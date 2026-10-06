@@ -7,6 +7,7 @@ import type { Handler } from '../../utils/env.ts'
 import { claveLimite, limitar } from '../../utils/rateLimit.ts'
 import { consumirMagicToken } from '../../utils/magicLink.ts'
 import { crearCookieSesion } from '../../utils/session.ts'
+import { asegurarUsuario } from '../../utils/usuarios.ts'
 
 function redirigir(destino: string, cookie?: string): Response {
   const h = new Headers({ Location: destino, 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' })
@@ -22,10 +23,7 @@ export const onRequestGet: Handler = async ({ request, env, data }) => {
   const r = await consumirMagicToken(env, token)
   if (!r.ok) return redirigir(`/?auth=${r.motivo}`)
 
-  await env.DB.prepare('INSERT INTO usuarios (id, email) VALUES (?1, ?2) ON CONFLICT (email) DO NOTHING')
-    .bind(crypto.randomUUID(), r.email)
-    .run()
-  const u = await env.DB.prepare('SELECT id, email FROM usuarios WHERE email = ?1').bind(r.email).first<{ id: string; email: string }>()
+  const u = await asegurarUsuario(env, r.email)
   if (!u) return redirigir('/?auth=error')
 
   return redirigir('/', await crearCookieSesion(env, u.id, u.email))

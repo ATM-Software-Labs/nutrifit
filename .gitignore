@@ -30,6 +30,7 @@ ios/App/App/public/
 # Varios
 .env
 .env.*
+!.env.example
 *.log
 npm-debug.log*
 .DS_Store
@@ -38,3 +39,7 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 coverage/
+*.jks.b64
+
+# Capturas locales de pruebas (las del README están en docs/screenshots/)
+previews/

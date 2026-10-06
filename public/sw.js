@@ -55,18 +55,21 @@ self.addEventListener('fetch', (event) => {
     if (url.pathname === '/api/comidas/resumen') event.respondWith(redPrimero(req, C_API))
     return
   }
+  // /app-login lleva el token del magic link: que lo gestione solo la red.
+  if (url.pathname.startsWith('/app-login')) return
   if (req.mode === 'navigate') {
-    event.respondWith(navegacion(event))
+    event.respondWith(navegacion(event, url))
     return
   }
   if (ESTATICO.test(url.pathname)) event.respondWith(cachePrimero(req))
 })
 
-async function navegacion(event) {
+async function navegacion(event, url) {
   try {
     const pre = await event.preloadResponse
     const res = pre || (await fetch(event.request))
-    if (res.ok) {
+    // Solo la raíz alimenta el shell offline (todas las rutas de la SPA sirven el mismo HTML).
+    if (res.ok && url.pathname === '/') {
       const copia = res.clone()
       caches.open(C_PAGINAS).then((c) => c.put('/index.html', copia))
     }

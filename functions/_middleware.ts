@@ -4,9 +4,16 @@
  * estáticos no pasan por aquí (ni consumen peticiones de Workers).
  *
  * Para /api/*:
- *   1. Carga la sesión (cookie nf_session firmada) en context.data.sesion.
+ *   0. CORS SOLO para el WebView de la app Android (https://localhost y
+ *      capacitor://localhost): preflight OPTIONS y Access-Control-Allow-Origin,
+ *      sin credenciales (la app se autentica con Bearer, nunca con cookie).
+ *   1. Carga la sesión (cookie nf_session o Authorization: Bearer) en context.data.sesion.
  *   2. En escrituras (POST/PUT/PATCH/DELETE):
- *        · Origin obligatorio y en la lista permitida (+ Sec-Fetch-Site ≠ cross-site);
+ *        · con Bearer válido no hay riesgo de CSRF (el navegador nunca añade esa
+ *          cabecera por su cuenta) → se omite la comprobación de Origin;
+ *        · desde el origen de la app sin Bearer solo se aceptan escrituras anónimas
+ *          (pedir enlace, canjear token), nunca con cookie;
+ *        · resto: Origin obligatorio y en la lista permitida (+ Sec-Fetch-Site ≠ cross-site);
  *        · Content-Type JSON o multipart (bloquea CSRF por formularios "simples");
  *        · rate limit 20/min por IP en /api/comidas/analizar;
  *        · Turnstile obligatorio en RUTAS_TURNSTILE.
@@ -28,6 +35,20 @@ const ESCRITURA = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 export const RUTAS_TURNSTILE = new Set(['/api/auth/solicitar', '/api/usuarios/perfil', '/api/comidas/analizar'])
 /** Rutas con Turnstile que además requieren sesión: se comprueba ANTES de gastar el token. */
 const RUTAS_SESION_PREVIA = new Set(['/api/usuarios/perfil', '/api/comidas/analizar'])
+
+/** Orígenes del WebView de Capacitor (APK). */
+export const ORIGENES_APP = new Set(['https://localhost', 'capacitor://localhost'])
+
+export function cabecerasCors(origin: string): Record<string, string> {
+  return {
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Authorization, Content-Type, CF-Turnstile-Token',
+    'Access-Control-Expose-Headers': 'Retry-After',
+    'Access-Control-Max-Age': '86400',
+    Vary: 'Origin',
+  }
+}
 
 const MAX_JSON_ANALIZAR = 2_300_000 // ~1.5 MB de imagen en base64 + margen
 
@@ -81,9 +102,11 @@ async function extraerTokenTurnstile(request: Request, pathname: string): Promis
   return null
 }
 
-function conCabecerasSeguridad(res: Response): Response {
+function conCabecerasSeguridad(res: Response, originApp?: string | null): Response {
   const r = new Response(res.body, res) // copia mutable
   const h = r.headers
+  if (originApp) for (const [k, v] of Object.entries(cabecerasCors(originApp))) h.set(k, v)
+  else h.append('Vary', 'Origin')
   h.set('X-Content-Type-Options', 'nosniff')
   h.set('X-Frame-Options', 'DENY')
   h.set('Referrer-Policy', 'no-referrer')
@@ -104,13 +127,27 @@ export const onRequest: Handler = async (ctx) => {
   const url = new URL(request.url)
   if (!url.pathname.startsWith('/api/')) return ctx.next()
 
+  const origin = request.headers.get('Origin')
+  const originApp = origin && ORIGENES_APP.has(origin) ? origin : null
+
+  // Preflight CORS: solo lo contestamos para la app; cualquier otro origen, 403.
+  if (request.method === 'OPTIONS') {
+    return conCabecerasSeguridad(new Response(null, { status: originApp ? 204 : 403 }), originApp)
+  }
+
   const datos = ctx.data as Datos
   try {
     datos.ip = ipCliente(request)
     datos.sesion = await leerSesion(env, request)
 
     if (ESCRITURA.has(request.method)) {
-      comprobarOrigen(request, env, url)
+      if (datos.sesion?.via === 'bearer') {
+        // Sin CSRF posible: la credencial no viaja sola en peticiones cruzadas.
+      } else if (originApp) {
+        if (datos.sesion) throw new HttpError(403, 'Origen no permitido.', { codigo: 'origen' })
+      } else {
+        comprobarOrigen(request, env, url)
+      }
       comprobarContentType(request)
 
       if (url.pathname === '/api/comidas/analizar') {
@@ -130,8 +167,8 @@ export const onRequest: Handler = async (ctx) => {
 
     const res = await ctx.next()
     ctx.waitUntil(limpiezaOportunista(env))
-    return conCabecerasSeguridad(res)
+    return conCabecerasSeguridad(res, originApp)
   } catch (e) {
-    return conCabecerasSeguridad(manejarError(e))
+    return conCabecerasSeguridad(manejarError(e), originApp)
   }
 }

@@ -5,6 +5,8 @@ import { Button } from './ui/Button.tsx'
 import { Input } from './ui/Input.tsx'
 import { useTurnstile } from '../hooks/useTurnstile.ts'
 import { api, ApiError } from '../lib/api.ts'
+import { esNativa } from '../lib/plataforma.ts'
+import { URL_REPO } from '../lib/config.ts'
 
 const AVISOS: Record<string, string> = {
   usado: 'Ese enlace ya se ha usado. Pide uno nuevo para entrar.',
@@ -116,6 +118,11 @@ export default function Login() {
               Hemos enviado un enlace a <strong className="font-medium text-graphite dark:text-neutral-100">{email.trim().toLowerCase()}</strong>. Caduca
               en 15 minutos y solo funciona una vez.
             </p>
+            {esNativa && (
+              <p className="mt-4 rounded-2xl bg-mint-50 px-4 py-3 text-sm text-mint-900 dark:bg-mint-950 dark:text-mint-100">
+                Ábrelo <strong className="font-semibold">en este móvil</strong>: el enlace abrirá NutriFit directamente.
+              </p>
+            )}
             <p className="mt-4 text-sm text-neutral-500 dark:text-neutral-400">¿No lo ves? Mira en spam o en promociones.</p>
             {error && (
               <p role="alert" className="mt-4 text-sm text-protein">
@@ -141,9 +148,22 @@ export default function Login() {
           </div>
         )}
       </div>
-      <p className="mt-10 text-center text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">
-        Protegido con Cloudflare Turnstile · Proyecto open source (MIT)
-      </p>
+      <footer className="mt-10 space-y-2 text-center text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">
+        <nav aria-label="Enlaces" className="flex justify-center gap-4 font-medium">
+          {!esNativa && (
+            <a href="/descargar" className="hover:text-graphite dark:hover:text-white">
+              Descargar la app
+            </a>
+          )}
+          <a href="/privacidad" className="hover:text-graphite dark:hover:text-white">
+            Privacidad
+          </a>
+          <a href={URL_REPO} target="_blank" rel="noopener noreferrer" className="hover:text-graphite dark:hover:text-white">
+            GitHub
+          </a>
+        </nav>
+        <p>Protegido con Cloudflare Turnstile · Proyecto open source (MIT)</p>
+      </footer>
     </main>
   )
 }

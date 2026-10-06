@@ -1,7 +1,12 @@
 import type { Handler } from '../../utils/env.ts'
 import { json } from '../../utils/response.ts'
-import { cookieBorrada } from '../../utils/session.ts'
+import { cookieBorrada, revocarTokenApp } from '../../utils/session.ts'
 
-/** POST /api/auth/salir — borra la cookie de sesión. */
-export const onRequestPost: Handler = async () =>
-  json({ ok: true }, { headers: { 'Set-Cookie': cookieBorrada() } })
+/** POST /api/auth/salir — borra la cookie (web) o revoca el token Bearer (app). */
+export const onRequestPost: Handler = async ({ env, data }) => {
+  if (data.sesion?.via === 'bearer' && data.sesion.jtiHash) {
+    await revocarTokenApp(env, data.sesion.jtiHash)
+    return json({ ok: true })
+  }
+  return json({ ok: true }, { headers: { 'Set-Cookie': cookieBorrada() } })
+}

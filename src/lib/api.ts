@@ -1,7 +1,11 @@
 /**
- * Cliente de la API (/api/*). Mismo origen → la cookie nf_session viaja sola
- * (HttpOnly, SameSite=Strict). Los errores se normalizan en ApiError.
+ * Cliente de la API (/api/*).
+ *  · Web: mismo origen → la cookie nf_session viaja sola (HttpOnly, SameSite=Strict).
+ *  · App Android: URL absoluta a producción + `Authorization: Bearer`, sin cookies.
+ * Los errores se normalizan en ApiError.
  */
+import { API_BASE, esNativa } from './plataforma.ts'
+import { borrarTokenApp, obtenerTokenApp } from './tokenApp.ts'
 import type { PlanMacros } from './macros.ts'
 import type { Comida, DatosPerfil, NuevaComida, Resumen, ResultadoAnalisis, Usuario } from './tipos.ts'
 
@@ -41,16 +45,19 @@ async function pedir<T>(ruta: string, o: Opciones = {}): Promise<T> {
     body = JSON.stringify(o.body)
   }
   if (o.turnstile) headers['CF-Turnstile-Token'] = o.turnstile
+  const token = esNativa ? await obtenerTokenApp() : null
+  if (token) headers.authorization = `Bearer ${token}`
 
   let res: Response
   try {
-    res = await fetch(ruta, { method: o.method ?? 'GET', headers, body, signal: o.signal, credentials: 'same-origin' })
+    res = await fetch(API_BASE + ruta, { method: o.method ?? 'GET', headers, body, signal: o.signal, credentials: esNativa ? 'omit' : 'same-origin' })
   } catch (e) {
     if ((e as Error).name === 'AbortError') throw e
     throw new ApiError(0, 'Sin conexión. Revisa tu red e inténtalo de nuevo.', 'red')
   }
   const data = (await res.json().catch(() => ({}))) as Record<string, unknown>
   if (!res.ok) {
+    if (res.status === 401 && token) await borrarTokenApp() // revocado o caducado
     if (res.status === 401 && !o.silencio401) alPerderSesion?.()
     throw new ApiError(
       res.status,
@@ -66,9 +73,16 @@ async function pedir<T>(ruta: string, o: Opciones = {}): Promise<T> {
 export const api = {
   config: () => pedir<{ turnstileSiteKey: string | null }>('/api/config'),
 
-  yo: () => pedir<{ ok: true; usuario: Usuario | null; perfilCompleto: boolean }>('/api/auth/yo', { silencio401: true }),
+  yo: async (): Promise<{ ok: true; usuario: Usuario | null; perfilCompleto: boolean }> => {
+    // En la app, sin token no hay sesión posible: ni siquiera preguntamos.
+    if (esNativa && !(await obtenerTokenApp())) return { ok: true, usuario: null, perfilCompleto: false }
+    return pedir('/api/auth/yo', { silencio401: true })
+  },
+  /** App Android: canjea el token del magic link por un token Bearer. */
+  canjearToken: (token: string) =>
+    pedir<{ ok: true; token: string; expira: number; usuario: Usuario; perfilCompleto: boolean }>('/api/auth/token', { method: 'POST', body: { token }, silencio401: true }),
   solicitarEnlace: (email: string, turnstile: string) =>
-    pedir<{ ok: true; mensaje: string }>('/api/auth/solicitar', { method: 'POST', body: { email }, turnstile }),
+    pedir<{ ok: true; mensaje: string }>('/api/auth/solicitar', { method: 'POST', body: { email, cliente: esNativa ? 'app' : 'web' }, turnstile }),
   salir: () => pedir<{ ok: true }>('/api/auth/salir', { method: 'POST' }),
 
   guardarPerfil: (datos: DatosPerfil, turnstile: string) =>

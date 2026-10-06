@@ -5,6 +5,8 @@ import { useToast } from './components/ui/Toast.tsx'
 import { api, ApiError, onSesionPerdida } from './lib/api.ts'
 import type { Usuario } from './lib/tipos.ts'
 import { activarActualizacion } from './lib/sw.ts'
+import { esNativa } from './lib/plataforma.ts'
+import { borrarTokenApp, guardarTokenApp } from './lib/tokenApp.ts'
 
 // Pantallas en chunks separados. Se precargan en paralelo a /api/auth/yo según
 // la pista "nf:sesion" para no añadir una cascada de red.
@@ -14,10 +16,17 @@ const cargarOnboarding = () => import('./components/Onboarding.tsx')
 const Login = lazy(cargarLogin)
 const Dashboard = lazy(cargarDashboard)
 const Onboarding = lazy(cargarOnboarding)
+// Páginas sueltas (accesibles sin sesión)
+const SeccionDescargas = lazy(() => import('./components/SeccionDescargas.tsx'))
+const Privacidad = lazy(() => import('./components/Privacidad.tsx'))
+
+const ruta = location.pathname.replace(/\/+$/, '') || '/'
 
 const PISTA = 'nf:sesion'
-if (localStorage.getItem(PISTA)) void cargarDashboard()
-else void cargarLogin()
+if (ruta === '/') {
+  if (localStorage.getItem(PISTA)) void cargarDashboard()
+  else void cargarLogin()
+}
 
 type Estado =
   | { fase: 'cargando' }
@@ -60,7 +69,31 @@ export default function App() {
       })
   }, [])
 
+  // App Android: el magic link abre la app (App Link / esquema propio) con el token.
+  const canjear = useCallback(
+    async (token: string) => {
+      setEstado({ fase: 'cargando' })
+      try {
+        const r = await api.canjearToken(token)
+        await guardarTokenApp(r.token)
+        localStorage.setItem(PISTA, '1')
+        setEstado(r.perfilCompleto ? { fase: 'app', usuario: r.usuario } : { fase: 'onboarding', usuario: r.usuario })
+        toast({ tipo: 'exito', mensaje: 'Sesión iniciada' })
+      } catch (e) {
+        toast({ tipo: 'error', mensaje: e instanceof Error ? e.message : 'No se pudo iniciar sesión.', duracion: 7000 })
+        comprobar()
+      }
+    },
+    [comprobar, toast],
+  )
+
   useEffect(() => {
+    if (!esNativa) return
+    void import('./lib/nativo.ts').then((m) => m.iniciarNativo((t) => void canjear(t)))
+  }, [canjear])
+
+  useEffect(() => {
+    if (ruta !== '/') return
     comprobar()
     onSesionPerdida(() => {
       localStorage.removeItem(PISTA)
@@ -87,10 +120,14 @@ export default function App() {
     } catch {
       /* da igual: borramos el estado local */
     }
+    if (esNativa) await borrarTokenApp().catch(() => {})
     localStorage.removeItem(PISTA)
     navigator.serviceWorker?.controller?.postMessage({ tipo: 'LIMPIAR_DATOS' })
     setEstado({ fase: 'anonimo' })
   }, [])
+
+  if (ruta === '/descargar' && !esNativa) return <Suspense fallback={<Cargando />}><SeccionDescargas /></Suspense>
+  if (ruta === '/privacidad') return <Suspense fallback={<Cargando />}><Privacidad /></Suspense>
 
   let pantalla
   switch (estado.fase) {

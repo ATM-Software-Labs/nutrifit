@@ -3,10 +3,13 @@
  * cuando hay una versión nueva esperando, se emite 'nf:actualizacion' y la UI
  * muestra el aviso "Nueva versión disponible" → activarActualizacion().
  */
+import { esNativa } from './plataforma.ts'
+
 let actualizando = false
 
 export function registrarServiceWorker() {
-  if (!('serviceWorker' in navigator) || !import.meta.env.PROD) return
+  // En el APK la web ya va empaquetada: no hace falta Service Worker.
+  if (!('serviceWorker' in navigator) || !import.meta.env.PROD || esNativa) return
   const avisar = (w: ServiceWorker) => window.dispatchEvent(new CustomEvent<ServiceWorker>('nf:actualizacion', { detail: w }))
 
   window.addEventListener('load', () => {

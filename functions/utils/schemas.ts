@@ -55,7 +55,17 @@ export const email = z
 const turnstileToken = z.string().trim().max(4096).optional()
 
 // --------------------------------------------------------------------- auth
-export const solicitarSchema = z.object({ email, turnstileToken })
+export const solicitarSchema = z.object({
+  email,
+  turnstileToken,
+  /** 'app' → el enlace apunta a /app-login (App Link de Android) en vez de a la web. */
+  cliente: z.enum(['web', 'app']).default('web'),
+})
+
+/** Canje del token del magic link por un token Bearer (app Android). */
+export const canjeTokenSchema = z.object({
+  token: z.string().trim().min(20, { error: 'Enlace no válido.' }).max(1024, { error: 'Enlace no válido.' }),
+})
 
 // ---------------------------------------------------------------- macros
 export const calcularSchema = z.object({

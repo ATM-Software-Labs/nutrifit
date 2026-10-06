@@ -1,0 +1,16 @@
+@font-face { font-family: 'Outfit'; src: url('/fonts/outfit-latin-var.woff2') format('woff2'); font-weight: 300 700; font-display: swap; }
+:root { color-scheme: light dark; --bg: #fafafa; --txt: #111827; --suave: #525252; --borde: #e5e5e5; }
+@media (prefers-color-scheme: dark) { :root { --bg: #09090b; --txt: #f4f4f5; --suave: #a3a3a3; --borde: #262626; } }
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100dvh; display: grid; place-items: center; background: var(--bg); color: var(--txt); font: 16px/1.5 Outfit, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+main { width: 100%; max-width: 24rem; padding: 2rem 1.5rem; text-align: center; }
+h1 { margin: 1.25rem 0 0.5rem; font-size: 1.75rem; font-weight: 600; letter-spacing: -0.02em; }
+p { margin: 0 0 1.5rem; color: var(--suave); }
+.boton { display: flex; align-items: center; justify-content: center; height: 3.25rem; margin-top: 0.75rem; border-radius: 1rem; font-weight: 600; text-decoration: none; }
+.boton[hidden] { display: none; }
+.primario { background: #047857; color: #fff; }
+.primario:hover { background: #065f46; }
+.secundario { border: 1px solid var(--borde); color: var(--txt); }
+.ayuda { margin-top: 1.75rem; font-size: 0.875rem; }
+.ayuda a { color: inherit; font-weight: 600; }
+a:focus-visible { outline: 2px solid #10b981; outline-offset: 2px; }

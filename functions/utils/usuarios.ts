@@ -24,3 +24,11 @@ export const COLUMNAS_USUARIO =
 export function obtenerUsuario(env: Env, id: string) {
   return env.DB.prepare(`SELECT ${COLUMNAS_USUARIO} FROM usuarios WHERE id = ?1`).bind(id).first<Usuario>()
 }
+
+/** Crea el usuario si no existe (alta por magic link) y devuelve id + email. */
+export async function asegurarUsuario(env: Env, email: string): Promise<{ id: string; email: string } | null> {
+  await env.DB.prepare('INSERT INTO usuarios (id, email) VALUES (?1, ?2) ON CONFLICT (email) DO NOTHING')
+    .bind(crypto.randomUUID(), email)
+    .run()
+  return env.DB.prepare('SELECT id, email FROM usuarios WHERE email = ?1').bind(email).first<{ id: string; email: string }>()
+}

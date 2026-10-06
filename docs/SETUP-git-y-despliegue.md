@@ -20,16 +20,14 @@ git log --oneline
 git remote -v          # debe salir vacío
 ```
 
-### 1.1 (Recomendado) Poner tu identidad en el commit inicial
+### 1.1 Identidad de los commits
 
-El primer commit se creó con un email provisional. Antes de subirlo, configura
-tu identidad y reescribe el autor (es seguro: todavía no se ha publicado nada):
+Ya está configurada en el repositorio local y los commits existentes se
+reescribieron con ella (no había nada publicado):
 
 ```bash
-git config user.name  "Alberto Trujillo Mingorance"
-git config user.email "TU_EMAIL_DE_GITHUB"          # o tu dirección noreply de GitHub
-git commit --amend --reset-author --no-edit
-git log -1 --format='%an <%ae>'
+git log --format='%an <%ae>' | sort -u
+# Alberto Trujillo Mingorance <138725560+albertotruji@users.noreply.github.com>
 ```
 
 ---
@@ -62,13 +60,13 @@ gh repo view --web
 1. Entra en <https://github.com/new>.
 2. *Repository name:* `nutrifit` · *Public* · **NO** marques README, .gitignore
    ni licencia (ya existen en local).
-3. Crea el repositorio y enlaza el remoto (sustituye `TU_USUARIO`):
+3. Crea el repositorio `nutrifit` en la cuenta **albertotruji** y enlaza el remoto:
 
 ```bash
 # HTTPS
-git remote add origin https://github.com/TU_USUARIO/nutrifit.git
+git remote add origin https://github.com/albertotruji/nutrifit.git
 # …o SSH
-# git remote add origin git@github.com:TU_USUARIO/nutrifit.git
+# git remote add origin git@github.com:albertotruji/nutrifit.git
 
 git branch -M main
 git push -u origin main

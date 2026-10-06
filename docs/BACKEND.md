@@ -14,9 +14,10 @@ rutas anónimas o caras, y rate limiting en D1.
 |---|---|---|---|---|---|
 | GET | `/api/health` | — | — | — | Vida + ping a D1 |
 | GET | `/api/config` | — | — | — | Config pública (`turnstileSiteKey`) |
-| POST | `/api/auth/solicitar` | — | **Sí** | 5 / 15 min por IP **y** por email | Envía magic link. Responde siempre el mismo 200 genérico |
+| POST | `/api/auth/solicitar` | — | **Sí** | 5 / 15 min por IP **y** por email | Envía magic link (`cliente: "app"` → enlace a `/app-login`). Responde siempre el mismo 200 genérico |
 | GET | `/api/auth/verificar?token=` | — | — | 30 / 15 min por IP | Valida el enlace (firma, caducidad 15 min, un solo uso), crea el usuario si es nuevo, pone la cookie `nf_session` y redirige 302 a `/` (error → `/?auth=invalido\|caducado\|usado\|limite`) |
-| POST | `/api/auth/salir` | (cookie) | — | — | Borra la cookie |
+| POST | `/api/auth/token` | — | — | 30 / 15 min por IP | App Android: canjea el token del magic link por un token Bearer de 60 días (ver §8) |
+| POST | `/api/auth/salir` | (cookie o Bearer) | — | — | Borra la cookie o revoca el token Bearer |
 | GET | `/api/auth/yo` | No | — | — | Perfil del usuario, o `usuario: null` si no hay sesión (200, sin ruido en consola) |
 | POST | `/api/macros/calcular` | — | — | 60 / min por IP | Mifflin-St Jeor → `{tmb, tdee, calorias, proteinas, carbohidratos, grasas}` |
 | POST | `/api/usuarios/perfil` | Sí | **Sí** | — | Guarda onboarding + objetivos; la 1.ª vez envía la bienvenida (en segundo plano) |
@@ -185,23 +186,27 @@ curl -X POST $B/api/auth/solicitar -H "Origin: $B" -H 'content-type: application
 
 ---
 
-## 8. Pendiente para Capacitor (APK)
+## 8. App Android (Capacitor): Bearer + CORS
 
-En la APK el WebView tiene origen `https://localhost`, por lo que las llamadas a
-`https://nutri.trujillomingorance.com/api` son *cross-site*:
+Implementado (detalle y pasos de firma en [ANDROID.md](ANDROID.md)). En el APK
+la web corre en `https://localhost`, así que:
 
-- la cookie `SameSite=Strict` no se enviaría;
-- el middleware rechazaría ese `Origin`;
-- haría falta CORS.
-
-Propuesta (fase Capacitor):
-
-1. **Token Bearer para nativo:**
-   - El magic link abre la app mediante Android App Link (`/.well-known/assetlinks.json`), con una ruta del tipo `https://nutri.trujillomingorance.com/app/entrar?token=…`.
-   - La app canjea el token en un nuevo `POST /api/auth/token` y recibe un token de sesión firmado (el mismo formato, otro propósito).
-   - Lo guarda en almacenamiento seguro (Keystore) y lo envía en `Authorization: Bearer`.
-2. **Middleware:**
-   - Las peticiones con `Authorization: Bearer` no usan cookie, así que no son vulnerables a CSRF y pueden saltarse la comprobación de Origin.
-   - Se añade CORS **solo** para `https://localhost` y `capacitor://localhost`, sin `Access-Control-Allow-Credentials`, con `Authorization, Content-Type, CF-Turnstile-Token` permitidos y respuesta a `OPTIONS`.
-3. **Turnstile en el WebView:** añadir `localhost` a los hostnames del widget (o usar *Pre-clearance* / Play Integrity a futuro).
-4. **Alternativa rápida:** `CapacitorHttp` (HTTP nativo, sin CORS y con un *cookie jar* nativo donde SameSite no aplica). Es más sencillo, pero mezcla modelos y es más difícil de razonar. Se recomienda la opción Bearer.
+- **Login:** `POST /api/auth/solicitar` con `cliente: "app"` → el email apunta a
+  `https://nutri.trujillomingorance.com/app-login?token=…`. Si Android verificó el
+  App Link (`/.well-known/assetlinks.json`), se abre la app directamente; si no, la
+  página estática `/app-login` ofrece «Abrir en la app» (`intent://` con el esquema
+  `com.trujillomingorance.nutrifit://login`) o «Entrar en la web». La página **no**
+  consume el token.
+- **Canje:** `POST /api/auth/token {token}` → token Bearer firmado con HMAC y
+  clave derivada propia (propósito `app`, distinto de la cookie), **60 días**,
+  registrado por SHA-256 de su `jti` en `tokens_app` (migración 0002) para poder
+  **revocarlo** (`POST /api/auth/salir` con Bearer).
+- **Middleware:** si llega `Authorization`, solo cuenta el Bearer (nunca cae a la
+  cookie). Con Bearer válido se omite la comprobación de Origin (no hay CSRF: el
+  navegador no añade esa cabecera solo). Desde el origen de la app sin Bearer
+  solo se aceptan escrituras anónimas (pedir enlace, canjear).
+- **CORS** solo para `https://localhost` y `capacitor://localhost`: `OPTIONS` →
+  204 con `Allow-Headers: Authorization, Content-Type, CF-Turnstile-Token`, sin
+  `Allow-Credentials`. Cualquier otro origen: preflight 403 y sin cabeceras CORS.
+- **Turnstile** en el WebView: hostname `localhost`, ya permitido en el widget.
+- Tests: `tests/appAuth.test.ts` (firma, tipo, caducidad, revocación, preflight y Origin).

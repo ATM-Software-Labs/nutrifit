@@ -1,8 +1,12 @@
 /**
- * POST /api/auth/solicitar  { email, turnstileToken }
+ * POST /api/auth/solicitar  { email, turnstileToken, cliente?: 'web' | 'app' }
  * Turnstile lo valida el middleware. Respuesta SIEMPRE idéntica (200 genérico)
  * exista o no el email → sin enumeración de usuarios. El envío va en waitUntil
  * para que el tiempo de respuesta tampoco delate nada.
+ *
+ * cliente 'app' → enlace a /app-login?token=… (página estática que abre la app
+ * por App Link / esquema propio; NO consume el token, lo canjea la app en
+ * POST /api/auth/token). cliente 'web' → /api/auth/verificar (cookie).
  */
 import { esProduccion, type Handler } from '../../utils/env.ts'
 import { json } from '../../utils/response.ts'
@@ -17,7 +21,7 @@ const LIMITE = 'Has pedido demasiados enlaces. Espera unos minutos antes de volv
 
 export const onRequestPost: Handler = async (ctx) => {
   const { request, env, data } = ctx
-  const { email } = await leerBody(request, solicitarSchema)
+  const { email, cliente } = await leerBody(request, solicitarSchema)
 
   await exigirLimite(env, await claveLimite('auth:ip', data.ip), 5, 900, LIMITE)
   await exigirLimite(env, await claveLimite('auth:email', email), 5, 900, LIMITE)
@@ -26,7 +30,9 @@ export const onRequestPost: Handler = async (ctx) => {
   // evita que un atacante haga enviar enlaces que apunten a su dominio.
   const base = env.APP_URL?.startsWith('http') ? env.APP_URL : esProduccion(env) ? 'https://nutri.trujillomingorance.com' : new URL(request.url).origin
   const token = await crearMagicToken(env, email)
-  const enlace = `${base.replace(/\/$/, '')}/api/auth/verificar?token=${encodeURIComponent(token)}`
+  const raiz = base.replace(/\/$/, '')
+  const enlace =
+    cliente === 'app' ? `${raiz}/app-login?token=${encodeURIComponent(token)}` : `${raiz}/api/auth/verificar?token=${encodeURIComponent(token)}`
 
   ctx.waitUntil(enviarMagicLink(env, email, enlace))
   return json({ ok: true, mensaje: MENSAJE })

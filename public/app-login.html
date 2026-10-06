@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="robots" content="noindex" />
+    <title>Entrar en NutriFit</title>
+    <meta name="theme-color" content="#FAFAFA" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#09090B" media="(prefers-color-scheme: dark)" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="preload" href="/fonts/outfit-latin-var.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="/app-login.css" />
+    <!--
+      Página de aterrizaje del magic link de la APP (cliente: 'app').
+      Si Android verificó el App Link, esta página ni se carga: se abre la app.
+      Si no, ofrece "Abrir en la app" (intent:// con esquema propio) o entrar en la web.
+      NO consume el token: lo canjea la app (POST /api/auth/token) o, si el usuario
+      elige la web, /api/auth/verificar.
+    -->
+  </head>
+  <body>
+    <main>
+      <img src="/logo.svg" alt="NutriFit" width="56" height="56" />
+      <h1 id="titulo">Entrar en NutriFit</h1>
+      <p id="texto">Abre este enlace en la app de NutriFit para iniciar sesión.</p>
+      <a id="abrir-app" class="boton primario" href="#" hidden>Abrir en la app</a>
+      <a id="entrar-web" class="boton secundario" href="/" hidden>Entrar en la web</a>
+      <p id="ayuda" class="ayuda" hidden>
+        ¿No tienes la app? <a href="/descargar">Descárgala aquí</a>. El enlace caduca en 15 minutos y solo funciona una vez.
+      </p>
+      <noscript><p>Activa JavaScript para continuar, o vuelve a pedir el enlace desde la app.</p></noscript>
+    </main>
+    <script src="/app-login.js"></script>
+  </body>
+</html>

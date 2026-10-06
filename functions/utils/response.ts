@@ -1,13 +1,16 @@
 /** Respuestas JSON y errores HTTP tipados. */
 
 export class HttpError extends Error {
-  constructor(
-    public status: number,
-    message: string,
-    public extra: Record<string, unknown> = {},
-    public headers: HeadersInit = {},
-  ) {
+  status: number
+  extra: Record<string, unknown>
+  headers: HeadersInit
+  // Sin "parameter properties": así el archivo también corre con el
+  // type-stripping nativo de Node en los tests.
+  constructor(status: number, message: string, extra: Record<string, unknown> = {}, headers: HeadersInit = {}) {
     super(message)
+    this.status = status
+    this.extra = extra
+    this.headers = headers
   }
 }
 

@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react'
 import { SquarePlus, X } from 'lucide-react'
 import { Logo } from './Logo.tsx'
 import { Button } from './ui/Button.tsx'
+import { esNativa } from '../lib/plataforma.ts'
 
 interface EventoInstalar extends Event {
   prompt: () => Promise<void>
@@ -47,7 +48,7 @@ export function BannerInstalarPWA() {
   const [evento, setEvento] = useState<EventoInstalar | null>(null)
 
   useEffect(() => {
-    if (instalada() || descartadoReciente()) return
+    if (esNativa || instalada() || descartadoReciente()) return
     if (esIOSSafari()) {
       const t = setTimeout(() => setModo('ios'), 1200)
       return () => clearTimeout(t)

@@ -20,11 +20,14 @@ export interface Env {
   GEMINI_API_KEY?: string
 }
 
-/** Sesión verificada a partir de la cookie nf_session. */
+/** Sesión verificada: cookie nf_session (web) o token Bearer (app Android). */
 export interface Sesion {
   usuarioId: string
   email: string
   exp: number
+  via: 'cookie' | 'bearer'
+  /** SHA-256 del jti (solo Bearer): permite revocarlo al cerrar sesión. */
+  jtiHash?: string
 }
 
 /** Datos compartidos entre el middleware y los handlers (context.data). */

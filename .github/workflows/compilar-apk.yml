@@ -1,0 +1,180 @@
+# NutriFit · Compila el APK de Android (Capacitor) y lo publica en GitHub Releases.
+#
+#  · Tag v* (p. ej. v1.2.0) → Release con NutriFit-v1.2.0.apk + NutriFit.apk
+#    (nombre fijo para el enlace estable releases/latest/download/NutriFit.apk).
+#  · Manual (workflow_dispatch) → artefacto descargable y, si se pide, pre-release.
+#
+# Firma: si existen los secretos ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD,
+# ANDROID_KEY_ALIAS y ANDROID_KEY_PASSWORD → assembleRelease firmado; si no,
+# assembleDebug (firmado con la clave de depuración). Ver docs/ANDROID.md.
+name: Compilar APK
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      prerelease:
+        description: 'Publicar también como pre-release (no cambia "latest")'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: compilar-apk-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  apk:
+    name: APK Android
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      VITE_GITHUB_REPO: ${{ github.repository }}
+      VITE_API_URL: https://nutri.trujillomingorance.com
+
+    steps:
+      - name: Código
+        uses: actions/checkout@v5
+
+      - name: Node 22
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Dependencias
+        run: npm ci
+
+      - name: Tipos y tests
+        run: npm run typecheck && npm test
+
+      - name: Versión
+        id: version
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            NOMBRE="${GITHUB_REF_NAME#v}"
+          else
+            NOMBRE="$(node -p "require('./package.json').version")-dev.${GITHUB_RUN_NUMBER}"
+          fi
+          # versionCode creciente: X.Y.Z → X*1000000 + Y*10000 + Z*100 (+ nº de ejecución en builds dev)
+          IFS='.-' read -r MA MI PA _ <<< "$NOMBRE"
+          CODIGO=$(( ${MA:-0} * 1000000 + ${MI:-0} * 10000 + ${PA:-0} * 100 ))
+          if [[ "$GITHUB_REF_TYPE" != "tag" ]]; then CODIGO=$(( CODIGO + GITHUB_RUN_NUMBER % 100 )); fi
+          echo "nombre=$NOMBRE" >> "$GITHUB_OUTPUT"
+          echo "codigo=$CODIGO" >> "$GITHUB_OUTPUT"
+          echo "Versión $NOMBRE (versionCode $CODIGO)"
+
+      - name: Compilar web
+        run: npm run build
+
+      - name: Java 21 (Temurin)
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Capacitor sync
+        run: npx cap sync android
+
+      - name: Keystore de firma
+        id: firma
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [[ -n "$KEYSTORE_B64" && -n "$KEYSTORE_PASSWORD" && -n "$KEY_ALIAS" && -n "$KEY_PASSWORD" ]]; then
+            echo "$KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/nutrifit-release.jks"
+            echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/nutrifit-release.jks" >> "$GITHUB_ENV"
+            echo "firmado=true" >> "$GITHUB_OUTPUT"
+            echo "Firma de release: sí"
+          else
+            echo "firmado=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Sin secretos de firma: se publica un APK de DEPURACIÓN (no actualizable a la versión firmada sin desinstalar)."
+          fi
+
+      - name: Gradle
+        working-directory: android
+        env:
+          FIRMADO: ${{ steps.firma.outputs.firmado }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          NUTRIFIT_VERSION_NAME: ${{ steps.version.outputs.nombre }}
+          NUTRIFIT_VERSION_CODE: ${{ steps.version.outputs.codigo }}
+        run: |
+          set -euo pipefail
+          chmod +x gradlew
+          if [[ "$FIRMADO" == "true" ]]; then
+            ./gradlew --no-daemon assembleRelease
+            cp app/build/outputs/apk/release/app-release.apk ../NutriFit.apk
+          else
+            ./gradlew --no-daemon assembleDebug
+            cp app/build/outputs/apk/debug/app-debug.apk ../NutriFit.apk
+          fi
+
+      - name: Renombrar, verificar firma y checksums
+        env:
+          NOMBRE: ${{ steps.version.outputs.nombre }}
+        run: |
+          set -euo pipefail
+          cp NutriFit.apk "NutriFit-v${NOMBRE}.apk"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)/apksigner"
+          # La huella SHA-256 que aparece aquí es la de assetlinks.json (App Links).
+          "$APKSIGNER" verify --print-certs NutriFit.apk | tee firma.txt
+          sha256sum "NutriFit-v${NOMBRE}.apk" NutriFit.apk > SHA256SUMS.txt
+          {
+            echo "### NutriFit v${NOMBRE}"
+            echo '```'
+            cat firma.txt
+            cat SHA256SUMS.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: NutriFit-v${{ steps.version.outputs.nombre }}
+          path: |
+            NutriFit-v${{ steps.version.outputs.nombre }}.apk
+            NutriFit.apk
+            SHA256SUMS.txt
+          retention-days: 30
+
+      - name: Release (tag)
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          name: NutriFit v${{ steps.version.outputs.nombre }}
+          generate_release_notes: true
+          make_latest: 'true'
+          body: |
+            📲 Descarga directa: **NutriFit.apk** (o NutriFit-v${{ steps.version.outputs.nombre }}.apk). Guía de instalación: https://nutri.trujillomingorance.com/descargar
+            ${{ steps.firma.outputs.firmado != 'true' && '⚠️ APK de depuración (sin firma de release).' || '' }}
+          files: |
+            NutriFit-v${{ steps.version.outputs.nombre }}.apk
+            NutriFit.apk
+            SHA256SUMS.txt
+
+      - name: Pre-release (manual)
+        if: github.event_name == 'workflow_dispatch' && inputs.prerelease
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: dev-${{ github.run_number }}
+          target_commitish: ${{ github.sha }}
+          name: NutriFit v${{ steps.version.outputs.nombre }} (pre-release)
+          prerelease: true
+          make_latest: 'false'
+          files: |
+            NutriFit-v${{ steps.version.outputs.nombre }}.apk
+            NutriFit.apk
+            SHA256SUMS.txt

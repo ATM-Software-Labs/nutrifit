@@ -1,6 +1,8 @@
 /** Ajustes: perfil y objetivos (recalculados al momento), tema, cuenta y enlaces. */
 import { useMemo, useState } from 'react'
-import { Download, ExternalLink, LogOut, Monitor, Moon, Sun } from 'lucide-react'
+import { ChevronRight, Download, ExternalLink, LogOut, Monitor, Moon, Shield, Sun } from 'lucide-react'
+import { URL_REPO } from '../lib/config.ts'
+import { esNativa } from '../lib/plataforma.ts'
 import { Sheet } from './ui/Sheet.tsx'
 import { Button } from './ui/Button.tsx'
 import { Input } from './ui/Input.tsx'
@@ -17,7 +19,6 @@ import type { Usuario } from '../lib/tipos.ts'
 
 const SELECT =
   'h-12 w-full appearance-none rounded-2xl border border-neutral-200 bg-card px-4 text-[15px] focus:border-mint focus:outline-none focus:ring-4 focus:ring-mint/15 dark:border-neutral-800 dark:bg-card-dark'
-const REPO = 'https://github.com/' // TODO: URL definitiva del repositorio
 
 function Seccion({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
@@ -153,12 +154,19 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
 
         <Seccion titulo="Más">
           <div className="divide-y divide-neutral-100 rounded-2xl border border-neutral-200 dark:divide-neutral-800 dark:border-neutral-800">
-            <div className="flex items-center gap-3 px-4 py-3.5 text-[15px]">
-              <Download size={18} className="text-neutral-500 dark:text-neutral-400" />
-              <span className="flex-1">Descargar app Android (APK)</span>
-              <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-2xs font-medium text-neutral-500 dark:bg-neutral-800">Próximamente</span>
-            </div>
-            <a href={REPO} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 px-4 py-3.5 text-[15px] hover:bg-neutral-50 dark:hover:bg-neutral-900">
+            {!esNativa && (
+              <a href="/descargar" className="flex items-center gap-3 px-4 py-3.5 text-[15px] hover:bg-neutral-50 dark:hover:bg-neutral-900">
+                <Download size={18} className="text-neutral-500 dark:text-neutral-400" />
+                <span className="flex-1">Descargar la app (Android · iPhone)</span>
+                <ChevronRight size={16} className="text-neutral-400" />
+              </a>
+            )}
+            <a href="/privacidad" className="flex items-center gap-3 px-4 py-3.5 text-[15px] hover:bg-neutral-50 dark:hover:bg-neutral-900">
+              <Shield size={18} className="text-neutral-500 dark:text-neutral-400" />
+              <span className="flex-1">Privacidad</span>
+              <ChevronRight size={16} className="text-neutral-400" />
+            </a>
+            <a href={URL_REPO} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 px-4 py-3.5 text-[15px] hover:bg-neutral-50 dark:hover:bg-neutral-900">
               <ExternalLink size={18} className="text-neutral-500 dark:text-neutral-400" />
               <span className="flex-1">Código abierto en GitHub</span>
               <span className="text-xs text-neutral-500 dark:text-neutral-400">MIT</span>
