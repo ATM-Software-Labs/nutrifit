@@ -27,7 +27,7 @@ reescribieron con ella (no había nada publicado):
 
 ```bash
 git log --format='%an <%ae>' | sort -u
-# Alberto Trujillo Mingorance <138725560+albertotruji@users.noreply.github.com>
+# Alberto Trujillo Mingorance <249946281+atrumin16@users.noreply.github.com>
 ```
 
 ---
@@ -38,7 +38,7 @@ git log --format='%an <%ae>' | sort -u
 
 ```bash
 gh auth login                       # una sola vez (GitHub.com → HTTPS → navegador)
-gh repo create nutrifit \
+gh repo create ATM-Software-Labs/nutrifit \
   --public \
   --description "NutriFit — app open source de nutrición y macros (React + Cloudflare Pages)" \
   --homepage "https://nutri.trujillomingorance.com" \
@@ -60,13 +60,13 @@ gh repo view --web
 1. Entra en <https://github.com/new>.
 2. *Repository name:* `nutrifit` · *Public* · **NO** marques README, .gitignore
    ni licencia (ya existen en local).
-3. Crea el repositorio `nutrifit` en la cuenta **albertotruji** y enlaza el remoto:
+3. Crea el repositorio `nutrifit` en la organización **ATM-Software-Labs** y enlaza el remoto:
 
 ```bash
 # HTTPS
-git remote add origin https://github.com/albertotruji/nutrifit.git
+git remote add origin https://github.com/ATM-Software-Labs/nutrifit.git
 # …o SSH
-# git remote add origin git@github.com:albertotruji/nutrifit.git
+# git remote add origin git@github.com:ATM-Software-Labs/nutrifit.git
 
 git branch -M main
 git push -u origin main

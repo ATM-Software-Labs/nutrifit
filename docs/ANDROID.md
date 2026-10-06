@@ -119,11 +119,11 @@ git commit -am "chore: v1.0.0" && git tag v1.0.0 && git push --follow-tags
 
 `.github/workflows/compilar-apk.yml` compila y crea la Release con
 `NutriFit-v1.0.0.apk`, `NutriFit.apk` (nombre fijo → enlace estable
-`https://github.com/albertotruji/nutrifit/releases/latest/download/NutriFit.apk`,
+`https://github.com/ATM-Software-Labs/nutrifit/releases/latest/download/NutriFit.apk`,
 que usa `/descargar`) y `SHA256SUMS.txt`. versionCode = X·1 000 000 + Y·10 000 + Z·100.
 También se puede lanzar a mano (Actions → Compilar APK → Run workflow): deja el
 APK como artefacto y, si se marca, crea una pre-release `dev-N` (no cambia «latest»).
 
 El repositorio por defecto está en **un solo sitio**: `src/lib/config.ts`
-(`VITE_GITHUB_REPO`, por defecto `albertotruji/nutrifit`; en CI se usa
+(`VITE_GITHUB_REPO`, por defecto `ATM-Software-Labs/nutrifit`; en CI se usa
 automáticamente `github.repository`).

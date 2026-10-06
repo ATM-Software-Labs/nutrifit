@@ -5,7 +5,7 @@
 const env = import.meta.env
 
 /** Repositorio de GitHub "propietario/nombre" (enlaces de código y descargas). */
-export const GITHUB_REPO: string = env.VITE_GITHUB_REPO || 'albertotruji/nutrifit'
+export const GITHUB_REPO: string = env.VITE_GITHUB_REPO || 'ATM-Software-Labs/nutrifit'
 export const URL_REPO = `https://github.com/${GITHUB_REPO}`
 /** Enlace estable al último APK publicado (el workflow sube siempre "NutriFit.apk"). */
 export const URL_APK = `${URL_REPO}/releases/latest/download/NutriFit.apk`

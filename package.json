@@ -6,6 +6,13 @@
   "license": "MIT",
   "author": "Alberto Trujillo Mingorance",
   "homepage": "https://nutri.trujillomingorance.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ATM-Software-Labs/nutrifit.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ATM-Software-Labs/nutrifit/issues"
+  },
   "type": "module",
   "engines": {
     "node": ">=22"

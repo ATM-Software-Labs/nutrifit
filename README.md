@@ -10,7 +10,7 @@
 <p align="center">
   <a href="https://nutri.trujillomingorance.com"><b>nutri.trujillomingorance.com</b></a> ·
   <a href="https://nutri.trujillomingorance.com/descargar">Descargar</a> ·
-  <a href="https://github.com/albertotruji/nutrifit/releases/latest">Releases</a> ·
+  <a href="https://github.com/ATM-Software-Labs/nutrifit/releases/latest">Releases</a> ·
   <a href="LICENSE">Licencia MIT</a>
 </p>
 
@@ -18,7 +18,7 @@
   <img alt="Licencia MIT" src="https://img.shields.io/badge/licencia-MIT-10B981" />
   <img alt="Cloudflare Pages" src="https://img.shields.io/badge/Cloudflare-Pages%20%2B%20D1-F38020?logo=cloudflare&logoColor=white" />
   <img alt="PWA" src="https://img.shields.io/badge/PWA-iPhone%20%C2%B7%20Android-111827" />
-  <img alt="APK" src="https://img.shields.io/github/v/release/albertotruji/nutrifit?label=APK&color=047857" />
+  <img alt="APK" src="https://img.shields.io/github/v/release/ATM-Software-Labs/nutrifit?label=APK&color=047857" />
 </p>
 
 ---
@@ -104,7 +104,7 @@ Más detalle: [docs/BACKEND.md](docs/BACKEND.md) · [docs/FRONTEND.md](docs/FRON
 Requisitos: **Node.js ≥ 22**. Para el APK, además JDK 21 y Android SDK.
 
 ```bash
-git clone https://github.com/albertotruji/nutrifit.git && cd nutrifit
+git clone https://github.com/ATM-Software-Labs/nutrifit.git && cd nutrifit
 npm install
 cp .dev.vars.example .dev.vars        # claves de PRUEBA de Turnstile + AUTH_SECRET local
 npm run db:migrate:local              # crea la BD D1 local
@@ -147,7 +147,7 @@ Guía paso a paso con git y GitHub: [docs/SETUP-git-y-despliegue.md](docs/SETUP-
 
 ## APK Android
 
-- **Descarga directa:** <https://github.com/albertotruji/nutrifit/releases/latest/download/NutriFit.apk>.
+- **Descarga directa:** <https://github.com/ATM-Software-Labs/nutrifit/releases/latest/download/NutriFit.apk>.
 - **CI:** `.github/workflows/compilar-apk.yml` se ejecuta al publicar un tag `v*` (o a mano).
   - Compila la web, sincroniza Capacitor y genera el APK.
   - Si están los secretos `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` y `ANDROID_KEY_PASSWORD`, lo firma en release; si no, publica uno de depuración.
