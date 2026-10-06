@@ -8,20 +8,46 @@
  *    logos y favicon                → cache-first (inmutables o casi).
  *  · /api/comidas/resumen (GET)     → network-first con copia para ver el día sin conexión.
  *  · Resto de /api                  → nunca se cachea (pasa directo a la red).
+ *
+ * Actualización: cada versión se activa sola (skipWaiting + clients.claim) y
+ * borra las cachés anteriores. Nunca se guarda en caché un recurso estático que
+ * no sea válido (status ≠ 200 o JS/CSS servido como HTML por el fallback SPA):
+ * así un despliegue a medias no puede «envenenar» la app con una pantalla blanca.
  */
 const VERSION = '__VERSION__'
 const PRECACHE = /*__PRECACHE__*/ []
 const C_ESTATICO = `nf-estatico-${VERSION}`
-const C_PAGINAS = 'nf-paginas'
+const C_PAGINAS = `nf-paginas-${VERSION}`
 const C_API = 'nf-api'
 const ACTUALES = [C_ESTATICO, C_PAGINAS, C_API]
 
+/** ¿La respuesta sirve para ese recurso? (descarta 404 y el index.html del fallback SPA). */
+function valida(url, res) {
+  if (!res || res.status !== 200 || res.type === 'opaque') return false
+  const tipo = (res.headers.get('content-type') || '').toLowerCase()
+  if (/\.m?js$/.test(url.pathname)) return tipo.includes('javascript')
+  if (/\.css$/.test(url.pathname)) return tipo.includes('text/css')
+  if (url.pathname === '/index.html') return tipo.includes('text/html')
+  return !tipo.includes('text/html')
+}
+
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(C_ESTATICO).then((c) => c.addAll(PRECACHE.map((u) => new Request(u, { cache: 'reload' })))),
+    (async () => {
+      const cache = await caches.open(C_ESTATICO)
+      await Promise.all(
+        PRECACHE.map(async (u) => {
+          const url = new URL(u, self.location.origin)
+          // /index.html redirige (308) a «/» en Pages: se descarga «/» y se guarda como /index.html.
+          const res = await fetch(new Request(u === '/index.html' ? '/' : u, { cache: 'reload' }))
+          // Si el despliegue aún no está completo, la instalación falla y se reintenta luego.
+          if (!valida(url, res)) throw new Error(`[sw] precarga inválida: ${u} (${res.status})`)
+          await cache.put(u, res)
+        }),
+      )
+      await self.skipWaiting()
+    })(),
   )
-  // No se llama a skipWaiting aquí: la app muestra un aviso "Nueva versión" y
-  // el usuario decide cuándo activar (mensaje SKIP_WAITING).
 })
 
 self.addEventListener('activate', (event) => {
@@ -43,7 +69,7 @@ self.addEventListener('message', (event) => {
   if (tipo === 'LIMPIAR_DATOS') event.waitUntil(Promise.all([caches.delete(C_API), caches.delete(C_PAGINAS)]))
 })
 
-const ESTATICO = /^\/(assets|fonts|icons)\/|^\/(logo[\w-]*\.svg|favicon\.(svg|ico)|manifest\.webmanifest)$/
+const ESTATICO = /^\/(assets|fonts|icons)\/|^\/(logo[\w-]*\.svg|favicon\.(svg|ico)|manifest\.webmanifest|boot\.js)$/
 
 self.addEventListener('fetch', (event) => {
   const req = event.request
@@ -84,10 +110,13 @@ async function navegacion(event, url) {
 }
 
 async function cachePrimero(req) {
+  const url = new URL(req.url)
   const enCache = await caches.match(req, { ignoreSearch: true })
-  if (enCache) return enCache
-  const res = await fetch(req)
-  if (res.ok) {
+  if (enCache && valida(url, enCache)) return enCache
+  let res = await fetch(req)
+  // Respuesta no válida (p. ej. una copia mala en la caché HTTP): una vez más, saltándose la caché.
+  if (!valida(url, res)) res = await fetch(req.url, { cache: 'reload', credentials: 'same-origin' })
+  if (valida(url, res)) {
     const copia = res.clone()
     caches.open(C_ESTATICO).then((c) => c.put(req, copia))
   }

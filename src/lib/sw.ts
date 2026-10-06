@@ -1,42 +1,44 @@
 /**
- * Registro del Service Worker (solo en producción) y flujo de actualización:
- * cuando hay una versión nueva esperando, se emite 'nf:actualizacion' y la UI
- * muestra el aviso "Nueva versión disponible" → activarActualizacion().
+ * Registro del Service Worker (solo en producción) y flujo de actualización.
+ *
+ * El SW nuevo se activa solo (skipWaiting + clients.claim) para que nunca se
+ * quede sirviendo una versión vieja. Si la página ya estaba controlada por un
+ * SW anterior, se emite 'nf:actualizacion' y la UI muestra «Nueva versión
+ * disponible» → activarActualizacion() recarga. Si mientras tanto falla algún
+ * chunk de la versión anterior, recuperacion.ts recarga de forma automática.
  */
 import { esNativa } from './plataforma.ts'
-
-let actualizando = false
 
 export function registrarServiceWorker() {
   // En el APK la web ya va empaquetada: no hace falta Service Worker.
   if (!('serviceWorker' in navigator) || !import.meta.env.PROD || esNativa) return
-  const avisar = (w: ServiceWorker) => window.dispatchEvent(new CustomEvent<ServiceWorker>('nf:actualizacion', { detail: w }))
+  const habiaControlador = !!navigator.serviceWorker.controller
+  let avisado = false
 
   window.addEventListener('load', () => {
     navigator.serviceWorker
-      .register('/sw.js', { scope: '/' })
+      // updateViaCache 'none': las comprobaciones de /sw.js nunca salen de la caché HTTP
+      // (el dominio puede alargar su Cache-Control).
+      .register('/sw.js', { scope: '/', updateViaCache: 'none' })
       .then((reg) => {
-        if (reg.waiting && navigator.serviceWorker.controller) avisar(reg.waiting)
-        reg.addEventListener('updatefound', () => {
-          const nuevo = reg.installing
-          nuevo?.addEventListener('statechange', () => {
-            if (nuevo.state === 'installed' && navigator.serviceWorker.controller) avisar(nuevo)
-          })
-        })
-        const comprobar = () => void reg.update().catch(() => {})
+        // Un SW de una versión antigua (sin skipWaiting automático) puede quedarse esperando.
+        reg?.waiting?.postMessage({ tipo: 'SKIP_WAITING' })
+        const comprobar = () => void reg?.update().catch(() => {})
         setInterval(comprobar, 60 * 60 * 1000)
         document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && comprobar())
       })
       .catch((e) => console.warn('[sw] registro fallido', e))
   })
 
-  // Recargar solo cuando el usuario ha pedido actualizar (no en la 1.ª instalación).
+  // Primera instalación: no hay nada que avisar. Cambio de versión: aviso (una vez).
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (actualizando) window.location.reload()
+    if (!habiaControlador || avisado) return
+    avisado = true
+    window.dispatchEvent(new CustomEvent('nf:actualizacion'))
   })
 }
 
-export function activarActualizacion(w: ServiceWorker) {
-  actualizando = true
-  w.postMessage({ tipo: 'SKIP_WAITING' })
+/** «Actualizar»: el SW nuevo ya controla la página; basta con recargar. */
+export function activarActualizacion() {
+  window.location.reload()
 }

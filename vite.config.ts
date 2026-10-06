@@ -29,6 +29,7 @@ function nutrifitSW(): Plugin {
           (u) =>
             /^\/assets\/.+\.(js|css)$/.test(u) ||
             u === '/fonts/outfit-latin-var.woff2' ||
+            u === '/boot.js' ||
             u === '/manifest.webmanifest' ||
             u === '/favicon.svg' ||
             u === '/logo.svg' ||
@@ -62,5 +63,20 @@ export default defineConfig({
     // redirige a las Pages Functions locales de Wrangler.
     proxy: { '/api': 'http://localhost:8788' },
   },
-  build: { outDir: 'dist', sourcemap: false, target: 'es2022', modulePreload: { polyfill: false } },
+  build: {
+    outDir: 'dist',
+    sourcemap: false,
+    target: 'es2022',
+    modulePreload: { polyfill: false },
+    rolldownOptions: {
+      // «nombre.hash» (antes «nombre-hash»): estrena TODAS las URLs de /assets para que
+      // ningún navegador reutilice copias malas (index.html servido como JS/CSS con
+      // caché inmutable) guardadas durante los despliegues del 6-oct-2026.
+      output: {
+        entryFileNames: 'assets/[name].[hash].js',
+        chunkFileNames: 'assets/[name].[hash].js',
+        assetFileNames: 'assets/[name].[hash][extname]',
+      },
+    },
+  },
 })

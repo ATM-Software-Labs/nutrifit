@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="robots" content="noindex" />
+    <title>Recurso no encontrado · NutriFit</title>
+  </head>
+  <body>
+    <!-- Recurso con hash inexistente (p. ej. de un despliegue anterior). Devolver un 404
+         real —en vez del index.html del fallback SPA con 200— permite que el navegador,
+         el Service Worker y public/boot.js detecten el fallo y recarguen la versión actual.
+         Solo afecta a /assets/*: las rutas de la SPA (/descargar, /privacidad…) siguen
+         recibiendo index.html porque no hay 404.html en la raíz. -->
+    <p>Recurso no encontrado.</p>
+  </body>
+</html>

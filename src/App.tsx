@@ -104,11 +104,11 @@ export default function App() {
 
   // Aviso de nueva versión del Service Worker.
   useEffect(() => {
-    const f = (e: Event) =>
+    const f = () =>
       toast({
         mensaje: 'Nueva versión disponible',
         duracion: 0,
-        accion: { etiqueta: 'Actualizar', onClick: () => activarActualizacion((e as CustomEvent<ServiceWorker>).detail) },
+        accion: { etiqueta: 'Actualizar', onClick: activarActualizacion },
       })
     window.addEventListener('nf:actualizacion', f)
     return () => window.removeEventListener('nf:actualizacion', f)
