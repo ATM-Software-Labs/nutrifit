@@ -1,0 +1,24 @@
+# NutriFit · Cloudflare Pages (+ Pages Functions en /functions)
+# Docs: https://developers.cloudflare.com/pages/functions/wrangler-configuration/
+name = "nutrifit"
+compatibility_date = "2026-10-01"
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = "dist"
+
+[vars]
+ENVIRONMENT = "production"
+
+# --- Cloudflare D1 (fase posterior) ------------------------------------------
+# Crear con:  npx wrangler d1 create nutrifit-db   y pegar aquí el database_id.
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "nutrifit-db"
+# database_id = "<PENDIENTE>"
+# migrations_dir = "migrations"
+
+# --- Workers AI (fase posterior) ---------------------------------------------
+# [ai]
+# binding = "AI"
+
+# Secretos (NO van aquí): wrangler pages secret put GEMINI_API_KEY / BREVO_API_KEY
+# En local se leen de .dev.vars (ver .dev.vars.example).

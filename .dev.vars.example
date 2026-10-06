@@ -1,0 +1,6 @@
+# Copia este archivo a .dev.vars (ignorado por git) para desarrollo local con
+# `npm run pages:dev`. En producción usa: wrangler pages secret put <NOMBRE>
+ENVIRONMENT=development
+GEMINI_API_KEY=
+BREVO_API_KEY=
+BREVO_SENDER_EMAIL=
