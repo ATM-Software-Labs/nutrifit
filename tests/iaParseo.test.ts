@@ -85,3 +85,22 @@ test('valores negativos o absurdos → ErrorParseo', () => {
 test('extraerJson devuelve el PRIMER objeto', () => {
   assert.deepEqual(extraerJson('a {"x":1} b {"y":2}'), { x: 1 })
 })
+
+// ---------------------------------------------------------------- texto (Workers AI)
+import { contenidoWorkersAI } from '../functions/utils/ia.ts'
+import { normalizarProducto } from '../functions/utils/off.ts'
+
+test('contenidoWorkersAI: formato OpenAI (choices) y clásico (response)', () => {
+  const json = '{"nombre_plato":"Tostada","ingredientes":[],"calorias":200,"proteinas":5,"carbohidratos":30,"grasas":6}'
+  assert.equal(parsearRespuestaModelo(contenidoWorkersAI({ choices: [{ message: { content: json } }] })).calorias, 200)
+  assert.equal(parsearRespuestaModelo(contenidoWorkersAI({ response: JSON.parse(json) })).nombre_plato, 'Tostada')
+  assert.equal(parsearRespuestaModelo(contenidoWorkersAI({ response: '```json\n' + json + '\n```' })).grasas, 6)
+})
+
+test('Open Food Facts: normaliza por 100 g, kJ→kcal y descarta basura', () => {
+  const p = normalizarProducto({ code: '8480000610553', product_name: 'Gazpacho <b>', brands: 'Hacendado,Otra', nutriments: { 'energy-kcal_100g': 52, proteins_100g: '1,2', carbohydrates_100g: 11, fat_100g: 0 } })
+  assert.deepEqual(p, { codigo: '8480000610553', nombre: 'Gazpacho b', marca: 'Hacendado', por100: { calorias: 52, proteinas: 1.2, carbohidratos: 11, grasas: 0 }, racion: null })
+  assert.equal(normalizarProducto({ product_name: 'X', nutriments: { 'energy-kj_100g': 418.4 } })?.por100.calorias, 100)
+  assert.equal(normalizarProducto({ product_name: '', nutriments: { 'energy-kcal_100g': 10 } }), null)
+  assert.equal(normalizarProducto({ product_name: 'Sin datos', nutriments: {} }), null)
+})

@@ -16,7 +16,7 @@
  *          (pedir enlace, canjear token), nunca con cookie;
  *        · resto: Origin obligatorio y en la lista permitida (+ Sec-Fetch-Site ≠ cross-site);
  *        · Content-Type JSON o multipart (bloquea CSRF por formularios "simples");
- *        · rate limit 20/min por IP en /api/comidas/analizar;
+ *        · rate limit 20/min por IP en /api/comidas/analizar y /analizar-texto;
  *        · Turnstile obligatorio en RUTAS_TURNSTILE.
  *      El resto de escrituras autenticadas se apoyan en sesión + SameSite=Strict
  *      + comprobación de Origin (Turnstile sería impracticable en cada guardado).
@@ -33,9 +33,9 @@ import { claveLimite, exigirLimite, limpiezaOportunista } from './utils/rateLimi
 const ESCRITURA = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 
 /** Escrituras que exigen Turnstile (anónimas o caras). */
-export const RUTAS_TURNSTILE = new Set(['/api/auth/solicitar', '/api/usuarios/perfil', '/api/comidas/analizar'])
+export const RUTAS_TURNSTILE = new Set(['/api/auth/solicitar', '/api/usuarios/perfil', '/api/comidas/analizar', '/api/comidas/analizar-texto'])
 /** Rutas con Turnstile que además requieren sesión: se comprueba ANTES de gastar el token. */
-const RUTAS_SESION_PREVIA = new Set(['/api/usuarios/perfil', '/api/comidas/analizar'])
+const RUTAS_SESION_PREVIA = new Set(['/api/usuarios/perfil', '/api/comidas/analizar', '/api/comidas/analizar-texto'])
 
 /** Orígenes del WebView de Capacitor (APK). */
 export const ORIGENES_APP = new Set(['https://localhost', 'capacitor://localhost'])
@@ -151,7 +151,7 @@ export const onRequest: Handler = async (ctx) => {
       }
       comprobarContentType(request)
 
-      if (url.pathname === '/api/comidas/analizar') {
+      if (url.pathname === '/api/comidas/analizar' || url.pathname === '/api/comidas/analizar-texto') {
         await exigirLimite(env, await claveLimite('analizar:ip', datos.ip), 20, 60)
       }
       if (RUTAS_TURNSTILE.has(url.pathname)) {
