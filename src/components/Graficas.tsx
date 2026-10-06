@@ -119,7 +119,7 @@ export function GraficaBarras({
       {meta ? (
         <g>
           <line x1={PAD.l} x2={W - PAD.r} y1={sy(meta)} y2={sy(meta)} className="stroke-mint-600 dark:stroke-mint-400" strokeWidth="1.25" strokeDasharray="5 4" />
-          <text x={W - PAD.r} y={sy(meta) - 5} textAnchor="end" className="fill-mint-700 text-[10px] font-medium dark:fill-mint-400">
+          <text x={W - PAD.r} y={sy(meta) - 5} textAnchor="end" paintOrder="stroke" strokeWidth="4" strokeLinejoin="round" className="fill-mint-700 stroke-card text-[10px] font-medium dark:fill-mint-400 dark:stroke-card-dark">
             {etiquetaMeta ?? `Objetivo ${entero(meta)} ${unidad}`}
           </text>
         </g>
