@@ -33,6 +33,8 @@
   Cache-Control: no-cache
 /sw.js
   Cache-Control: no-cache
+/boot.js
+  Cache-Control: no-cache
 
 # Fuente autoalojada (nombre estable; cambia rara vez).
 /fonts/*
