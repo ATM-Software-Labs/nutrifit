@@ -83,7 +83,7 @@ export default function GraficaPeso({ usuario }: { usuario: Usuario }) {
   const cambio = ultimo && primero && registros!.length > 1 ? ultimo.peso - primero.peso : null
 
   return (
-    <section className="tarjeta p-5" aria-labelledby="titulo-peso">
+    <section id="peso" className="tarjeta scroll-mt-6 p-5" aria-labelledby="titulo-peso">
       <div className="flex items-start justify-between">
         <div>
           <h2 id="titulo-peso" className="flex items-center gap-2 font-semibold">

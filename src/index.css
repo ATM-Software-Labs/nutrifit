@@ -116,3 +116,27 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Informe PDF (Exportar → Informe): al imprimir solo se ve .nf-informe. */
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
+  :root,
+  body {
+    background: #fff !important;
+    color-scheme: light;
+  }
+  body > :not(.nf-informe) {
+    display: none !important;
+  }
+  .nf-informe {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .nf-evitar-corte,
+  .nf-informe tr {
+    break-inside: avoid;
+  }
+}

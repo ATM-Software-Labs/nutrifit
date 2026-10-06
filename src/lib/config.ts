@@ -13,3 +13,6 @@ export const URL_PRIVACIDAD_REPO = `${URL_REPO}/blob/main/PRIVACIDAD.md`
 
 /** API de producción: la usa la app Android (su web corre en https://localhost). */
 export const URL_API_NATIVA: string = (env.VITE_API_URL || 'https://nutri.trujillomingorance.com').replace(/\/$/, '')
+
+/** Meta diaria de agua (ml) del widget y del historial. */
+export const META_AGUA_ML = 2500

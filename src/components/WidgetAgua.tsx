@@ -3,8 +3,7 @@ import { Droplet, Minus } from 'lucide-react'
 import { useToast } from './ui/Toast.tsx'
 import { api } from '../lib/api.ts'
 import { litros } from '../lib/formato.ts'
-
-const META_ML = 2500
+import { META_AGUA_ML as META_ML } from '../lib/config.ts'
 
 /** Agua del día: barra de progreso y +250/+500 ml con estado optimista. */
 export function WidgetAgua({ fecha, inicial, onCambio }: { fecha: string; inicial: number; onCambio?: (ml: number) => void }) {
@@ -34,7 +33,7 @@ export function WidgetAgua({ fecha, inicial, onCambio }: { fecha: string; inicia
 
   const pct = Math.min(100, Math.round((ml / META_ML) * 100))
   return (
-    <section className="tarjeta p-5" aria-labelledby="titulo-agua">
+    <section id="agua" className="tarjeta scroll-mt-6 p-5" aria-labelledby="titulo-agua">
       <div className="flex items-center justify-between">
         <h2 id="titulo-agua" className="flex items-center gap-2 font-semibold">
           <Droplet size={16} strokeWidth={2} className="text-water" /> Agua
