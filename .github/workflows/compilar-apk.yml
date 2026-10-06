@@ -80,7 +80,10 @@ jobs:
           cache: gradle
 
       - name: Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
+        with:
+          # v3 instalaba por defecto el paquete obsoleto 'tools' y fallaba.
+          packages: 'platform-tools'
 
       - name: Capacitor sync
         run: npx cap sync android
