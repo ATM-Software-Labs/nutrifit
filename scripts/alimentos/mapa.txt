@@ -1,0 +1,364 @@
+# Nombre|categoría|ración (g)|descripción USDA SR Legacy (exacta)
+Manzana|Frutas|180|Apples, raw, with skin (Includes foods for USDA's Food Distribution Program)
+Manzana sin piel|Frutas|160|Apples, raw, without skin
+Pera|Frutas|170|Pears, raw
+Plátano|Frutas|120|Bananas, raw
+Naranja|Frutas|180|Oranges, raw, all commercial varieties
+Mandarina|Frutas|80|Tangerines, (mandarin oranges), raw
+Limón|Frutas|60|Lemons, raw, without peel
+Pomelo|Frutas|250|Grapefruit, raw, pink and red, all areas
+Fresas|Frutas|150|Strawberries, raw
+Uvas|Frutas|120|Grapes, red or green (European type, such as Thompson seedless), raw
+Sandía|Frutas|300|Watermelon, raw
+Melón|Frutas|250|Melons, cantaloupe, raw
+Melón (piel de sapo)|Frutas|250|Melons, honeydew, raw
+Melocotón|Frutas|150|Peaches, yellow, raw
+Nectarina|Frutas|140|Nectarines, raw
+Albaricoque|Frutas|40|Apricots, raw
+Ciruela|Frutas|65|Plums, raw
+Cerezas|Frutas|120|Cherries, sweet, raw
+Kiwi|Frutas|75|Kiwifruit, green, raw
+Piña|Frutas|165|Pineapple, raw, all varieties
+Mango|Frutas|200|Mangos, raw
+Papaya|Frutas|150|Papayas, raw
+Aguacate|Frutas|100|Avocados, raw, all commercial varieties
+Higos|Frutas|50|Figs, raw
+Granada|Frutas|150|Pomegranates, raw
+Caqui|Frutas|170|Persimmons, japanese, raw
+Arándanos|Frutas|100|Blueberries, raw
+Frambuesas|Frutas|100|Raspberries, raw
+Moras|Frutas|100|Blackberries, raw
+Chirimoya|Frutas|200|Cherimoya, raw
+Níspero|Frutas|50|Loquats, raw
+Coco (pulpa)|Frutas|40|Nuts, coconut meat, raw
+Dátiles|Frutas|30|Dates, medjool
+Pasas|Frutas|30|Raisins, dark, seedless (Includes foods for USDA's Food Distribution Program)
+Ciruelas pasas|Frutas|40|Plums, dried (prunes), uncooked
+Orejones de albaricoque|Frutas|40|Apricots, dried, sulfured, uncooked
+Higos secos|Frutas|40|Figs, dried, uncooked
+Macedonia en almíbar|Frutas|150|Fruit cocktail, (peach and pineapple and pear and grape and cherry), canned, heavy syrup, solids and liquids
+Melocotón en almíbar|Frutas|150|Peaches, canned, heavy syrup pack, solids and liquids
+Tomate|Verduras|150|Tomatoes, red, ripe, raw, year round average
+Tomate cherry|Verduras|100|Tomatoes, red, ripe, raw, year round average
+Tomate triturado|Verduras|100|Tomatoes, crushed, canned
+Lechuga|Verduras|80|Lettuce, cos or romaine, raw
+Lechuga iceberg|Verduras|80|Lettuce, iceberg (includes crisphead types), raw
+Canónigos|Verduras|50|Cornsalad, raw
+Rúcula|Verduras|40|Arugula, raw
+Espinacas|Verduras|100|Spinach, raw
+Espinacas cocidas|Verduras|180|Spinach, cooked, boiled, drained, without salt
+Acelgas cocidas|Verduras|175|Chard, swiss, cooked, boiled, drained, without salt
+Pepino|Verduras|120|Cucumber, with peel, raw
+Pimiento rojo|Verduras|120|Peppers, sweet, red, raw
+Pimiento verde|Verduras|120|Peppers, sweet, green, raw
+Pimiento asado|Verduras|100|Peppers, sweet, red, cooked, boiled, drained, without salt
+Cebolla|Verduras|100|Onions, raw
+Cebolleta|Verduras|30|Onions, spring or scallions (includes tops and bulb), raw
+Ajo|Verduras|5|Garlic, raw
+Puerro|Verduras|90|Leeks, (bulb and lower leaf-portion), raw
+Zanahoria|Verduras|80|Carrots, raw
+Zanahoria cocida|Verduras|150|Carrots, cooked, boiled, drained, without salt
+Calabacín|Verduras|200|Squash, summer, zucchini, includes skin, raw
+Calabacín cocinado|Verduras|180|Squash, summer, zucchini, includes skin, cooked, boiled, drained, without salt
+Berenjena|Verduras|200|Eggplant, raw
+Berenjena cocinada|Verduras|150|Eggplant, cooked, boiled, drained, without salt
+Calabaza|Verduras|200|Pumpkin, raw
+Calabaza asada|Verduras|200|Pumpkin, cooked, boiled, drained, without salt
+Brócoli|Verduras|150|Broccoli, raw
+Brócoli cocido|Verduras|150|Broccoli, cooked, boiled, drained, without salt
+Coliflor|Verduras|150|Cauliflower, raw
+Coliflor cocida|Verduras|150|Cauliflower, cooked, boiled, drained, without salt
+Coles de Bruselas cocidas|Verduras|150|Brussels sprouts, cooked, boiled, drained, without salt
+Repollo|Verduras|100|Cabbage, raw
+Lombarda|Verduras|100|Cabbage, red, raw
+Judías verdes cocidas|Verduras|200|Beans, snap, green, cooked, boiled, drained, without salt
+Judías verdes|Verduras|150|Beans, snap, green, raw
+Guisantes cocidos|Verduras|100|Peas, green, cooked, boiled, drained, without salt
+Guisantes congelados|Verduras|100|Peas, green, frozen, unprepared (Includes foods for USDA's Food Distribution Program)
+Alcachofa cocida|Verduras|120|Artichokes, (globe or french), cooked, boiled, drained, without salt
+Espárragos verdes|Verduras|120|Asparagus, raw
+Espárragos blancos (lata)|Verduras|100|Asparagus, canned, drained solids
+Champiñones|Verduras|100|Mushrooms, white, raw
+Champiñones salteados|Verduras|100|Mushrooms, white, stir-fried
+Setas (shiitake)|Verduras|100|Mushrooms, shiitake, raw
+Remolacha cocida|Verduras|100|Beets, cooked, boiled, drained
+Apio|Verduras|60|Celery, raw
+Rábanos|Verduras|50|Radishes, raw
+Maíz dulce (lata)|Verduras|80|Corn, sweet, yellow, canned, whole kernel, drained solids
+Mazorca de maíz cocida|Verduras|150|Corn, sweet, yellow, cooked, boiled, drained, without salt
+Patata|Verduras|200|Potatoes, flesh and skin, raw
+Patata cocida|Verduras|200|Potatoes, boiled, cooked without skin, flesh, without salt
+Patata asada|Verduras|200|Potatoes, baked, flesh and skin, without salt
+Patatas fritas (caseras)|Verduras|150|Potatoes, french fried, all types, salt not added in processing, frozen, oven-heated
+Patatas fritas de bolsa|Dulces y snacks|30|Snacks, potato chips, plain, salted
+Puré de patatas|Verduras|200|Potatoes, mashed, home-prepared, whole milk and butter added
+Boniato|Verduras|200|Sweet potato, raw, unprepared (Includes foods for USDA's Food Distribution Program)
+Boniato asado|Verduras|200|Sweet potato, cooked, baked in skin, flesh, without salt
+Aceitunas verdes|Verduras|30|Olives, pickled, canned or bottled, green
+Aceitunas negras|Verduras|30|Olives, ripe, canned (small-extra large)
+Pepinillos|Verduras|30|Pickles, cucumber, dill or kosher dill
+Lentejas cocidas|Legumbres|200|Lentils, mature seeds, cooked, boiled, without salt
+Lentejas secas|Legumbres|70|Lentils, raw
+Garbanzos cocidos|Legumbres|200|Chickpeas (garbanzo beans, bengal gram), mature seeds, cooked, boiled, without salt
+Garbanzos secos|Legumbres|70|Chickpeas (garbanzo beans, bengal gram), mature seeds, raw
+Garbanzos (bote)|Legumbres|200|Chickpeas (garbanzo beans, bengal gram), mature seeds, canned, drained, rinsed in tap water
+Alubias blancas cocidas|Legumbres|200|Beans, white, mature seeds, cooked, boiled, without salt
+Alubias rojas cocidas|Legumbres|200|Beans, kidney, all types, mature seeds, cooked, boiled, without salt
+Alubias pintas cocidas|Legumbres|200|Beans, pinto, mature seeds, cooked, boiled, without salt
+Alubias negras cocidas|Legumbres|200|Beans, black, mature seeds, cooked, boiled, without salt
+Habas cocidas|Legumbres|150|Broadbeans (fava beans), mature seeds, cooked, boiled, without salt
+Proteína de soja (concentrado)|Legumbres|50|Soy protein concentrate, produced by alcohol extraction
+Edamame|Legumbres|100|Edamame, frozen, prepared
+Tofu|Legumbres|125|Tofu, firm, prepared with calcium sulfate and magnesium chloride (nigari)
+Hummus|Legumbres|50|Hummus, commercial
+Pan blanco (barra)|Cereales y pan|60|Bread, french or vienna (includes sourdough)
+Pan de molde|Cereales y pan|50|Bread, white, commercially prepared (includes soft bread crumbs)
+Pan de molde integral|Cereales y pan|50|Bread, whole-wheat, commercially prepared
+Pan integral|Cereales y pan|60|Bread, whole-wheat, commercially prepared
+Pan tostado|Cereales y pan|30|Bread, white, commercially prepared, toasted
+Pan de centeno|Cereales y pan|60|Bread, rye
+Pan multicereales|Cereales y pan|60|Bread, multi-grain (includes whole-grain)
+Pan de pita|Cereales y pan|60|Bread, pita, white, enriched
+Biscotes|Cereales y pan|20|Zwieback
+Picos de pan|Cereales y pan|30|Bread, sticks, plain
+Tortilla de trigo (wrap)|Cereales y pan|60|Tortillas, ready-to-bake or -fry, flour, refrigerated
+Tortilla de maíz|Cereales y pan|30|Tortillas, ready-to-bake or -fry, corn
+Croissant|Cereales y pan|60|Croissants, butter
+Magdalena|Dulces y snacks|40|Muffins, plain, prepared from recipe, made with low fat (2%) milk
+Arroz blanco cocido|Cereales y pan|180|Rice, white, long-grain, regular, enriched, cooked
+Arroz blanco crudo|Cereales y pan|80|Rice, white, long-grain, regular, raw, enriched
+Arroz integral cocido|Cereales y pan|180|Rice, brown, long-grain, cooked (Includes foods for USDA's Food Distribution Program)
+Arroz integral crudo|Cereales y pan|80|Rice, brown, long-grain, raw (Includes foods for USDA's Food Distribution Program)
+Arroz basmati cocido|Cereales y pan|180|Rice, white, long-grain, regular, unenriched, cooked without salt
+Pasta cocida|Cereales y pan|200|Pasta, cooked, enriched, without added salt
+Pasta cruda|Cereales y pan|80|Pasta, dry, enriched
+Pasta integral cocida|Cereales y pan|200|Pasta, whole-wheat, cooked (Includes foods for USDA's Food Distribution Program)
+Pasta fresca cocida|Cereales y pan|125|Pasta, fresh-refrigerated, plain, cooked
+Fideos de arroz cocidos|Cereales y pan|175|Rice noodles, cooked
+Cuscús cocido|Cereales y pan|150|Couscous, cooked
+Quinoa cocida|Cereales y pan|150|Quinoa, cooked
+Copos de avena|Cereales y pan|40|Cereals, oats, regular and quick, not fortified, dry
+Gachas de avena (con agua)|Cereales y pan|240|Cereals, oats, regular and quick, unenriched, cooked with water (includes boiling and microwaving), without salt
+Muesli|Cereales y pan|50|Cereals ready-to-eat, granola, homemade
+Cereales de maíz (copos)|Cereales y pan|30|Cereals ready-to-eat, RALSTON Corn Flakes
+Harina de trigo|Cereales y pan|30|Wheat flour, white, all-purpose, enriched, bleached
+Harina de maíz|Cereales y pan|30|Cornmeal, whole-grain, yellow
+Tortitas de arroz|Cereales y pan|10|Snacks, rice cakes, brown rice, multigrain
+Pan rallado|Cereales y pan|20|Bread, crumbs, dry, grated, plain
+Galletas María|Dulces y snacks|30|Cookies, vanilla wafers, lower fat
+Galletas digestive|Dulces y snacks|30|Cookies, graham crackers, plain or honey (includes cinnamon)
+Galletas con chocolate|Dulces y snacks|30|Cookies, chocolate chip, commercially prepared, regular, higher fat, enriched
+Leche entera|Lácteos|250|Milk, whole, 3.25% milkfat, with added vitamin D
+Leche semidesnatada|Lácteos|250|Milk, reduced fat, fluid, 2% milkfat, with added vitamin A and vitamin D
+Leche desnatada|Lácteos|250|Milk, nonfat, fluid, with added vitamin A and vitamin D (fat free or skim)
+Bebida de soja|Lácteos|250|Soymilk, original and vanilla, unfortified
+Bebida de almendra|Lácteos|250|Beverages, almond milk, unsweetened, shelf stable
+Yogur natural|Lácteos|125|Yogurt, plain, whole milk
+Yogur desnatado|Lácteos|125|Yogurt, plain, skim milk
+Yogur griego|Lácteos|125|Yogurt, Greek, plain, whole milk
+Yogur griego 0 %|Lácteos|125|Yogurt, Greek, plain, nonfat (Includes foods for USDA's Food Distribution Program)
+Yogur de sabores|Lácteos|125|Yogurt, fruit, low fat, 10 grams protein per 8 ounce
+Kéfir|Lácteos|200|Kefir, lowfat, plain, LIFEWAY
+Queso fresco|Lácteos|60|Cheese, fresh, queso fresco
+Requesón|Lácteos|100|Cheese, cottage, creamed, large or small curd
+Queso cottage|Lácteos|100|Cheese, cottage, lowfat, 2% milkfat
+Queso batido 0 %|Lácteos|125|Cheese, cottage, nonfat, uncreamed, dry, large or small curd
+Mozzarella|Lácteos|60|Cheese, mozzarella, whole milk
+Mozzarella light|Lácteos|60|Cheese, mozzarella, low moisture, part-skim
+Queso curado|Lácteos|30|Cheese, mexican, queso anejo
+Queso semicurado|Lácteos|40|Cheese, gouda
+Queso de cabra|Lácteos|30|Cheese, goat, semisoft type
+Queso de cabra tierno|Lácteos|30|Cheese, goat, soft type
+Queso parmesano|Lácteos|10|Cheese, parmesan, grated
+Queso emmental|Lácteos|30|Cheese, swiss
+Queso cheddar|Lácteos|30|Cheese, cheddar (Includes foods for USDA's Food Distribution Program)
+Queso feta|Lácteos|30|Cheese, feta
+Queso azul|Lácteos|30|Cheese, blue
+Queso brie|Lácteos|30|Cheese, brie
+Queso en lonchas|Lácteos|20|Cheese, pasteurized process, American, fortified with vitamin D
+Queso crema (untar)|Lácteos|20|Cheese, cream
+Queso rallado (mezcla)|Lácteos|20|Cheese, Mexican blend
+Nata para cocinar|Lácteos|50|Cream, fluid, light (coffee cream or table cream)
+Nata para montar|Lácteos|50|Cream, fluid, heavy whipping
+Nata montada (spray)|Lácteos|10|Cream, whipped, cream topping, pressurized
+Mantequilla|Aceites y grasas|10|Butter, salted
+Margarina|Aceites y grasas|10|Margarine, regular, 80% fat, composite, stick, with salt
+Natillas|Lácteos|125|Puddings, vanilla, ready-to-eat
+Flan|Lácteos|100|Desserts, flan, caramel custard, prepared-from-recipe
+Arroz con leche|Lácteos|150|Puddings, rice, ready-to-eat
+Helado de vainilla|Dulces y snacks|80|Ice creams, vanilla
+Helado de chocolate|Dulces y snacks|80|Ice creams, chocolate
+Batido de chocolate|Lácteos|250|Milk, chocolate, fluid, commercial, reduced fat, with added vitamin A and vitamin D
+Huevo|Huevos|60|Egg, whole, raw, fresh
+Huevo cocido|Huevos|60|Egg, whole, cooked, hard-boiled
+Huevo frito|Huevos|60|Egg, whole, cooked, fried
+Huevos revueltos|Huevos|120|Egg, whole, cooked, scrambled
+Huevo escalfado|Huevos|60|Egg, whole, cooked, poached
+Tortilla francesa|Huevos|120|Egg, whole, cooked, omelet
+Clara de huevo|Huevos|33|Egg, white, raw, fresh
+Yema de huevo|Huevos|17|Egg, yolk, raw, fresh
+Pechuga de pollo cruda|Carnes|150|Chicken, broiler or fryers, breast, skinless, boneless, meat only, raw
+Pechuga de pollo a la plancha|Carnes|150|Chicken, broilers or fryers, breast, meat only, cooked, roasted
+Muslo de pollo asado|Carnes|150|Chicken, broilers or fryers, thigh, meat only, cooked, roasted
+Contramuslo de pollo crudo|Carnes|150|Chicken, broilers or fryers, dark meat, thigh, meat only, raw
+Alitas de pollo asadas|Carnes|120|Chicken, broilers or fryers, wing, meat and skin, cooked, roasted
+Pollo asado (con piel)|Carnes|200|Chicken, broilers or fryers, meat and skin, cooked, roasted
+Pollo empanado (nuggets)|Carnes|100|Fast foods, chicken tenders
+Pavo (pechuga)|Carnes|150|Turkey, whole, breast, meat only, raw
+Pavo asado|Carnes|150|Turkey, whole, breast, meat only, cooked, roasted
+Pechuga de pavo (fiambre)|Embutidos|40|Turkey breast, sliced, prepackaged
+Ternera (filete)|Carnes|150|Beef, top sirloin, steak, separable lean only, trimmed to 1/8" fat, choice, raw
+Ternera a la plancha|Carnes|150|Beef, top sirloin, steak, separable lean only, trimmed to 1/8" fat, choice, cooked, broiled
+Carne picada de ternera|Carnes|125|Beef, ground, 85% lean meat / 15% fat, raw (Includes foods for USDA's Food Distribution Program)
+Carne picada de ternera cocinada|Carnes|125|Beef, ground, 85% lean meat / 15% fat, patty, cooked, broiled
+Entrecot|Carnes|200|Beef, rib eye steak, boneless, lip-on, separable lean only, trimmed to 1/8" fat, all grades, cooked, grilled
+Solomillo de ternera|Carnes|150|Beef, tenderloin, steak, separable lean only, trimmed to 1/8" fat, all grades, cooked, broiled
+Hamburguesa de ternera|Carnes|120|Beef, ground, 80% lean meat / 20% fat, patty, cooked, broiled
+Cerdo (lomo)|Carnes|150|Pork, fresh, loin, center loin (chops), bone-in, separable lean only, raw
+Lomo de cerdo a la plancha|Carnes|150|Pork, fresh, loin, center loin (chops), bone-in, separable lean only, cooked, broiled
+Solomillo de cerdo|Carnes|150|Pork, fresh, loin, tenderloin, separable lean only, cooked, roasted
+Costillas de cerdo|Carnes|200|Pork, fresh, spareribs, separable lean and fat, cooked, braised
+Panceta|Carnes|50|Pork, fresh, belly, raw
+Carne picada de cerdo|Carnes|125|Pork, fresh, ground, raw
+Cordero (chuletas)|Carnes|150|Lamb, loin, separable lean and fat, trimmed to 1/4" fat, choice, cooked, broiled
+Conejo|Carnes|150|Game meat, rabbit, domesticated, composite of cuts, cooked, roasted
+Hígado de ternera|Carnes|100|Beef, variety meats and by-products, liver, cooked, pan-fried
+Pato|Carnes|150|Duck, domesticated, meat only, cooked, roasted
+Jamón serrano|Embutidos|30|Pork, cured, ham, boneless, extra lean (approximately 5% fat), roasted
+Jamón cocido|Embutidos|40|Ham, sliced, regular (approximately 11% fat)
+Jamón cocido extra|Embutidos|40|Ham, sliced, pre-packaged, deli meat (96%fat free, water added)
+Chorizo|Embutidos|30|Sausage, pork, chorizo, link or ground, raw
+Salchichón / salami|Embutidos|30|Salami, Italian, pork
+Fuet|Embutidos|30|Salami, dry or hard, pork
+Mortadela|Embutidos|30|Bologna, pork
+Salchichas tipo Frankfurt|Embutidos|50|Frankfurter, beef, unheated
+Salchichas frescas|Embutidos|75|Polish sausage, pork
+Bacon|Embutidos|30|Pork, cured, bacon, cooked, baked
+Morcilla|Embutidos|50|Blood sausage
+Paté|Embutidos|30|Pate, liver, not specified, canned
+Merluza / pescadilla|Pescados y mariscos|150|Fish, whiting, mixed species, raw
+Bacalao cocinado|Pescados y mariscos|150|Fish, cod, Atlantic, cooked, dry heat
+Bacalao|Pescados y mariscos|150|Fish, cod, Atlantic, raw
+Bacalao salado (seco)|Pescados y mariscos|150|Fish, cod, Atlantic, dried and salted
+Salmón|Pescados y mariscos|150|Fish, salmon, Atlantic, farmed, raw
+Salmón a la plancha|Pescados y mariscos|150|Fish, salmon, Atlantic, farmed, cooked, dry heat
+Salmón ahumado|Pescados y mariscos|50|Fish, salmon, chinook, smoked
+Atún fresco|Pescados y mariscos|150|Fish, tuna, fresh, yellowfin, raw
+Atún en lata (al natural)|Pescados y mariscos|60|Fish, tuna, light, canned in water, drained solids (Includes foods for USDA's Food Distribution Program)
+Atún en aceite|Pescados y mariscos|60|Fish, tuna, light, canned in oil, drained solids
+Sardinas|Pescados y mariscos|100|Fish, sardine, Atlantic, canned in oil, drained solids with bone
+Sardinas en lata|Pescados y mariscos|50|Fish, sardine, Atlantic, canned in oil, drained solids with bone
+Caballa|Pescados y mariscos|150|Fish, mackerel, Atlantic, raw
+Caballa en aceite|Pescados y mariscos|60|Fish, mackerel, jack, canned, drained solids
+Boquerones|Pescados y mariscos|100|Fish, anchovy, european, raw
+Anchoas en aceite|Pescados y mariscos|15|Fish, anchovy, european, canned in oil, drained solids
+Dorada / lubina|Pescados y mariscos|150|Fish, sea bass, mixed species, cooked, dry heat
+Lenguado|Pescados y mariscos|150|Fish, flatfish (flounder and sole species), raw
+Trucha|Pescados y mariscos|150|Fish, trout, rainbow, farmed, cooked, dry heat
+Rape|Pescados y mariscos|150|Fish, monkfish, raw
+Pez espada|Pescados y mariscos|150|Fish, swordfish, cooked, dry heat
+Gambas / langostinos|Pescados y mariscos|100|Crustaceans, shrimp, raw
+Gambas cocidas|Pescados y mariscos|100|Crustaceans, shrimp, cooked
+Calamar|Pescados y mariscos|100|Mollusks, squid, mixed species, raw
+Calamares a la romana|Pescados y mariscos|100|Mollusks, squid, mixed species, cooked, fried
+Pulpo|Pescados y mariscos|100|Mollusks, octopus, common, cooked, moist heat
+Sepia|Pescados y mariscos|100|Mollusks, cuttlefish, mixed species, cooked, moist heat
+Mejillones|Pescados y mariscos|100|Mollusks, mussel, blue, cooked, moist heat
+Almejas|Pescados y mariscos|100|Mollusks, clam, mixed species, cooked, moist heat
+Berberechos (lata)|Pescados y mariscos|60|Mollusks, clam, mixed species, canned, drained solids
+Ostras|Pescados y mariscos|80|Mollusks, oyster, eastern, wild, raw
+Cangrejo|Pescados y mariscos|100|Crustaceans, crab, blue, cooked, moist heat
+Surimi (palitos de cangrejo)|Pescados y mariscos|60|Fish, surimi
+Almendras|Frutos secos|30|Nuts, almonds
+Almendras tostadas|Frutos secos|30|Nuts, almonds, dry roasted, without salt added
+Nueces|Frutos secos|30|Nuts, walnuts, english
+Avellanas|Frutos secos|30|Nuts, hazelnuts or filberts
+Anacardos|Frutos secos|30|Nuts, cashew nuts, raw
+Pistachos|Frutos secos|30|Nuts, pistachio nuts, dry roasted, with salt added
+Cacahuetes|Frutos secos|30|Peanuts, all types, dry-roasted, with salt
+Crema de cacahuete|Frutos secos|20|Peanut butter, smooth style, without salt
+Pipas de girasol|Frutos secos|30|Seeds, sunflower seed kernels, dried
+Pipas de calabaza|Frutos secos|30|Seeds, pumpkin and squash seed kernels, dried
+Semillas de chía|Frutos secos|15|Seeds, chia seeds, dried
+Semillas de lino|Frutos secos|10|Seeds, flaxseed
+Semillas de sésamo|Frutos secos|10|Seeds, sesame seeds, whole, dried
+Tahini|Frutos secos|15|Seeds, sesame butter, tahini, from roasted and toasted kernels (most common type)
+Castañas asadas|Frutos secos|50|Nuts, chestnuts, european, roasted
+Nueces de macadamia|Frutos secos|30|Nuts, macadamia nuts, raw
+Aceite de oliva|Aceites y grasas|10|Oil, olive, salad or cooking
+Aceite de girasol|Aceites y grasas|10|Oil, sunflower, linoleic, (approx. 65%)
+Aceite de coco|Aceites y grasas|10|Oil, coconut
+Manteca de cerdo|Aceites y grasas|10|Lard
+Mayonesa|Salsas y condimentos|15|Salad dressing, mayonnaise, regular
+Mayonesa light|Salsas y condimentos|15|Salad dressing, mayonnaise, light
+Kétchup|Salsas y condimentos|15|Catsup
+Mostaza|Salsas y condimentos|10|Mustard, prepared, yellow
+Salsa de soja|Salsas y condimentos|15|Soy sauce made from soy and wheat (shoyu)
+Tomate frito|Salsas y condimentos|50|Sauce, pasta, spaghetti/marinara, ready-to-serve
+Salsa barbacoa|Salsas y condimentos|20|Sauce, barbecue
+Pesto|Salsas y condimentos|20|Sauce, pesto, ready-to-serve, refrigerated
+Salsa bechamel|Salsas y condimentos|60|Sauce, white, thin, prepared-from-recipe, with butter
+Vinagre|Salsas y condimentos|10|Vinegar, cider
+Vinagre balsámico|Salsas y condimentos|10|Vinegar, balsamic
+Vinagreta|Salsas y condimentos|15|Salad dressing, italian dressing, commercial, regular
+Caldo de pollo|Salsas y condimentos|250|Soup, chicken broth, ready-to-serve
+Caldo de verduras|Salsas y condimentos|250|Soup, vegetable broth, ready to serve
+Sopa de tomate (lata)|Platos|250|Soup, tomato, canned, prepared with equal volume water, commercial
+Sal|Salsas y condimentos|1|Salt, table
+Azúcar|Dulces y snacks|8|Sugars, granulated
+Azúcar moreno|Dulces y snacks|8|Sugars, brown
+Miel|Dulces y snacks|20|Honey
+Mermelada|Dulces y snacks|20|Jams and preserves
+Sirope de agave|Dulces y snacks|20|Sweetener, syrup, agave
+Cacao en polvo azucarado|Dulces y snacks|15|Beverages, Cocoa mix, powder
+Cacao puro en polvo|Dulces y snacks|10|Cocoa, dry powder, unsweetened
+Chocolate negro 70 %|Dulces y snacks|20|Chocolate, dark, 70-85% cacao solids
+Chocolate con leche|Dulces y snacks|20|Candies, milk chocolate
+Crema de cacao (tipo Nutella)|Dulces y snacks|20|Chocolate-flavored hazelnut spread
+Bizcocho|Dulces y snacks|60|Cake, pound, commercially prepared, butter (includes fresh and frozen)
+Donut|Dulces y snacks|60|Doughnuts, yeast-leavened, glazed, enriched (includes honey buns)
+Tarta de queso|Dulces y snacks|100|Cake, cheesecake, commercially prepared
+Tarta de chocolate|Dulces y snacks|100|Cake, chocolate, commercially prepared with chocolate frosting, in-store bakery
+Napolitana de queso|Dulces y snacks|80|Danish pastry, cheese
+Barrita de cereales|Dulces y snacks|25|Snacks, granola bars, hard, plain
+Palomitas|Dulces y snacks|25|Snacks, popcorn, air-popped
+Palomitas de microondas|Dulces y snacks|30|Snacks, popcorn, microwave, regular (butter) flavor, made with partially hydrogenated oil
+Gominolas|Dulces y snacks|30|Candies, gumdrops, starch jelly pieces
+Nachos|Dulces y snacks|30|Snacks, tortilla chips, plain, white corn, salted
+Pretzels|Dulces y snacks|30|Snacks, pretzels, hard, plain, salted
+Crackers|Dulces y snacks|25|Crackers, standard snack-type, regular
+Pizza margarita|Platos|300|Pizza, cheese topping, regular crust, frozen, cooked
+Pizza de pepperoni|Platos|300|Pizza, pepperoni topping, regular crust, frozen, cooked
+Hamburguesa completa|Platos|220|Fast foods, hamburger; single, regular patty; with condiments
+Hamburguesa con queso|Platos|230|Fast foods, cheeseburger; single, large patty; plain
+Lasaña|Platos|250|Lasagna, cheese, frozen, prepared
+Lasaña de carne|Platos|250|Lasagna with meat & sauce, frozen entree
+Macarrones con queso|Platos|250|Macaroni and Cheese, canned entree
+Burrito|Platos|220|Burrito, beef and bean, microwaved
+Rollito de primavera|Platos|90|Egg rolls, vegetable, frozen, prepared
+Empanadilla|Platos|80|Turnover, meat- and cheese-filled, tomato-based sauce, reduced fat, frozen
+Sopa de fideos|Platos|250|Soup, chicken noodle, canned, prepared with equal volume water
+Crema de champiñones (lata)|Platos|250|Soup, cream of mushroom, canned, prepared with equal volume water
+Café solo|Bebidas|50|Beverages, coffee, brewed, espresso, restaurant-prepared
+Té|Bebidas|200|Beverages, tea, black, brewed, prepared with tap water
+Infusión|Bebidas|200|Beverages, tea, herb, other than chamomile, brewed
+Zumo de naranja natural|Bebidas|200|Orange juice, raw (Includes foods for USDA's Food Distribution Program)
+Zumo de naranja (envase)|Bebidas|200|Orange juice, chilled, includes from concentrate
+Zumo de manzana|Bebidas|200|Apple juice, canned or bottled, unsweetened, without added ascorbic acid
+Zumo de piña|Bebidas|200|Pineapple juice, canned or bottled, unsweetened, without added ascorbic acid
+Refresco de cola|Bebidas|330|Beverages, carbonated, cola, regular
+Refresco de cola zero|Bebidas|330|Beverages, carbonated, low calorie, cola or pepper-type, with aspartame, contains caffeine
+Refresco de naranja|Bebidas|330|Beverages, carbonated, orange
+Refresco de limón|Bebidas|330|Beverages, carbonated, lemon-lime soda, no caffeine
+Tónica|Bebidas|200|Beverages, carbonated, tonic water
+Bebida isotónica|Bebidas|500|Beverages, PEPSICO QUAKER, Gatorade, G performance O 2, ready-to-drink.
+Bebida energética|Bebidas|250|Beverages, Energy drink, RED BULL
+Cerveza|Bebidas|330|Alcoholic beverage, beer, regular, all
+Cerveza sin alcohol|Bebidas|330|Malt beverage, includes non-alcoholic beer
+Vino tinto|Bebidas|150|Alcoholic beverage, wine, table, red
+Vino blanco|Bebidas|150|Alcoholic beverage, wine, table, white
+Cava|Bebidas|120|Alcoholic beverage, wine, table, white, Sauvignon Blanc
+Vermut|Bebidas|100|Alcoholic beverage, wine, dessert, sweet
+Ginebra / ron / whisky|Bebidas|40|Alcoholic beverage, distilled, all (gin, rum, vodka, whiskey) 80 proof
+Agua|Bebidas|250|Beverages, water, tap, drinking
+Proteína whey (polvo)|Suplementos|30|Beverages, Whey protein powder isolate
