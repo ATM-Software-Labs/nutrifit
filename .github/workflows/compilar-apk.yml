@@ -32,8 +32,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      VITE_GITHUB_REPO: ${{ github.repository }}
-      VITE_API_URL: https://nutri.trujillomingorance.com
+      # Variables del repo (Settings → Variables); si no existen, valores por defecto.
+      VITE_GITHUB_REPO: ${{ vars.VITE_GITHUB_REPO || github.repository }}
+      VITE_API_URL: ${{ vars.VITE_API_URL || 'https://nutri.trujillomingorance.com' }}
 
     steps:
       - name: Código

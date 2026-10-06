@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      VITE_GITHUB_REPO: ${{ github.repository }}
+      VITE_GITHUB_REPO: ${{ vars.VITE_GITHUB_REPO || github.repository }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
