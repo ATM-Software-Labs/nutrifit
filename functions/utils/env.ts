@@ -5,6 +5,8 @@
  */
 export interface Env {
   DB: D1Database
+  /** BD aparte con la base de alimentos genéricos (FTS5). Opcional: sin ella se usa solo la lista local. */
+  ALIMENTOS?: D1Database
   AI: Ai
 
   ENVIRONMENT?: string // 'production' | 'development' | 'preview'

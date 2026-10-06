@@ -71,6 +71,9 @@ export async function limpiezaOportunista(env: Env, probabilidad = 0.02) {
       env.DB.prepare('DELETE FROM codigos_login WHERE expira_en < ?1').bind(ahora - 86400),
       env.DB.prepare('DELETE FROM emparejamientos_qr WHERE expira_en < ?1').bind(ahora - 3600),
     ])
+    // Aparte: si la migración 0004 aún no está aplicada, no debe tumbar la limpieza anterior.
+    // Se conserva una semana tras caducar (copia de emergencia si OFF no responde).
+    await env.DB.prepare('DELETE FROM cache_off WHERE expira_en < ?1').bind(ahora - 7 * 86400).run().catch(() => {})
   } catch (e) {
     console.warn('[limpieza] fallo no bloqueante', e)
   }

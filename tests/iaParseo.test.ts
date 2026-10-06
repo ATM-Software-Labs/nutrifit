@@ -99,7 +99,17 @@ test('contenidoWorkersAI: formato OpenAI (choices) y clásico (response)', () =>
 
 test('Open Food Facts: normaliza por 100 g, kJ→kcal y descarta basura', () => {
   const p = normalizarProducto({ code: '8480000610553', product_name: 'Gazpacho <b>', brands: 'Hacendado,Otra', nutriments: { 'energy-kcal_100g': 52, proteins_100g: '1,2', carbohydrates_100g: 11, fat_100g: 0 } })
-  assert.deepEqual(p, { codigo: '8480000610553', nombre: 'Gazpacho b', marca: 'Hacendado', por100: { calorias: 52, proteinas: 1.2, carbohidratos: 11, grasas: 0 }, racion: null })
+  assert.deepEqual(p, {
+    codigo: '8480000610553',
+    nombre: 'Gazpacho b',
+    marca: 'Hacendado',
+    por100: { calorias: 52, proteinas: 1.2, carbohidratos: 11, grasas: 0 },
+    extra: { azucares: null, saturadas: null, fibra: null, sal: null },
+    racion: null,
+    envase: null,
+    unidad: 'g',
+    fuente: 'off',
+  })
   assert.equal(normalizarProducto({ product_name: 'X', nutriments: { 'energy-kj_100g': 418.4 } })?.por100.calorias, 100)
   assert.equal(normalizarProducto({ product_name: '', nutriments: { 'energy-kcal_100g': 10 } }), null)
   assert.equal(normalizarProducto({ product_name: 'Sin datos', nutriments: {} }), null)

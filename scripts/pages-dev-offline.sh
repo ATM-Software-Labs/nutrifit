@@ -15,10 +15,14 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 for d in dist functions src node_modules .dev.vars; do ln -s "$ROOT/$d" "$TMP/$d"; done
 cd "$TMP"
-DB_ID="$(sed -nE 's/^database_id *= *"([^"]+)".*/\1/p' "$ROOT/wrangler.toml")"
+# Ids de D1 por nombre (hay dos BDs: nutrifit-db y nutrifit-alimentos).
+id_bd() { awk -v n="$1" '$1=="database_name"{gsub(/"/,"",$3); actual=$3} $1=="database_id"&&actual==n{gsub(/"/,"",$3); print $3; exit}' "$ROOT/wrangler.toml"; }
+DB_ID="$(id_bd nutrifit-db)"
+ALIMENTOS_ID="$(id_bd nutrifit-alimentos)"
 exec npx wrangler pages dev dist \
   --port "${PORT:-8788}" --inspector-port "${INSPECTOR_PORT:-9229}" \
   --compatibility-date 2026-10-01 \
   --compatibility-flags nodejs_compat \
   --d1 "DB=$DB_ID" \
+  --d1 "ALIMENTOS=$ALIMENTOS_ID" \
   --persist-to "$ROOT/.wrangler/state"

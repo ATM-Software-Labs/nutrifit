@@ -179,6 +179,37 @@ export const offQuery = z.union([
   z.object({ q: texto(60, 2) }),
 ])
 
+export const buscarQuery = z.object({ q: texto(60, 2) })
+
+const g100 = (nombre: string) => numero(0, 100, nombre)
+const g100Opcional = (nombre: string) => z.union([z.null(), g100(nombre)]).optional().default(null)
+
+/** Producto propio (p. ej. creado desde la foto de la etiqueta). Valores por 100 g/ml. */
+export const productoSchema = z
+  .object({
+    codigo: z
+      .union([z.null(), z.literal(''), z.string().trim().regex(/^\d{8,14}$/, { error: 'El código de barras tiene de 8 a 14 cifras.' })])
+      .optional()
+      .transform((v) => v || null),
+    nombre: texto(100),
+    marca: z.union([z.null(), z.literal(''), texto(60)]).optional().transform((v) => v || null),
+    calorias: numero(0, 950, 'Las calorías'),
+    proteinas: g100('Las proteínas'),
+    carbohidratos: g100('Los hidratos'),
+    grasas: g100('Las grasas'),
+    azucares: g100Opcional('Los azúcares'),
+    saturadas: g100Opcional('Las grasas saturadas'),
+    fibra: g100Opcional('La fibra'),
+    sal: g100Opcional('La sal'),
+    racion: z.union([z.null(), numero(1, 2000, 'La ración')]).optional().default(null),
+    envase: z.union([z.null(), numero(1, 10000, 'El envase')]).optional().default(null),
+    unidad: z.enum(['g', 'ml']).default('g'),
+  })
+  .refine((p) => p.proteinas + p.carbohidratos + p.grasas <= 105, { error: 'Los macros suman más de 100 g por 100 g.', path: ['carbohidratos'] })
+  .refine((p) => p.azucares === null || p.azucares <= p.carbohidratos + 0.5, { error: 'Los azúcares no pueden superar a los hidratos.', path: ['azucares'] })
+  .refine((p) => p.saturadas === null || p.saturadas <= p.grasas + 0.5, { error: 'Las saturadas no pueden superar a las grasas.', path: ['saturadas'] })
+export type ProductoEntrada = z.infer<typeof productoSchema>
+
 // ------------------------------------------------------------------ helpers
 export type Issue = { campo: string; mensaje: string }
 

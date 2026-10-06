@@ -24,8 +24,18 @@ database_name = "nutrifit-db"
 database_id = "c7f77ed4-a5d0-4c3a-a686-ecc1fb77d1f1"
 migrations_dir = "migrations"
 
+# Base de alimentos genéricos (USDA + Ciqual) con búsqueda FTS5. Va en una BD
+# APARTE porque D1 no exporta BDs con tablas virtuales: así las copias de
+# seguridad de nutrifit-db (`wrangler d1 export`) siguen funcionando. Son datos
+# de referencia que se regeneran con scripts/alimentos-db/ (ver docs/ALIMENTOS.md).
+[[d1_databases]]
+binding = "ALIMENTOS"
+database_name = "nutrifit-alimentos"
+database_id = "4ca3a77e-63b4-4090-bfa2-05e4032860c4"
+
 # --- Workers AI (fallback de visión) -----------------------------------------
-# Llama 3.2 Vision exige aceptar una vez la licencia de Meta (ver docs/BACKEND.md).
+# Visión sin Gemini: gemma-4 → qwen3.8 → mistral-small (sin licencia de Meta); Llama 3.2
+# Vision queda como último recurso y solo funciona si se aceptó su licencia (docs/BACKEND.md).
 [ai]
 binding = "AI"
 
