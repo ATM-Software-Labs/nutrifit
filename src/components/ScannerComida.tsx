@@ -1,10 +1,11 @@
 /**
  * Análisis de una foto: compresión en cliente (≤ 800 px, WebP 0.7 / JPEG) →
  * /api/comidas/analizar con Turnstile, con animación de "escáner" encima de la
- * miniatura. Errores: 429 (límite diario) y 503 (IA no disponible) → manual.
+ * miniatura. Errores: 429 (límite diario) y 503 (fallaron TODOS los proveedores
+ * de IA) → Reintentar, describir con texto, buscar el alimento o añadir a mano.
  */
 import { useEffect, useRef, useState } from 'react'
-import { CircleAlert, PenLine, RotateCcw, ScanLine } from 'lucide-react'
+import { CircleAlert, MessageSquareText, PenLine, RotateCcw, ScanLine, Search } from 'lucide-react'
 import { Sheet } from './ui/Sheet.tsx'
 import { Button } from './ui/Button.tsx'
 import { useTurnstile } from '../hooks/useTurnstile.ts'
@@ -12,18 +13,23 @@ import { api, ApiError } from '../lib/api.ts'
 import { comprimirImagen, ErrorImagen } from '../lib/imagen.ts'
 import type { ResultadoAnalisis } from '../lib/tipos.ts'
 
-type Estado = { fase: 'procesando' } | { fase: 'error'; mensaje: string; manual: boolean; reintentar: boolean }
+type Estado = { fase: 'procesando' } | { fase: 'error'; mensaje: string; manual: boolean; reintentar: boolean; alternativas?: boolean }
 
 export default function ScannerComida({
   archivo,
   onClose,
   onResultado,
   onManual,
+  onDescribir,
+  onBuscar,
 }: {
   archivo: File
   onClose: () => void
   onResultado: (r: ResultadoAnalisis, imagenUrl: string) => void
   onManual: (imagenUrl: string | null) => void
+  /** Alternativas cuando la IA de visión no responde. */
+  onDescribir?: () => void
+  onBuscar?: () => void
 }) {
   const [estado, setEstado] = useState<Estado>({ fase: 'procesando' })
   const [miniatura, setMiniatura] = useState<string | null>(null)
@@ -52,7 +58,13 @@ export default function ScannerComida({
         else if (e instanceof ApiError && e.status === 429)
           setEstado({ fase: 'error', mensaje: e.message || 'Has alcanzado el límite de análisis de hoy.', manual: true, reintentar: false })
         else if (e instanceof ApiError && e.status === 503)
-          setEstado({ fase: 'error', mensaje: 'La IA no está disponible ahora mismo. Puedes añadir la comida a mano.', manual: true, reintentar: true })
+          setEstado({
+            fase: 'error',
+            mensaje: e.message || 'No hemos podido analizar la foto ahora mismo. Pulsa «Reintentar», descríbela con texto o búscala en la base de alimentos.',
+            manual: true,
+            reintentar: true,
+            alternativas: true,
+          })
         else setEstado({ fase: 'error', mensaje: e instanceof Error ? e.message : 'No se pudo analizar la foto.', manual: true, reintentar: true })
       }
     })()
@@ -117,6 +129,20 @@ export default function ScannerComida({
               </Button>
             )}
           </div>
+          {estado.alternativas && (onDescribir || onBuscar) && (
+            <div className="flex gap-2">
+              {onDescribir && (
+                <Button variant="outline" block size="sm" icon={<MessageSquareText size={16} />} onClick={onDescribir}>
+                  Describir con texto
+                </Button>
+              )}
+              {onBuscar && (
+                <Button variant="outline" block size="sm" icon={<Search size={16} />} onClick={onBuscar}>
+                  Buscar alimento
+                </Button>
+              )}
+            </div>
+          )}
         </div>
       )}
     </Sheet>

@@ -13,8 +13,12 @@ APP_URL = "https://nutri.trujillomingorance.com"
 ALLOWED_ORIGINS = "https://nutri.trujillomingorance.com,https://nutrifit-ac9.pages.dev"
 # Site key PÚBLICA de Turnstile (widget en modo Invisible). En local, .dev.vars usa la clave de prueba.
 TURNSTILE_SITE_KEY = "0x4AAAAAAFPhRCuPz21TsJR5"
-# Modelo de Gemini (Flash estable con free tier en oct-2026).
+# IA «blindada» (functions/utils/ia.ts): orden de la cadena de proveedores. Un
+# proveedor sin clave se salta solo. Ver docs/BACKEND.md §5.
+IA_PROVEEDORES = "gemini,groq,trujillo,workersai"
+# Modelos de Gemini: principal (Flash estable más reciente) y respaldo (Flash-Lite).
 GEMINI_MODEL = "gemini-3.8-flash"
+GEMINI_MODEL_RESPALDO = "gemini-3.5-flash-lite"
 
 # --- Cloudflare D1 -----------------------------------------------------------
 # Creada con `npx wrangler d1 create nutrifit-db` (el id no es secreto).
@@ -34,4 +38,7 @@ binding = "AI"
 #   npx wrangler pages secret put TURNSTILE_SECRET_KEY --project-name nutrifit   # ✓ configurado
 #   npx wrangler pages secret put BREVO_API_KEY        --project-name nutrifit   # pendiente
 #   npx wrangler pages secret put GEMINI_API_KEY       --project-name nutrifit   # pendiente
+#   npx wrangler pages secret put GROQ_API_KEY         --project-name nutrifit   # pendiente
+#   (opcional) TRUJILLO_AI_TOKEN + var IA_TRUJILLO=1 cuando Trujillo AI exponga su endpoint
+#   (solo preview) IA_DIAG_TOKEN → habilita POST /api/ia/diagnostico
 # En local van en .dev.vars (ver .dev.vars.example).

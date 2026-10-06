@@ -9,6 +9,10 @@ import { borrarTokenApp, obtenerTokenApp } from './tokenApp.ts'
 import type { PlanMacros } from './macros.ts'
 import type { Comida, DatosPerfil, Historial, InfoVinculo, NuevaComida, ProductoOFF, Resumen, ResultadoAnalisis, Usuario } from './tipos.ts'
 
+
+/** Proveedor de IA que sirvió el análisis (lo devuelve el servidor). */
+export type ProveedorIA = 'gemini' | 'groq' | 'trujillo' | 'workers-ai'
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -127,7 +131,7 @@ export const api = {
   analizar: (imagen: Blob, turnstile: string) => {
     const fd = new FormData()
     fd.append('imagen', imagen, imagen.type === 'image/webp' ? 'plato.webp' : 'plato.jpg')
-    return pedir<{ ok: true; proveedor: 'gemini' | 'workers-ai'; resultado: ResultadoAnalisis }>('/api/comidas/analizar', {
+    return pedir<{ ok: true; proveedor: ProveedorIA; modelo?: string; resultado: ResultadoAnalisis }>('/api/comidas/analizar', {
       method: 'POST',
       body: fd,
       turnstile,
@@ -135,7 +139,7 @@ export const api = {
   },
 
   analizarTexto: (descripcion: string, turnstile: string) =>
-    pedir<{ ok: true; proveedor: 'gemini' | 'workers-ai'; resultado: ResultadoAnalisis }>('/api/comidas/analizar-texto', {
+    pedir<{ ok: true; proveedor: ProveedorIA; modelo?: string; resultado: ResultadoAnalisis }>('/api/comidas/analizar-texto', {
       method: 'POST',
       body: { descripcion },
       turnstile,

@@ -269,6 +269,8 @@ export default function Dashboard({
             onClose={cerrar}
             onResultado={(resultado, imagenUrl) => setHoja({ tipo: 'revision', comida: hoja.comida, resultado, imagenUrl })}
             onManual={(imagenUrl) => setHoja({ tipo: 'revision', comida: hoja.comida, resultado: null, imagenUrl })}
+            onDescribir={() => setHoja({ tipo: 'texto', comida: hoja.comida })}
+            onBuscar={() => setHoja({ tipo: 'buscar', comida: hoja.comida })}
           />
         )}
         {hoja?.tipo === 'texto' && (

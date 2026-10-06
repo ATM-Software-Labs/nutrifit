@@ -10,7 +10,7 @@ import { leerBody } from '../../utils/http.ts'
 import { analizarJsonSchema } from '../../utils/schemas.ts'
 import { exigirSesion } from '../../utils/session.ts'
 import { exigirLimite } from '../../utils/rateLimit.ts'
-import { analizarImagen, detectarMime, ErrorIA, MAX_IMAGEN_BYTES, type Imagen } from '../../utils/ia.ts'
+import { analizarImagen, detectarMime, ErrorIA, MAX_IMAGEN_BYTES, MENSAJE_IA_NO_DISPONIBLE_FOTO, type Imagen } from '../../utils/ia.ts'
 
 const MAX_JSON = 2_300_000
 const MAX_MULTIPART = MAX_IMAGEN_BYTES + 64 * 1024
@@ -53,11 +53,11 @@ export const onRequestPost: Handler = async ({ request, env, data }) => {
 
   const img: Imagen = { bytes, mime }
   try {
-    const { proveedor, resultado } = await analizarImagen(env, img)
-    return json({ ok: true, proveedor, resultado })
+    const { proveedor, modelo, resultado } = await analizarImagen(env, img)
+    return json({ ok: true, proveedor, modelo, resultado })
   } catch (e) {
     if (e instanceof ErrorIA) {
-      return error(503, 'No hemos podido analizar la foto ahora mismo. Inténtalo de nuevo o añade la comida manualmente.', { codigo: 'ia_no_disponible' })
+      return error(503, MENSAJE_IA_NO_DISPONIBLE_FOTO, { codigo: 'ia_no_disponible' })
     }
     throw e
   }
