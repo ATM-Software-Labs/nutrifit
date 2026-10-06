@@ -17,7 +17,7 @@ for d in dist functions src node_modules .dev.vars; do ln -s "$ROOT/$d" "$TMP/$d
 cd "$TMP"
 DB_ID="$(sed -nE 's/^database_id *= *"([^"]+)".*/\1/p' "$ROOT/wrangler.toml")"
 exec npx wrangler pages dev dist \
-  --port "${PORT:-8788}" \
+  --port "${PORT:-8788}" --inspector-port "${INSPECTOR_PORT:-9229}" \
   --compatibility-date 2026-10-01 \
   --compatibility-flags nodejs_compat \
   --d1 "DB=$DB_ID" \
