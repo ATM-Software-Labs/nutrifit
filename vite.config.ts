@@ -69,13 +69,13 @@ export default defineConfig({
     target: 'es2022',
     modulePreload: { polyfill: false },
     rolldownOptions: {
-      // «nombre.hash» (antes «nombre-hash»): estrena TODAS las URLs de /assets para que
-      // ningún navegador reutilice copias malas (index.html servido como JS/CSS con
-      // caché inmutable) guardadas durante los despliegues del 6-oct-2026.
+      // «nombre.hash12» (antes «nombre-hash»): estrena TODAS las URLs de /assets para que
+      // ni el borde de Cloudflare ni los navegadores reutilicen copias malas (index.html
+      // servido como JS/CSS con caché inmutable) guardadas en los despliegues del 6-oct-2026.
       output: {
-        entryFileNames: 'assets/[name].[hash].js',
-        chunkFileNames: 'assets/[name].[hash].js',
-        assetFileNames: 'assets/[name].[hash][extname]',
+        entryFileNames: 'assets/[name].[hash:12].js',
+        chunkFileNames: 'assets/[name].[hash:12].js',
+        assetFileNames: 'assets/[name].[hash:12][extname]',
       },
     },
   },
