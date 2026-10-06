@@ -3,6 +3,7 @@
 # NutriFit · crea el keystore de FIRMA DE RELEASE del APK (una sola vez).
 #
 #   bash scripts/crear-keystore.sh [ruta.jks] [alias]
+#   (no interactivo: NUTRIFIT_KS_PASS=… [NUTRIFIT_KS_DN=…] bash scripts/crear-keystore.sh …)
 #
 # ⚠️  Guarda el .jks y las contraseñas en un gestor de contraseñas y haz copia de
 #     seguridad: si los pierdes, no podrás publicar actualizaciones que se
@@ -20,16 +21,23 @@ ALIAS="${2:-nutrifit}"
 command -v keytool >/dev/null || { echo "Falta keytool: instala un JDK (p. ej. Temurin 21)." >&2; exit 1; }
 [[ -e "$KS" ]] && { echo "Ya existe $KS — no lo sobrescribo." >&2; exit 1; }
 
-read -r -s -p "Contraseña del keystore (mín. 6 caracteres): " PASS; echo
-read -r -s -p "Repite la contraseña: " PASS2; echo
-[[ "$PASS" == "$PASS2" && ${#PASS} -ge 6 ]] || { echo "Las contraseñas no coinciden o son demasiado cortas." >&2; exit 1; }
+if [[ -n "${NUTRIFIT_KS_PASS:-}" ]]; then
+  # Modo no interactivo (la contraseña llega por entorno; no se imprime nunca).
+  PASS="$NUTRIFIT_KS_PASS"
+  [[ ${#PASS} -ge 6 ]] || { echo "NUTRIFIT_KS_PASS demasiado corta." >&2; exit 1; }
+else
+  read -r -s -p "Contraseña del keystore (mín. 6 caracteres): " PASS; echo
+  read -r -s -p "Repite la contraseña: " PASS2; echo
+  [[ "$PASS" == "$PASS2" && ${#PASS} -ge 6 ]] || { echo "Las contraseñas no coinciden o son demasiado cortas." >&2; exit 1; }
+fi
+DN="${NUTRIFIT_KS_DN:-CN=Alberto Trujillo Mingorance, O=NutriFit, L=Barcelona, C=ES}"
 
 # PKCS12: la contraseña de la clave es la misma que la del almacén.
 keytool -genkeypair -v \
   -keystore "$KS" -storetype PKCS12 \
   -alias "$ALIAS" -keyalg RSA -keysize 4096 -validity 10000 \
   -storepass "$PASS" -keypass "$PASS" \
-  -dname "CN=NutriFit, OU=NutriFit, O=Alberto Trujillo Mingorance, L=Barcelona, ST=Barcelona, C=ES"
+  -dname "$DN"
 
 base64 -w0 "$KS" > "$KS.b64" 2>/dev/null || base64 -i "$KS" -o "$KS.b64"   # Linux / macOS
 chmod 600 "$KS" "$KS.b64"

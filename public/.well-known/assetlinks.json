@@ -4,7 +4,7 @@
     "target": {
       "namespace": "android_app",
       "package_name": "com.trujillomingorance.nutrifit",
-      "sha256_cert_fingerprints": ["00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00"]
+      "sha256_cert_fingerprints": ["03:19:65:BF:53:E2:98:84:50:0C:5A:1A:29:4A:3C:8C:8E:25:BE:D7:DA:B5:63:B8:EF:8B:F4:DC:B9:87:EB:32"]
     }
   }
 ]

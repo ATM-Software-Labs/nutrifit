@@ -1,20 +1,38 @@
-# CI básica: instala, comprueba tipos y compila. (El despliegue se añadirá más adelante.)
+# NutriFit · CI: tipos, tests y build web en cada push a main y en cada PR.
 name: CI
+
 on:
   push:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  build:
+  verificar:
+    name: Tipos, tests y build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      VITE_GITHUB_REPO: ${{ github.repository }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          node-version-file: .nvmrc
+          node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run typecheck
-      - run: npm test
-      - run: npm run build
+      - name: Tipos (app + Functions + tests)
+        run: npm run typecheck
+      - name: Tests
+        run: npm test
+      - name: Build web
+        run: npm run build
+      - name: Tamaño del JS inicial (gzip)
+        run: |
+          for f in dist/assets/index-*.js; do printf '%s: %s bytes gzip\n' "$f" "$(gzip -c "$f" | wc -c)"; done | tee -a "$GITHUB_STEP_SUMMARY"

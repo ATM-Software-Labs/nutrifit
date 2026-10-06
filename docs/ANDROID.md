@@ -87,7 +87,7 @@ resumen). Ojo: un APK de depuración y uno firmado no se actualizan entre sí
 
 ### 3. Huella para App Links → `public/.well-known/assetlinks.json`
 
-Sustituye la huella de ejemplo (`00:00:…`) por la SHA-256 del keystore de release:
+Ya contiene la SHA-256 del keystore de release (`03:19:65:BF:…:87:EB:32`). Si algún día cambias de keystore, sustitúyela por la nueva:
 
 ```bash
 keytool -list -v -keystore ~/nutrifit-release.jks -alias nutrifit | grep SHA256
