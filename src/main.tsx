@@ -6,12 +6,14 @@ import { ToastProvider } from './components/ui/Toast.tsx'
 import { iniciarTema } from './lib/tema.ts'
 import { registrarServiceWorker } from './lib/sw.ts'
 import { comprobarEstilos, vigilarChunks } from './lib/recuperacion.ts'
+import { capturarPromptInstalar } from './lib/instalacion.ts'
 import './index.css'
 
 window.__nfIniciado = true // para el vigilante de public/boot.js
 vigilarChunks()
 comprobarEstilos()
 iniciarTema()
+capturarPromptInstalar()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

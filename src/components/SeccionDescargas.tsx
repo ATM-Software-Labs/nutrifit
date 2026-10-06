@@ -3,20 +3,15 @@
  * (iPhone/iPad) y enlace al código. Detecta la plataforma y pone primero la
  * recomendada. No se muestra dentro de la app nativa (App.tsx lo evita).
  */
-import { useMemo, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { ArrowLeft, ChevronDown, Download, ExternalLink, Globe, ShieldCheck, Smartphone } from 'lucide-react'
 import { Logo } from './Logo.tsx'
 import { cx } from './ui/cx.ts'
 import { GITHUB_REPO, URL_APK, URL_REPO } from '../lib/config.ts'
+import { detectarPlataforma, formatoMB } from '../lib/instalacion.ts'
+import { api } from '../lib/api.ts'
+import { QrDescarga } from './BloqueDescarga.tsx'
 
-type Plataforma = 'android' | 'ios' | 'escritorio'
-
-export function detectarPlataforma(ua = navigator.userAgent, plataforma = navigator.platform, toques = navigator.maxTouchPoints): Plataforma {
-  if (/Android/i.test(ua)) return 'android'
-  // iPadOS 13+ se anuncia como "Macintosh": lo delata la pantalla táctil.
-  if (/iPhone|iPad|iPod/i.test(ua) || (plataforma === 'MacIntel' && toques > 1)) return 'ios'
-  return 'escritorio'
-}
 
 function Insignia({ children }: { children: ReactNode }) {
   return <span className="rounded-full bg-mint-50 px-2.5 py-1 text-2xs font-semibold uppercase tracking-wider text-mint-700 dark:bg-mint-950 dark:text-mint-300">{children}</span>
@@ -134,15 +129,22 @@ const PASOS_IOS = [
 ]
 
 function Android({ recomendada }: { recomendada?: string }) {
+  const [info, setInfo] = useState<string | null>(null)
+  useEffect(() => {
+    api
+      .versionApp()
+      .then((r) => setInfo([r.version, formatoMB(r.tamano)].filter(Boolean).join(' · ') || null))
+      .catch(() => {})
+  }, [])
   return (
     <Tarjeta icono={<Smartphone size={20} strokeWidth={1.75} />} titulo="Android" recomendada={recomendada}>
       <a
         href={URL_APK}
         className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-mint-700 text-base font-semibold text-white shadow-sm transition hover:bg-mint-800 active:scale-[0.98]"
       >
-        <Download size={20} strokeWidth={2} /> Descargar APK Directo
+        <Download size={20} strokeWidth={2} /> Descargar APK
       </a>
-      <p className="mt-2.5 text-center text-xs text-neutral-500 dark:text-neutral-400">Última versión publicada en GitHub Releases · Android 7.0 o superior</p>
+      <p className="mt-2.5 text-center text-xs text-neutral-500 dark:text-neutral-400">{info ? `Versión ${info}` : 'Última versión publicada en GitHub Releases'} · Android 7.0 o superior</p>
       <details className="group mt-4 rounded-2xl border border-neutral-200 dark:border-neutral-800">
         <summary className="flex cursor-pointer list-none items-center justify-between rounded-2xl px-4 py-3.5 text-[15px] font-medium [&::-webkit-details-marker]:hidden">
           Cómo instalarlo en 3 pasos
@@ -211,16 +213,24 @@ export default function SeccionDescargas() {
       </header>
 
       <h1 className="mt-6 text-[2rem] font-semibold leading-tight tracking-tight">Descarga NutriFit</h1>
-      <p className="mt-2 text-[15px] leading-relaxed text-neutral-500 dark:text-neutral-400">
-        {plataforma === 'escritorio' ? (
-          <>
-            Abre esta página en tu móvil: <strong className="font-medium text-graphite dark:text-neutral-100">nutri.trujillomingorance.com/descargar</strong>. O usa la versión web
-            desde aquí mismo.
-          </>
-        ) : (
-          'Gratis, sin anuncios y de código abierto.'
-        )}
-      </p>
+      {plataforma === 'escritorio' ? (
+        <section aria-label="Descargar en el móvil" className="tarjeta mt-6 flex flex-col items-center gap-6 p-6 sm:flex-row">
+          <div className="shrink-0 rounded-2xl border border-neutral-200 p-2 dark:border-neutral-800">
+            <QrDescarga tamano={168} />
+          </div>
+          <div>
+            <p className="text-lg font-semibold tracking-tight">Escanéalo con tu móvil</p>
+            <p className="mt-2 text-[15px] leading-relaxed text-neutral-500 dark:text-neutral-400">
+              Abre la cámara y apunta al código: llegarás a esta página en el móvil, con el botón de descarga para Android o los pasos para iPhone.
+            </p>
+            <p className="mt-3 text-sm text-neutral-500 dark:text-neutral-400">
+              O escribe <strong className="font-medium text-graphite dark:text-neutral-100">nutri.trujillomingorance.com/descargar</strong>
+            </p>
+          </div>
+        </section>
+      ) : (
+        <p className="mt-2 text-[15px] leading-relaxed text-neutral-500 dark:text-neutral-400">Gratis, sin anuncios y de código abierto.</p>
+      )}
 
       <div className="mt-8 space-y-4">{tarjetas}</div>
 

@@ -9,6 +9,7 @@ import { esNativa } from '../lib/plataforma.ts'
 import { URL_REPO } from '../lib/config.ts'
 import { guardarTokenApp } from '../lib/tokenApp.ts'
 import { ESCRITORIO, useMedia } from '../hooks/useMedia.ts'
+import { BloqueDescarga } from './BloqueDescarga.tsx'
 import type { Usuario } from '../lib/tipos.ts'
 
 // El QR solo se descarga en escritorio (chunk aparte con el codificador).
@@ -157,6 +158,7 @@ export default function Login({ onEntrar, vinculando = false }: { onEntrar: (u: 
                 {!cargando && <ArrowRight size={18} strokeWidth={2} />}
               </Button>
             </form>
+            {!vinculando && <BloqueDescarga className="mt-8" />}
           </div>
         ) : (
           <div key="enviado" className="animate-pop-in" role="status">

@@ -9,11 +9,7 @@ import { SquarePlus, X } from 'lucide-react'
 import { Logo } from './Logo.tsx'
 import { Button } from './ui/Button.tsx'
 import { esNativa } from '../lib/plataforma.ts'
-
-interface EventoInstalar extends Event {
-  prompt: () => Promise<void>
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
-}
+import { alCambiarPrompt, instalada, promptInstalar, type EventoInstalar } from '../lib/instalacion.ts'
 
 const CLAVE = 'nf:banner-pwa'
 const DIAS = 30
@@ -30,8 +26,6 @@ function esIOSSafari() {
   return ios && safari
 }
 
-const instalada = () =>
-  window.matchMedia('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone === true
 
 /** Icono "Compartir" de iOS (cuadro con flecha hacia arriba). */
 function IconoCompartir() {
@@ -53,13 +47,14 @@ export function BannerInstalarPWA() {
       const t = setTimeout(() => setModo('ios'), 1200)
       return () => clearTimeout(t)
     }
-    const f = (e: Event) => {
-      e.preventDefault()
-      setEvento(e as EventoInstalar)
-      setModo('android')
+    // El evento se captura al arrancar (main.tsx) y puede haber llegado ya.
+    const f = (e: EventoInstalar | null) => {
+      setEvento(e)
+      setModo(e ? 'android' : null)
     }
-    window.addEventListener('beforeinstallprompt', f)
-    return () => window.removeEventListener('beforeinstallprompt', f)
+    const ya = promptInstalar()
+    if (ya) f(ya)
+    return alCambiarPrompt(f)
   }, [])
 
   if (!modo) return null

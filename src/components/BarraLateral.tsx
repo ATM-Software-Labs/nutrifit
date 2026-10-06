@@ -1,14 +1,16 @@
 /** Navegación lateral de escritorio (≥ lg). En móvil no se renderiza (hidden). */
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { ChartColumn, Download, Droplet, House, LogOut, Plus, Scale, Settings } from 'lucide-react'
 import { Logo } from './Logo.tsx'
 import { cx } from './ui/cx.ts'
+import { BloqueDescarga } from './BloqueDescarga.tsx'
+import { ofrecerDescarga } from '../lib/instalacion.ts'
 import type { Usuario } from '../lib/tipos.ts'
 
 const CLASE_ITEM =
   'flex h-10 w-full items-center gap-3 rounded-xl px-3 text-[15px] font-medium transition-colors duration-150 focus-visible:ring-offset-0'
 
-function Item({ icono, children, activo, onClick, href }: { icono: ReactNode; children: ReactNode; activo?: boolean; onClick?: () => void; href?: string }) {
+function Item({ icono, children, activo, onClick, href, expandido }: { icono: ReactNode; children: ReactNode; activo?: boolean; onClick?: () => void; href?: string; expandido?: boolean }) {
   const clase = cx(
     CLASE_ITEM,
     activo
@@ -28,7 +30,7 @@ function Item({ icono, children, activo, onClick, href }: { icono: ReactNode; ch
           {contenido}
         </a>
       ) : (
-        <button type="button" onClick={onClick} className={clase} aria-current={activo ? 'page' : undefined}>
+        <button type="button" onClick={onClick} className={clase} aria-current={activo ? 'page' : undefined} aria-expanded={expandido}>
           {contenido}
         </button>
       )}
@@ -59,6 +61,8 @@ export function BarraLateral({
 }) {
   const i = { size: 18, strokeWidth: 1.75 }
   const inicial = (usuario.nombre ?? usuario.email).trim().charAt(0).toUpperCase()
+  const [qr, setQr] = useState(false)
+  const conQr = ofrecerDescarga()
   return (
     <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r border-neutral-200 bg-card px-4 py-6 dark:border-neutral-800 dark:bg-card-dark lg:flex">
       <div className="flex items-center gap-2.5 px-3">
@@ -94,10 +98,17 @@ export function BarraLateral({
           <Item icono={<Settings {...i} />} onClick={onAjustes}>
             Ajustes
           </Item>
-          <Item icono={<Download {...i} />} href="/descargar">
-            Descargar app
-          </Item>
+          {conQr ? (
+            <Item icono={<Download {...i} />} onClick={() => setQr((v) => !v)} expandido={qr}>
+              Descargar app
+            </Item>
+          ) : (
+            <Item icono={<Download {...i} />} href="/descargar">
+              Descargar app
+            </Item>
+          )}
         </ul>
+        {conQr && qr && <BloqueDescarga variante="lateral" className="mx-1 mt-2 animate-pop-in" />}
       </nav>
 
       <div className="border-t border-neutral-100 pt-4 dark:border-neutral-800">
