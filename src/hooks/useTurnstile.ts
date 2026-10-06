@@ -79,15 +79,26 @@ export function precargarTurnstile() {
 export function useTurnstile(accion: string) {
   const contenedorRef = useRef<HTMLDivElement>(null)
   const widget = useRef<string | null>(null)
+  /** Contenedor en el que se renderizó el widget actual (para detectar remontajes). */
+  const contenedorWidget = useRef<HTMLElement | null>(null)
   const pendiente = useRef<{ res: (t: string) => void; rej: (e: Error) => void } | null>(null)
+
+  const quitarWidget = useCallback(() => {
+    const id = widget.current
+    widget.current = null
+    contenedorWidget.current = null
+    if (!id) return
+    try {
+      window.turnstile?.remove(id)
+    } catch {
+      /* el widget ya no existe: nada que quitar */
+    }
+  }, [])
 
   useEffect(() => {
     precargarTurnstile()
-    return () => {
-      if (widget.current) window.turnstile?.remove(widget.current)
-      widget.current = null
-    }
-  }, [])
+    return quitarWidget
+  }, [quitarWidget])
 
   const obtenerToken = useCallback(async (): Promise<string> => {
     const [ts, clave] = await Promise.all([cargarScript(), siteKey()])
@@ -104,8 +115,24 @@ export function useTurnstile(accion: string) {
       }
       pendiente.current = { res: fin, rej: fin }
 
-      if (!widget.current) {
-        widget.current = ts.render(el, {
+      // Un widget solo se puede resetear si sigue vivo en el MISMO contenedor; si el
+      // contenedor se ha remontado (o el iframe ya no está), se descarta y se renderiza
+      // de nuevo. Así se evita el aviso «Nothing to reset found for provided container».
+      if (widget.current && (contenedorWidget.current !== el || !el.isConnected || !el.hasChildNodes())) {
+        quitarWidget()
+      }
+
+      let id = widget.current
+      if (id) {
+        try {
+          ts.reset(id)
+        } catch {
+          quitarWidget()
+          id = null
+        }
+      }
+      if (!id) {
+        id = ts.render(el, {
           sitekey: clave,
           action: accion,
           execution: 'execute',
@@ -119,12 +146,17 @@ export function useTurnstile(accion: string) {
           },
           'timeout-callback': () => pendiente.current?.rej(new Error('La verificación anti-bots ha caducado.')),
         })
-      } else {
-        ts.reset(widget.current)
+        widget.current = id
+        contenedorWidget.current = el
       }
-      ts.execute(widget.current)
+      try {
+        ts.execute(id)
+      } catch {
+        quitarWidget()
+        fin(new Error('La verificación anti-bots ha fallado. Recarga e inténtalo de nuevo.'))
+      }
     })
-  }, [accion])
+  }, [accion, quitarWidget])
 
   return { contenedorRef, obtenerToken }
 }
