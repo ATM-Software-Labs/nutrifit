@@ -1,5 +1,5 @@
-import { useEffect, useState, type FormEvent } from 'react'
-import { ArrowRight, Mail } from 'lucide-react'
+import { lazy, Suspense, useEffect, useRef, useState, type FormEvent } from 'react'
+import { ArrowRight, Mail, MonitorSmartphone } from 'lucide-react'
 import { Logo } from './Logo.tsx'
 import { Button } from './ui/Button.tsx'
 import { Input } from './ui/Input.tsx'
@@ -7,6 +7,12 @@ import { useTurnstile } from '../hooks/useTurnstile.ts'
 import { api, ApiError } from '../lib/api.ts'
 import { esNativa } from '../lib/plataforma.ts'
 import { URL_REPO } from '../lib/config.ts'
+import { guardarTokenApp } from '../lib/tokenApp.ts'
+import { ESCRITORIO, useMedia } from '../hooks/useMedia.ts'
+import type { Usuario } from '../lib/tipos.ts'
+
+// El QR solo se descarga en escritorio (chunk aparte con el codificador).
+const LoginQR = lazy(() => import('./LoginQR.tsx'))
 
 const AVISOS: Record<string, string> = {
   usado: 'Ese enlace ya se ha usado. Pide uno nuevo para entrar.',
@@ -29,8 +35,13 @@ function leerAvisoUrl(): string | null {
 
 const EMAIL_OK = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 
-export default function Login() {
+export default function Login({ onEntrar, vinculando = false }: { onEntrar: (u: Usuario, perfilCompleto: boolean) => void; vinculando?: boolean }) {
+  const escritorio = useMedia(ESCRITORIO) && !esNativa && !vinculando
   const [email, setEmail] = useState('')
+  const [codigo, setCodigo] = useState('')
+  const [errorCodigo, setErrorCodigo] = useState<string | null>(null)
+  const [comprobando, setComprobando] = useState(false)
+  const ultimoProbado = useRef('')
   const [enviado, setEnviado] = useState(false)
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -58,6 +69,9 @@ export default function Login() {
       await api.solicitarEnlace(limpio, token)
       setEnviado(true)
       setEspera(30)
+      setCodigo('')
+      setErrorCodigo(null)
+      ultimoProbado.current = ''
     } catch (err) {
       setError(err instanceof ApiError || err instanceof Error ? err.message : 'Algo ha fallado.')
     } finally {
@@ -65,10 +79,46 @@ export default function Login() {
     }
   }
 
+  async function entrarConCodigo(e?: FormEvent, valor = codigo) {
+    e?.preventDefault()
+    const limpio = valor.replace(/\D/g, '')
+    if (limpio.length !== 6) {
+      setErrorCodigo('El código tiene 6 cifras.')
+      return
+    }
+    ultimoProbado.current = limpio
+    setErrorCodigo(null)
+    setComprobando(true)
+    try {
+      const r = await api.entrarConCodigo(email.trim().toLowerCase(), limpio)
+      if (esNativa && r.token) await guardarTokenApp(r.token)
+      onEntrar(r.usuario, r.perfilCompleto)
+    } catch (err) {
+      setErrorCodigo(err instanceof Error ? err.message : 'No se pudo comprobar el código.')
+      setComprobando(false)
+    }
+  }
+
+  function cambiarCodigo(v: string) {
+    const cifras = v.replace(/\D/g, '').slice(0, 6)
+    setCodigo(cifras.length > 3 ? `${cifras.slice(0, 3)} ${cifras.slice(3)}` : cifras)
+    if (errorCodigo) setErrorCodigo(null)
+    // Al completar las 6 cifras (o pegarlas / autocompletarlas), se envía solo.
+    if (cifras.length === 6 && cifras !== ultimoProbado.current && !comprobando) void entrarConCodigo(undefined, cifras)
+  }
+
   return (
-    <main className="mx-auto flex min-h-dvh max-w-sm flex-col px-6 pb-8 pt-[max(3rem,env(safe-area-inset-top))]">
-      <div className="flex flex-1 flex-col justify-center">
+    <main className="mx-auto flex min-h-dvh max-w-sm flex-col px-6 pb-8 pt-[max(3rem,env(safe-area-inset-top))] lg:max-w-6xl lg:px-10">
+      <div className="flex flex-1 flex-col justify-center lg:grid lg:grid-cols-[minmax(0,24rem)_minmax(0,1fr)] lg:items-center lg:gap-16 xl:gap-24">
+      <div>
         <Logo size={56} className="text-graphite dark:text-neutral-100" />
+
+        {vinculando && (
+          <p role="status" className="mt-8 flex gap-3 rounded-2xl border border-mint/30 bg-mint-50 px-4 py-3 text-sm text-mint-900 dark:border-mint/20 dark:bg-mint-950 dark:text-mint-100">
+            <MonitorSmartphone size={20} strokeWidth={1.75} className="mt-0.5 shrink-0" aria-hidden="true" />
+            <span>Para aprobar el acceso del ordenador, primero inicia sesión en este móvil. Después te pediremos que lo confirmes.</span>
+          </p>
+        )}
 
         {!enviado ? (
           <div key="form" className="animate-pop-in">
@@ -78,7 +128,7 @@ export default function Login() {
               <span className="text-mint-600 dark:text-mint-400">en equilibrio.</span>
             </h1>
             <p className="mt-3 text-[15px] leading-relaxed text-neutral-500 dark:text-neutral-400">
-              Entra con tu email. Te enviaremos un enlace de acceso: sin contraseñas.
+              Entra con tu email. Te enviaremos un enlace y un código de acceso: sin contraseñas.
             </p>
 
             {aviso && (
@@ -115,9 +165,28 @@ export default function Login() {
             </div>
             <h1 className="mt-6 text-[2rem] font-semibold leading-tight tracking-tight">Revisa tu correo</h1>
             <p className="mt-3 text-[15px] leading-relaxed text-neutral-500 dark:text-neutral-400">
-              Hemos enviado un enlace a <strong className="font-medium text-graphite dark:text-neutral-100">{email.trim().toLowerCase()}</strong>. Caduca
-              en 15 minutos y solo funciona una vez.
+              Hemos enviado un enlace y un código a <strong className="font-medium text-graphite dark:text-neutral-100">{email.trim().toLowerCase()}</strong>.
+              Caducan en 15 minutos y solo funcionan una vez.
             </p>
+            <form onSubmit={(e) => void entrarConCodigo(e)} noValidate className="mt-6 space-y-3">
+              <Input
+                label="Código de 6 cifras"
+                hint="Escríbelo aquí si abres el correo en otro dispositivo."
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                enterKeyHint="go"
+                placeholder="123 456"
+                maxLength={7}
+                value={codigo}
+                onChange={(e) => cambiarCodigo(e.target.value)}
+                error={errorCodigo ?? undefined}
+                className="[&_input]:cifra [&_input]:text-center [&_input]:text-xl [&_input]:tracking-[0.3em]"
+                data-autofocus
+              />
+              <Button type="submit" size="lg" block loading={comprobando}>
+                {comprobando ? 'Comprobando…' : 'Entrar con el código'}
+              </Button>
+            </form>
             {esNativa && (
               <p className="mt-4 rounded-2xl bg-mint-50 px-4 py-3 text-sm text-mint-900 dark:bg-mint-950 dark:text-mint-100">
                 Ábrelo <strong className="font-semibold">en este móvil</strong>: el enlace abrirá NutriFit directamente.
@@ -130,7 +199,7 @@ export default function Login() {
               </p>
             )}
             <div ref={contenedorRef} className="mt-4 flex justify-center empty:hidden" />
-            <div className="mt-8 space-y-2">
+            <div className="mt-6 space-y-2">
               <Button variant="outline" size="lg" block disabled={espera > 0} loading={cargando} onClick={() => void enviar()}>
                 {espera > 0 ? `Reenviar enlace (${espera} s)` : 'Reenviar enlace'}
               </Button>
@@ -147,6 +216,14 @@ export default function Login() {
             </div>
           </div>
         )}
+      </div>
+      {escritorio && (
+        <aside className="hidden lg:block" aria-label="Entrar con el móvil">
+          <Suspense fallback={<div className="tarjeta h-[30rem] animate-pulse bg-neutral-100/60 dark:bg-neutral-900/60" />}>
+            <LoginQR onEntrar={onEntrar} />
+          </Suspense>
+        </aside>
+      )}
       </div>
       <footer className="mt-10 space-y-2 text-center text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">
         <nav aria-label="Enlaces" className="flex justify-center gap-4 font-medium">

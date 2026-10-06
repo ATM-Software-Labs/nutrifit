@@ -99,3 +99,39 @@ export interface DatosPerfil {
   actividad: NivelActividad
   objetivo: Objetivo
 }
+
+export interface DiaHistorial extends Totales {
+  fecha: string
+  num_comidas: number
+  agua_ml: number
+  peso: number | null
+}
+
+export interface Historial {
+  desde: string
+  hasta: string
+  dias: DiaHistorial[]
+  metas: Totales | null
+  /** Medias sobre los días con comidas (agua: sobre los días con agua). */
+  medias: (Totales & { agua_ml: number }) | null
+  dias_con_registro: number
+  dias_en_objetivo: number
+  peso: { inicio: number; fin: number; cambio: number } | null
+}
+
+/** Lo que ve el móvil antes de aprobar el acceso de un ordenador. */
+export interface InfoVinculo {
+  codigo: string
+  dispositivo: string
+  ubicacion: string | null
+  creado_en: number
+  expira_en: number
+}
+
+export interface ProductoOFF {
+  codigo: string
+  nombre: string
+  marca: string | null
+  por100: Totales
+  racion: number | null
+}

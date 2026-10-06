@@ -2,6 +2,7 @@
  * Integración nativa (solo dentro del APK; se carga con import() dinámico):
  *  · Magic link → App Link https://nutri…/app-login?token=… o esquema propio
  *    com.trujillomingorance.nutrifit://login?token=… → canje por token Bearer.
+ *  · QR del ordenador → App Link https://nutri…/vincular#<id> → pantalla de aprobación.
  *  · Botón "atrás" de Android: cierra hojas/modales antes de salir.
  *  · Barra de estado acorde al tema claro/oscuro.
  */
@@ -26,13 +27,30 @@ export function tokenDeUrl(url: string): string | null {
   }
 }
 
-export async function iniciarNativo(onToken: (token: string) => void) {
+/** Id de emparejamiento de un enlace https://nutri…/vincular#<id> (o null). */
+export function vinculoDeUrl(url: string): string | null {
+  try {
+    const u = new URL(url)
+    if (u.protocol !== 'https:' || u.hostname !== new URL(URL_API_NATIVA).hostname || u.pathname.replace(/\/+$/, '') !== '/vincular') return null
+    const id = u.hash.slice(1)
+    return /^[A-Za-z0-9_-]{43}$/.test(id) ? id : null
+  } catch {
+    return null
+  }
+}
+
+export async function iniciarNativo(onToken: (token: string) => void, onVinculo?: (id: string) => void) {
   const vistos = new Set<string>() // getLaunchUrl y appUrlOpen pueden traer el mismo enlace
   const manejar = (url?: string) => {
     const t = url ? tokenDeUrl(url) : null
     if (t && !vistos.has(t)) {
       vistos.add(t)
       onToken(t)
+    }
+    const v = url ? vinculoDeUrl(url) : null
+    if (v && !vistos.has(v)) {
+      vistos.add(v)
+      onVinculo?.(v)
     }
   }
   await App.addListener('appUrlOpen', ({ url }) => manejar(url))

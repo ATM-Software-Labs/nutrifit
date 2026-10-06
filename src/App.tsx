@@ -7,6 +7,7 @@ import type { Usuario } from './lib/tipos.ts'
 import { activarActualizacion } from './lib/sw.ts'
 import { esNativa } from './lib/plataforma.ts'
 import { borrarTokenApp, guardarTokenApp } from './lib/tokenApp.ts'
+import { guardarVinculoPendiente, navegar, rutaActual, tomarVinculoPendiente, useRuta } from './lib/rutas.ts'
 
 // Pantallas en chunks separados. Se precargan en paralelo a /api/auth/yo según
 // la pista "nf:sesion" para no añadir una cascada de red.
@@ -19,12 +20,29 @@ const Onboarding = lazy(cargarOnboarding)
 // Páginas sueltas (accesibles sin sesión)
 const SeccionDescargas = lazy(() => import('./components/SeccionDescargas.tsx'))
 const Privacidad = lazy(() => import('./components/Privacidad.tsx'))
+const Vincular = lazy(() => import('./components/Vincular.tsx'))
 
-const ruta = location.pathname.replace(/\/+$/, '') || '/'
+const ruta = rutaActual()
+/** Página suelta (no necesita saber si hay sesión). */
+const paginaSuelta = (ruta === '/descargar' && !esNativa) || ruta === '/privacidad'
+
+// /vincular#<id>: el id del QR viaja en el fragmento (no llega a ningún servidor
+// ni a los logs). Lo sacamos de la URL nada más arrancar.
+let vinculoInicial: string | null = null
+if (ruta === '/vincular') {
+  const id = location.hash.slice(1)
+  if (/^[A-Za-z0-9_-]{43}$/.test(id)) {
+    vinculoInicial = id
+    guardarVinculoPendiente(id) // por si hay que entrar antes (enlace mágico en otra pestaña)
+  }
+  history.replaceState(null, '', '/vincular')
+} else if (!paginaSuelta && ruta !== '/' && ruta !== '/historial') {
+  history.replaceState(null, '', '/') // ruta desconocida → Hoy
+}
 
 const PISTA = 'nf:sesion'
-if (ruta === '/') {
-  if (localStorage.getItem(PISTA)) void cargarDashboard()
+if (!paginaSuelta) {
+  if (localStorage.getItem(PISTA)) void (ruta === '/vincular' ? import('./components/Vincular.tsx') : cargarDashboard())
   else void cargarLogin()
 }
 
@@ -45,7 +63,29 @@ function Cargando() {
 
 export default function App() {
   const [estado, setEstado] = useState<Estado>({ fase: 'cargando' })
+  const [vinculo, setVinculo] = useState<string | null>(vinculoInicial)
+  const rutaApp = useRuta()
   const toast = useToast()
+
+  /** Con sesión: si había una aprobación de QR pendiente, ir a ella. */
+  const retomarVinculo = useCallback(() => {
+    const id = tomarVinculoPendiente()
+    if (id) {
+      setVinculo(id)
+      navegar('/vincular', { reemplazar: true })
+    }
+  }, [])
+
+  /** Login completado sin recargar (código del email o QR). */
+  const entrar = useCallback(
+    (usuario: Usuario, perfilCompleto: boolean) => {
+      localStorage.setItem(PISTA, '1')
+      if (!perfilCompleto) void cargarOnboarding()
+      setEstado(perfilCompleto ? { fase: 'app', usuario } : { fase: 'onboarding', usuario })
+      retomarVinculo()
+    },
+    [retomarVinculo],
+  )
 
   const comprobar = useCallback(() => {
     setEstado({ fase: 'cargando' })
@@ -57,9 +97,7 @@ export default function App() {
           setEstado({ fase: 'anonimo' })
           return
         }
-        localStorage.setItem(PISTA, '1')
-        if (!perfilCompleto) void cargarOnboarding()
-        setEstado(perfilCompleto ? { fase: 'app', usuario } : { fase: 'onboarding', usuario })
+        entrar(usuario, perfilCompleto)
       })
       .catch((e: unknown) => {
         if (e instanceof ApiError && e.status === 401) {
@@ -67,7 +105,7 @@ export default function App() {
           setEstado({ fase: 'anonimo' })
         } else setEstado({ fase: 'error', mensaje: e instanceof Error ? e.message : 'Error' })
       })
-  }, [])
+  }, [entrar])
 
   // App Android: el magic link abre la app (App Link / esquema propio) con el token.
   const canjear = useCallback(
@@ -76,24 +114,33 @@ export default function App() {
       try {
         const r = await api.canjearToken(token)
         await guardarTokenApp(r.token)
-        localStorage.setItem(PISTA, '1')
-        setEstado(r.perfilCompleto ? { fase: 'app', usuario: r.usuario } : { fase: 'onboarding', usuario: r.usuario })
+        entrar(r.usuario, r.perfilCompleto)
         toast({ tipo: 'exito', mensaje: 'Sesión iniciada' })
       } catch (e) {
         toast({ tipo: 'error', mensaje: e instanceof Error ? e.message : 'No se pudo iniciar sesión.', duracion: 7000 })
         comprobar()
       }
     },
-    [comprobar, toast],
+    [comprobar, entrar, toast],
   )
 
   useEffect(() => {
     if (!esNativa) return
-    void import('./lib/nativo.ts').then((m) => m.iniciarNativo((t) => void canjear(t)))
+    void import('./lib/nativo.ts').then((m) =>
+      m.iniciarNativo(
+        (t) => void canjear(t),
+        (id) => {
+          // App Link https://…/vincular#id abierto en la app
+          guardarVinculoPendiente(id)
+          setVinculo(id)
+          navegar('/vincular')
+        },
+      ),
+    )
   }, [canjear])
 
   useEffect(() => {
-    if (ruta !== '/') return
+    if (paginaSuelta) return
     comprobar()
     onSesionPerdida(() => {
       localStorage.removeItem(PISTA)
@@ -126,7 +173,7 @@ export default function App() {
     setEstado({ fase: 'anonimo' })
   }, [])
 
-  if (ruta === '/descargar' && !esNativa) return <Suspense fallback={<Cargando />}><SeccionDescargas /></Suspense>
+  if (paginaSuelta && ruta === '/descargar') return <Suspense fallback={<Cargando />}><SeccionDescargas /></Suspense>
   if (ruta === '/privacidad') return <Suspense fallback={<Cargando />}><Privacidad /></Suspense>
 
   let pantalla
@@ -144,13 +191,27 @@ export default function App() {
       )
       break
     case 'anonimo':
-      pantalla = <Login />
+      pantalla = <Login onEntrar={entrar} vinculando={rutaApp === '/vincular'} />
       break
     case 'onboarding':
-      pantalla = <Onboarding usuario={estado.usuario} onCompletado={(usuario) => setEstado({ fase: 'app', usuario })} />
-      break
     case 'app':
-      pantalla = <Dashboard usuario={estado.usuario} onUsuario={(usuario) => setEstado({ fase: 'app', usuario })} onSalir={salir} />
+      if (rutaApp === '/vincular') {
+        pantalla = (
+          <Vincular
+            id={vinculo}
+            onTerminar={() => {
+              setVinculo(null)
+              navegar('/', { reemplazar: true })
+            }}
+          />
+        )
+        break
+      }
+      if (estado.fase === 'app') {
+        pantalla = <Dashboard usuario={estado.usuario} vista={rutaApp === '/historial' ? 'historial' : 'hoy'} onUsuario={(usuario) => setEstado({ fase: 'app', usuario })} onSalir={salir} />
+        break
+      }
+      pantalla = <Onboarding usuario={estado.usuario} onCompletado={(usuario) => setEstado({ fase: 'app', usuario })} />
       break
   }
 
