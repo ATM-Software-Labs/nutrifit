@@ -67,6 +67,23 @@ export const canjeTokenSchema = z.object({
   token: z.string().trim().min(20, { error: 'Enlace no válido.' }).max(1024, { error: 'Enlace no válido.' }),
 })
 
+/** Código de 6 cifras del email (se aceptan espacios: «123 456»). */
+export const codigoSchema = z.object({
+  email,
+  codigo: z
+    .string({ error: 'Escribe el código.' })
+    .transform((c) => c.replace(/\s+/g, ''))
+    .pipe(z.string().regex(/^\d{6}$/, { error: 'El código tiene 6 cifras.' })),
+  cliente: z.enum(['web', 'app']).default('web'),
+})
+
+// ------------------------------------------------------------ login por QR
+const base64url43 = z.string().regex(/^[A-Za-z0-9_-]{43}$/, { error: 'Identificador inválido.' }) // 32 bytes
+export const qrCrearSchema = z.object({ secretoHash: z.string().regex(/^[a-f0-9]{64}$/, { error: 'Secreto inválido.' }) })
+export const qrEstadoSchema = z.object({ id: base64url43, secreto: base64url43 })
+export const qrIdQuery = z.object({ id: base64url43 })
+export const qrDecidirSchema = z.object({ id: base64url43, aprobar: z.boolean({ error: 'Falta la decisión.' }) })
+
 // ---------------------------------------------------------------- macros
 export const calcularSchema = z.object({
   edad: entero(14, 100, 'La edad'),
@@ -132,6 +149,16 @@ export const aguaSchema = z.object({
 })
 export const aguaQuery = z.object({ fecha })
 
+// ------------------------------------------------------- historial y CSV
+const rango = (maxDias: number) =>
+  z
+    .object({ desde: fecha, hasta: fecha })
+    .refine((r) => r.desde <= r.hasta, { error: '«desde» no puede ser posterior a «hasta».', path: ['hasta'] })
+    .refine((r) => (Date.parse(r.hasta) - Date.parse(r.desde)) / 86_400_000 < maxDias, { error: `El rango máximo es de ${maxDias} días.`, path: ['hasta'] })
+
+export const historialQuery = rango(93)
+export const exportarQuery = z.intersection(rango(366), z.object({ tipo: z.enum(['comidas', 'peso', 'agua'], { error: 'Tipo de exportación inválido.' }) }))
+
 // ------------------------------------------------------------ análisis IA
 export const MIME_IMAGEN = ['image/jpeg', 'image/png', 'image/webp'] as const
 export const analizarJsonSchema = z.object({
@@ -140,6 +167,17 @@ export const analizarJsonSchema = z.object({
   mime: z.enum(MIME_IMAGEN).optional(),
   turnstileToken,
 })
+
+export const analizarTextoSchema = z.object({
+  descripcion: texto(300, 3),
+  turnstileToken,
+})
+
+// ------------------------------------------------------- Open Food Facts
+export const offQuery = z.union([
+  z.object({ codigo: z.string().trim().regex(/^\d{8,14}$/, { error: 'El código de barras tiene de 8 a 14 cifras.' }) }),
+  z.object({ q: texto(60, 2) }),
+])
 
 // ------------------------------------------------------------------ helpers
 export type Issue = { campo: string; mensaje: string }

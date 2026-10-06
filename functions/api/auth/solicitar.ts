@@ -1,5 +1,7 @@
 /**
  * POST /api/auth/solicitar  { email, turnstileToken, cliente?: 'web' | 'app' }
+ * El email lleva el magic link Y un código de 6 cifras (POST /api/auth/codigo),
+ * útil si el enlace se abre en otro dispositivo o navegador.
  * Turnstile lo valida el middleware. Respuesta SIEMPRE idéntica (200 genérico)
  * exista o no el email → sin enumeración de usuarios. El envío va en waitUntil
  * para que el tiempo de respuesta tampoco delate nada.
@@ -15,8 +17,9 @@ import { solicitarSchema } from '../../utils/schemas.ts'
 import { claveLimite, exigirLimite } from '../../utils/rateLimit.ts'
 import { crearMagicToken } from '../../utils/magicLink.ts'
 import { enviarMagicLink } from '../../utils/brevo.ts'
+import { crearCodigoLogin } from '../../utils/codigoLogin.ts'
 
-const MENSAJE = 'Si el email es válido, en unos segundos recibirás un enlace para entrar. Revisa también la carpeta de spam.'
+const MENSAJE = 'Si el email es válido, en unos segundos recibirás un enlace y un código para entrar. Revisa también la carpeta de spam.'
 const LIMITE = 'Has pedido demasiados enlaces. Espera unos minutos antes de volver a intentarlo.'
 
 export const onRequestPost: Handler = async (ctx) => {
@@ -34,6 +37,7 @@ export const onRequestPost: Handler = async (ctx) => {
   const enlace =
     cliente === 'app' ? `${raiz}/app-login?token=${encodeURIComponent(token)}` : `${raiz}/api/auth/verificar?token=${encodeURIComponent(token)}`
 
-  ctx.waitUntil(enviarMagicLink(env, email, enlace))
+  const codigo = await crearCodigoLogin(env, email)
+  ctx.waitUntil(enviarMagicLink(env, email, enlace, codigo))
   return json({ ok: true, mensaje: MENSAJE })
 }

@@ -10,6 +10,7 @@ import { leerBody } from '../../utils/http.ts'
 import { canjeTokenSchema } from '../../utils/schemas.ts'
 import { claveLimite, exigirLimite } from '../../utils/rateLimit.ts'
 import { consumirMagicToken } from '../../utils/magicLink.ts'
+import { cerrarSolicitudesLogin } from '../../utils/codigoLogin.ts'
 import { crearTokenApp } from '../../utils/session.ts'
 import { asegurarUsuario, obtenerUsuario } from '../../utils/usuarios.ts'
 
@@ -27,6 +28,7 @@ export const onRequestPost: Handler = async ({ request, env, data }) => {
 
   const u = await asegurarUsuario(env, r.email)
   if (!u) throw new HttpError(500, 'No se pudo iniciar sesión.')
+  await cerrarSolicitudesLogin(env, r.email)
   const { token: bearer, exp } = await crearTokenApp(env, u.id, u.email)
   const usuario = await obtenerUsuario(env, u.id)
   return json({ ok: true, token: bearer, expira: exp, usuario, perfilCompleto: usuario?.meta_calorias != null })

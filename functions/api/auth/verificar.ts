@@ -6,6 +6,7 @@
 import type { Handler } from '../../utils/env.ts'
 import { claveLimite, limitar } from '../../utils/rateLimit.ts'
 import { consumirMagicToken } from '../../utils/magicLink.ts'
+import { cerrarSolicitudesLogin } from '../../utils/codigoLogin.ts'
 import { crearCookieSesion } from '../../utils/session.ts'
 import { asegurarUsuario } from '../../utils/usuarios.ts'
 
@@ -25,6 +26,7 @@ export const onRequestGet: Handler = async ({ request, env, data }) => {
 
   const u = await asegurarUsuario(env, r.email)
   if (!u) return redirigir('/?auth=error')
+  await cerrarSolicitudesLogin(env, r.email) // el código del mismo email deja de valer
 
   return redirigir('/', await crearCookieSesion(env, u.id, u.email))
 }

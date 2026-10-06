@@ -90,23 +90,37 @@ function boton(href: string, texto: string): string {
 }
 
 // ------------------------------------------------------------------ magic link
-export async function enviarMagicLink(env: Env, email: string, enlace: string): Promise<boolean> {
+/** «123456» → «123 456» (más fácil de leer y copiar). */
+const agrupar = (c: string) => `${c.slice(0, 3)} ${c.slice(3)}`
+
+export async function enviarMagicLink(env: Env, email: string, enlace: string, codigo?: string): Promise<boolean> {
   if (!env.BREVO_API_KEY) {
-    // Desarrollo: imprimir el enlace en consola en vez de enviarlo.
-    console.log(`\n[auth] 🔗 Magic link para ${email} (válido 15 min):\n${enlace}\n`)
+    // Desarrollo: imprimir el enlace (y el código) en consola en vez de enviarlo.
+    console.log(`\n[auth] 🔗 Magic link para ${email} (válido 15 min):\n${enlace}${codigo ? `\n[auth] 🔢 Código: ${codigo}` : ''}\n`)
     return false
   }
+  const bloqueCodigo = codigo
+    ? `<tr><td style="font-size:14px;line-height:22px;color:${GRIS};padding-bottom:10px;">
+¿Estás en otro dispositivo? Escribe este código en la pantalla de acceso:</td></tr>
+<tr><td style="padding-bottom:28px;">
+<div style="display:inline-block;padding:14px 22px;border:1px solid ${BORDE};border-radius:14px;font-size:30px;line-height:36px;font-weight:600;letter-spacing:6px;color:${GRAFITO};font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;">${escaparHtml(agrupar(codigo))}</div>
+</td></tr>`
+    : ''
   const html = plantilla(
-    `<tr><td style="font-size:24px;line-height:32px;font-weight:600;padding-bottom:12px;">Tu enlace para entrar</td></tr>
+    `<tr><td style="font-size:24px;line-height:32px;font-weight:600;padding-bottom:12px;">Tu acceso a NutriFit</td></tr>
 <tr><td style="font-size:16px;line-height:24px;color:${GRIS};padding-bottom:28px;">
-Pulsa el botón para iniciar sesión en NutriFit. El enlace caduca en 15 minutos y solo funciona una vez.</td></tr>
+Pulsa el botón para iniciar sesión. El enlace${codigo ? ' y el código caducan' : ' caduca'} en 15 minutos y solo ${codigo ? 'funcionan' : 'funciona'} una vez.</td></tr>
 <tr><td style="padding-bottom:28px;">${boton(enlace, 'Entrar en NutriFit')}</td></tr>
+${bloqueCodigo}
 <tr><td style="font-size:13px;line-height:20px;color:${GRIS};">
-Si no has pedido este enlace, ignora este correo: nadie podrá entrar sin él.</td></tr>`,
-    'Tu enlace para entrar en NutriFit (caduca en 15 minutos)',
+Si no has pedido este acceso, ignora este correo: nadie podrá entrar sin él. Nunca compartas el código.</td></tr>`,
+    codigo ? `Tu código: ${agrupar(codigo)} · o entra con el enlace (caduca en 15 minutos)` : 'Tu enlace para entrar en NutriFit (caduca en 15 minutos)',
   )
-  const texto = `Entra en NutriFit con este enlace (caduca en 15 minutos, un solo uso):\n${enlace}\n\nSi no lo has pedido, ignora este correo.`
-  return enviar(env, { para: email, asunto: 'Tu enlace para entrar en NutriFit', html, texto })
+  const texto =
+    `Entra en NutriFit con este enlace (caduca en 15 minutos, un solo uso):\n${enlace}\n\n` +
+    (codigo ? `O escribe este código en la pantalla de acceso: ${agrupar(codigo)}\n\n` : '') +
+    'Si no lo has pedido, ignora este correo. Nunca compartas el código.'
+  return enviar(env, { para: email, asunto: codigo ? `${agrupar(codigo)} es tu código de NutriFit` : 'Tu enlace para entrar en NutriFit', html, texto })
 }
 
 // ------------------------------------------------------------------ bienvenida

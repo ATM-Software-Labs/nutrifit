@@ -68,6 +68,8 @@ export async function limpiezaOportunista(env: Env, probabilidad = 0.02) {
       env.DB.prepare('DELETE FROM rate_limits WHERE ventana_inicio < ?1').bind(ahora - 2 * 86400),
       env.DB.prepare('DELETE FROM magic_tokens WHERE expira_en < ?1').bind(ahora - 86400),
       env.DB.prepare('DELETE FROM tokens_app WHERE expira_en < ?1').bind(ahora - 86400),
+      env.DB.prepare('DELETE FROM codigos_login WHERE expira_en < ?1').bind(ahora - 86400),
+      env.DB.prepare('DELETE FROM emparejamientos_qr WHERE expira_en < ?1').bind(ahora - 3600),
     ])
   } catch (e) {
     console.warn('[limpieza] fallo no bloqueante', e)
