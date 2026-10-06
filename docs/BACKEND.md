@@ -14,6 +14,8 @@ rutas anónimas o caras, y rate limiting en D1.
 |---|---|---|---|---|---|
 | GET | `/api/health` | — | — | — | Vida + ping a D1 |
 | GET | `/api/config` | — | — | — | Config pública (`turnstileSiteKey`) |
+| GET | `/api/app/version` | — | — | — | Último APK: `{ version, tamano, url }` (caché 10 min) |
+| GET/HEAD | `/descargar/NutriFit.apk` | — | — | — | APK de la release *latest* servido desde nuestro dominio (no es `/api`; ver docs/ANDROID.md) |
 | POST | `/api/auth/solicitar` | — | **Sí** | 5 / 15 min por IP **y** por email | Envía magic link (`cliente: "app"` → enlace a `/app-login`). Responde siempre el mismo 200 genérico |
 | GET | `/api/auth/verificar?token=` | — | — | 30 / 15 min por IP | Valida el enlace (firma, caducidad 15 min, un solo uso), crea el usuario si es nuevo, pone la cookie `nf_session` y redirige 302 a `/` (error → `/?auth=invalido\|caducado\|usado\|limite`) |
 | POST | `/api/auth/token` | — | — | 30 / 15 min por IP | App Android: canjea el token del magic link por un token Bearer de 60 días (ver §8) |

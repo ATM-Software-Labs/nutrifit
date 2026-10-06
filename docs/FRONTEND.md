@@ -53,7 +53,7 @@ con la pantalla de Dashboard ≈ 62 KB. Fuente Outfit variable (subset latino,
 
 - `/descargar` (`SeccionDescargas`, lazy): APK directo, pasos de iOS ilustrados en SVG y enlace al código. Se llega desde el pie del login y desde Ajustes. Oculta dentro del APK.
 - `/privacidad` (`Privacidad`, lazy): renderiza `PRIVACIDAD.md` (importado `?raw`) con un Markdown mínimo y seguro.
-- `src/lib/config.ts`: **único sitio** para `GITHUB_REPO` (`VITE_GITHUB_REPO`, por defecto `ATM-Software-Labs/nutrifit`), `URL_APK` y `URL_API_NATIVA`.
+- `src/lib/config.ts`: **único sitio** para `GITHUB_REPO` (`VITE_GITHUB_REPO`, por defecto `ATM-Software-Labs/nutrifit`), `URL_APK` (`https://nutri.trujillomingorance.com/descargar/NutriFit.apk`, servido por nuestro dominio) y `URL_API_NATIVA`.
 - `src/lib/plataforma.ts`: `esNativa` (vía `window.Capacitor.isNativePlatform()`, sin meter `@capacitor/core` en el bundle web) y `API_BASE`. Los plugins nativos (`nativo.ts`, `tokenApp.ts`) se cargan con `import()` solo en el APK.
 
 ## Escritorio, historial y altas sin cámara (Fase 9)

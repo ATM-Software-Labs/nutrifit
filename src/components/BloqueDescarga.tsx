@@ -59,6 +59,7 @@ function BotonAPK() {
   return (
     <a
       href={URL_APK}
+      download="NutriFit.apk"
       className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-mint-700/30 bg-mint-50 px-5 text-[15px] font-semibold text-mint-800 transition hover:bg-mint-100 active:scale-[0.98] dark:border-mint-400/30 dark:bg-mint-950 dark:text-mint-200 dark:hover:bg-mint-900"
     >
       <Download size={18} strokeWidth={2} aria-hidden="true" />

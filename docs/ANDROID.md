@@ -119,8 +119,16 @@ git commit -am "chore: v1.0.0" && git tag v1.0.0 && git push --follow-tags
 
 `.github/workflows/compilar-apk.yml` compila y crea la Release con
 `NutriFit-v1.0.0.apk`, `NutriFit.apk` (nombre fijo → enlace estable
-`https://github.com/ATM-Software-Labs/nutrifit/releases/latest/download/NutriFit.apk`,
-que usa `/descargar`) y `SHA256SUMS.txt`. versionCode = X·1 000 000 + Y·10 000 + Z·100.
+`https://github.com/ATM-Software-Labs/nutrifit/releases/latest/download/NutriFit.apk`)
+y `SHA256SUMS.txt`. La web NO enlaza a GitHub (en muchos móviles abre la app de
+GitHub en vez de descargar): ofrece **`https://nutri.trujillomingorance.com/descargar/NutriFit.apk`**
+(alias `/descargar/NutriFit-latest.apk`), una Pages Function que resuelve la
+release *latest* con ese redirect (sin la API de GitHub), guarda la resolución
+10 min en la caché del borde y reenvía el binario en streaming con
+`Content-Type: application/vnd.android.package-archive`,
+`Content-Disposition: attachment; filename="NutriFit.apk"` y `Content-Length`.
+Una release nueva se sirve como mucho 10 min después de publicarse.
+`GET /api/app/version` → `{ version, tamano, url }` para los botones. versionCode = X·1 000 000 + Y·10 000 + Z·100.
 También se puede lanzar a mano (Actions → Compilar APK → Run workflow): deja el
 APK como artefacto y, si se marca, crea una pre-release `dev-N` (no cambia «latest»).
 

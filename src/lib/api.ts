@@ -145,7 +145,7 @@ export const api = {
     pedir<{ ok: true; productos: ProductoOFF[] }>(`/api/alimentos/off?${q(busqueda as Record<string, string>)}`, { signal }),
 
   /** Versión y tamaño del último APK (pública; null si GitHub no responde). */
-  versionApp: () => pedir<{ ok: true; version: string | null; tamano: number | null; fecha: string | null }>('/api/app/version', { silencio401: true }),
+  versionApp: () => pedir<{ ok: true; version: string | null; tamano: number | null; url: string }>('/api/app/version', { silencio401: true }),
 
   historial: (desde: string, hasta: string, signal?: AbortSignal) => pedir<{ ok: true } & Historial>(`/api/historial?${q({ desde, hasta })}`, { signal }),
   exportarCsv: (tipo: 'comidas' | 'peso' | 'agua', desde: string, hasta: string) => descargar(`/api/exportar?${q({ tipo, desde, hasta })}`),

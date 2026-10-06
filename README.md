@@ -156,7 +156,8 @@ Guía paso a paso con git y GitHub: [docs/SETUP-git-y-despliegue.md](docs/SETUP-
 
 ## APK Android
 
-- **Descarga directa:** <https://github.com/ATM-Software-Labs/nutrifit/releases/latest/download/NutriFit.apk>.
+- **Descarga directa:** <https://nutri.trujillomingorance.com/descargar/NutriFit.apk> — servida desde nuestro dominio (`functions/descargar/[archivo].ts` reenvía siempre el `NutriFit.apk` de la release *latest* de GitHub; así el móvil descarga el archivo en vez de abrir la app de GitHub). `GET /api/app/version` devuelve versión y tamaño.
+- **En la web:** el login, `/descargar` y la barra lateral muestran «Descarga la app»: QR a `/descargar` en el PC y botones en el móvil (APK en Android, «Añadir a pantalla de inicio» en iPhone). Se oculta dentro de la app y si la PWA ya está instalada.
 - **CI:** `.github/workflows/compilar-apk.yml` se ejecuta al publicar un tag `v*` (o a mano).
   - Compila la web, sincroniza Capacitor y genera el APK.
   - Si están los secretos `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` y `ANDROID_KEY_PASSWORD`, lo firma en release; si no, publica uno de depuración.

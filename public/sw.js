@@ -83,6 +83,8 @@ self.addEventListener('fetch', (event) => {
   }
   // /app-login lleva el token del magic link: que lo gestione solo la red.
   if (url.pathname.startsWith('/app-login')) return
+  // El APK (/descargar/NutriFit.apk) siempre de la red, sin tocarlo.
+  if (url.pathname.startsWith('/descargar/')) return
   if (req.mode === 'navigate') {
     event.respondWith(navegacion(event, url))
     return

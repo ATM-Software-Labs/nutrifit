@@ -136,10 +136,17 @@ function Android({ recomendada }: { recomendada?: string }) {
       .then((r) => setInfo([r.version, formatoMB(r.tamano)].filter(Boolean).join(' · ') || null))
       .catch(() => {})
   }, [])
+  const [noDisponible] = useState(() => new URLSearchParams(location.search).get('apk') === 'no-disponible')
   return (
     <Tarjeta icono={<Smartphone size={20} strokeWidth={1.75} />} titulo="Android" recomendada={recomendada}>
+      {noDisponible && (
+        <p role="alert" className="mb-4 rounded-2xl border border-fats/30 bg-fats-soft/60 px-4 py-3 text-sm text-amber-900 dark:border-fats/20 dark:bg-fats/10 dark:text-amber-200">
+          No hemos podido preparar la descarga ahora mismo. Inténtalo de nuevo en unos minutos.
+        </p>
+      )}
       <a
         href={URL_APK}
+        download="NutriFit.apk"
         className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-mint-700 text-base font-semibold text-white shadow-sm transition hover:bg-mint-800 active:scale-[0.98]"
       >
         <Download size={20} strokeWidth={2} /> Descargar APK
