@@ -9,7 +9,7 @@
 
 ---
 
-> 🚧 **Estado:** esqueleto inicial (Fase 1 identidad + Fase 2 base del proyecto).
+> 🚧 **Estado:** Fase 1 (identidad) · Fase 2 (esqueleto) · Fase 3 (backend: auth por magic link, D1, IA, seguridad).
 
 ## Stack
 
@@ -28,9 +28,12 @@ npm run dev          # Vite en http://localhost:5173 (proxy /api -> :8788)
 npm run pages:dev    # build + Pages Functions locales con Wrangler en http://localhost:8788
 npm run build        # compila a dist/
 npm run deploy       # build + wrangler pages deploy dist --project-name nutrifit
+npm run db:migrate:local   # esquema D1 local
+npm test             # tests unitarios
 ```
 
-Para variables locales: `cp .dev.vars.example .dev.vars`.
+Para variables locales: `cp .dev.vars.example .dev.vars`. Backend, endpoints, secretos y
+seguridad: **[docs/BACKEND.md](docs/BACKEND.md)**.
 
 ## Estructura
 

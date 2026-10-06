@@ -5,20 +5,33 @@ compatibility_date = "2026-10-01"
 compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = "dist"
 
+# Variables NO secretas (en local, .dev.vars las sobrescribe).
 [vars]
 ENVIRONMENT = "production"
+APP_URL = "https://nutri.trujillomingorance.com"
+# Orígenes extra aceptados en peticiones de escritura (además del propio host).
+ALLOWED_ORIGINS = "https://nutri.trujillomingorance.com,https://nutrifit.pages.dev"
+# Site key PÚBLICA de Turnstile (Cloudflare > Turnstile > Add widget).
+TURNSTILE_SITE_KEY = "REEMPLAZAR_TURNSTILE_SITE_KEY"
+# Modelo de Gemini (Flash estable con free tier en oct-2026).
+GEMINI_MODEL = "gemini-3.8-flash"
 
-# --- Cloudflare D1 (fase posterior) ------------------------------------------
+# --- Cloudflare D1 -----------------------------------------------------------
 # Crear con:  npx wrangler d1 create nutrifit-db   y pegar aquí el database_id.
-# [[d1_databases]]
-# binding = "DB"
-# database_name = "nutrifit-db"
-# database_id = "<PENDIENTE>"
-# migrations_dir = "migrations"
+[[d1_databases]]
+binding = "DB"
+database_name = "nutrifit-db"
+database_id = "00000000-0000-0000-0000-000000000000" # REEMPLAZAR (wrangler d1 create nutrifit-db)
+migrations_dir = "migrations"
 
-# --- Workers AI (fase posterior) ---------------------------------------------
-# [ai]
-# binding = "AI"
+# --- Workers AI (fallback de visión) -----------------------------------------
+# Llama 3.2 Vision exige aceptar una vez la licencia de Meta (ver docs/BACKEND.md).
+[ai]
+binding = "AI"
 
-# Secretos (NO van aquí): wrangler pages secret put GEMINI_API_KEY / BREVO_API_KEY
-# En local se leen de .dev.vars (ver .dev.vars.example).
+# --- SECRETOS: NUNCA en este archivo ni en git -------------------------------
+#   npx wrangler pages secret put AUTH_SECRET          --project-name nutrifit   # ≥ 32 bytes aleatorios
+#   npx wrangler pages secret put TURNSTILE_SECRET_KEY --project-name nutrifit
+#   npx wrangler pages secret put BREVO_API_KEY        --project-name nutrifit
+#   npx wrangler pages secret put GEMINI_API_KEY       --project-name nutrifit
+# En local van en .dev.vars (ver .dev.vars.example).
