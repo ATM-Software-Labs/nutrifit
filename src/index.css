@@ -2,17 +2,117 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  color-scheme: light dark;
+/* Outfit (OFL) autoalojada: subset latino, variable 300–700. */
+@font-face {
+  font-family: 'Outfit';
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url('/fonts/outfit-latin-var.woff2') format('woff2');
 }
 
-html,
-body,
-#root {
-  min-height: 100%;
+@layer base {
+  /* Fondo correcto desde el primer pintado (antes de que cargue JS), según el
+     sistema; .dark / .light en <html> fuerzan la preferencia del usuario. */
+  :root {
+    color-scheme: light;
+    background-color: #fafafa;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not(.light) {
+      color-scheme: dark;
+      background-color: #09090b;
+    }
+  }
+  :root.dark {
+    color-scheme: dark;
+    background-color: #09090b;
+  }
+
+  html,
+  body,
+  #root {
+    min-height: 100%;
+  }
+  body {
+    @apply bg-bg font-sans text-graphite antialiased dark:bg-bg-dark dark:text-neutral-100;
+    -webkit-tap-highlight-color: transparent;
+    text-rendering: optimizeLegibility;
+  }
+  :focus-visible {
+    @apply outline-none ring-2 ring-mint/60 ring-offset-2 ring-offset-bg dark:ring-offset-bg-dark;
+  }
+  ::selection {
+    @apply bg-mint/20;
+  }
+  input[type='number'] {
+    -moz-appearance: textfield;
+  }
+  input[type='number']::-webkit-inner-spin-button,
+  input[type='number']::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
 }
 
-body {
-  font-feature-settings: 'ss01', 'cv11';
-  -webkit-tap-highlight-color: transparent;
+@layer components {
+  .tarjeta {
+    @apply rounded-2xl border border-neutral-200 bg-card shadow-card dark:border-neutral-800 dark:bg-card-dark;
+  }
+  .etiqueta {
+    @apply text-xs font-medium uppercase tracking-[0.08em] text-neutral-500 dark:text-neutral-400;
+  }
+  .cifra {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Slider minimalista (input range nativo, accesible). --pct lo fija React. */
+  .slider {
+    @apply h-6 w-full cursor-pointer appearance-none bg-transparent;
+    --pct: 50%;
+  }
+  .slider::-webkit-slider-runnable-track {
+    @apply h-1.5 rounded-full;
+    background: linear-gradient(to right, #10b981 var(--pct), rgb(229 229 229) var(--pct));
+  }
+  .dark .slider::-webkit-slider-runnable-track {
+    background: linear-gradient(to right, #10b981 var(--pct), rgb(38 38 38) var(--pct));
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not(.light) .slider::-webkit-slider-runnable-track {
+      background: linear-gradient(to right, #10b981 var(--pct), rgb(38 38 38) var(--pct));
+    }
+  }
+  .slider::-webkit-slider-thumb {
+    @apply -mt-[9px] h-6 w-6 appearance-none rounded-full border border-neutral-200 bg-white shadow-lift transition-transform;
+  }
+  .slider:active::-webkit-slider-thumb {
+    transform: scale(1.1);
+  }
+  .slider::-moz-range-track {
+    @apply h-1.5 rounded-full bg-neutral-200 dark:bg-neutral-800;
+  }
+  .slider::-moz-range-progress {
+    @apply h-1.5 rounded-full bg-mint;
+  }
+  .slider::-moz-range-thumb {
+    @apply h-6 w-6 rounded-full border border-neutral-200 bg-white shadow-lift;
+  }
+  .slider:focus-visible {
+    @apply ring-0 ring-offset-0;
+  }
+  .slider:focus-visible::-webkit-slider-thumb {
+    @apply ring-4 ring-mint/30;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

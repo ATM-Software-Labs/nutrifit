@@ -1,4 +1,5 @@
 {
+  "id": "/",
   "name": "NutriFit",
   "short_name": "NutriFit",
   "description": "Seguimiento de nutrición y macros, minimalista y open source.",

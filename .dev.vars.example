@@ -7,10 +7,11 @@ APP_URL=http://localhost:8788
 ALLOWED_ORIGINS=http://localhost:8788,http://localhost:5173
 
 # Claves de PRUEBA oficiales de Turnstile (siempre pasan). Nunca en producción:
-#   site key   1x00000000000000000000AA
+#   site key   1x00000000000000000000BB  (invisible, como el widget de producción)
+#   site key   1x00000000000000000000AA  (visible)
 #   secret key 1x0000000000000000000000000000000AA
 # (2x0000000000000000000000000000000AA = secret que siempre falla, útil para probar errores)
-TURNSTILE_SITE_KEY=1x00000000000000000000AA
+TURNSTILE_SITE_KEY=1x00000000000000000000BB
 TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
 
 # Secreto para firmar sesiones y magic links. Genera uno con:

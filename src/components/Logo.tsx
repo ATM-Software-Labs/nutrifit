@@ -37,7 +37,7 @@ export function Logo({ size = 48, withWordmark = false, className = '' }: LogoPr
       </svg>
       {withWordmark && (
         <span className="text-2xl font-medium tracking-tight">
-          Nutri<span className="font-semibold text-mint">Fit</span>
+          Nutri<span className="font-semibold text-mint-700 dark:text-mint-400">Fit</span>
         </span>
       )}
     </span>

@@ -10,18 +10,18 @@ pages_build_output_dir = "dist"
 ENVIRONMENT = "production"
 APP_URL = "https://nutri.trujillomingorance.com"
 # Orígenes extra aceptados en peticiones de escritura (además del propio host).
-ALLOWED_ORIGINS = "https://nutri.trujillomingorance.com,https://nutrifit.pages.dev"
-# Site key PÚBLICA de Turnstile (Cloudflare > Turnstile > Add widget).
-TURNSTILE_SITE_KEY = "REEMPLAZAR_TURNSTILE_SITE_KEY"
+ALLOWED_ORIGINS = "https://nutri.trujillomingorance.com,https://nutrifit-ac9.pages.dev"
+# Site key PÚBLICA de Turnstile (widget en modo Invisible). En local, .dev.vars usa la clave de prueba.
+TURNSTILE_SITE_KEY = "0x4AAAAAAFPhRCuPz21TsJR5"
 # Modelo de Gemini (Flash estable con free tier en oct-2026).
 GEMINI_MODEL = "gemini-3.8-flash"
 
 # --- Cloudflare D1 -----------------------------------------------------------
-# Crear con:  npx wrangler d1 create nutrifit-db   y pegar aquí el database_id.
+# Creada con `npx wrangler d1 create nutrifit-db` (el id no es secreto).
 [[d1_databases]]
 binding = "DB"
 database_name = "nutrifit-db"
-database_id = "00000000-0000-0000-0000-000000000000" # REEMPLAZAR (wrangler d1 create nutrifit-db)
+database_id = "c7f77ed4-a5d0-4c3a-a686-ecc1fb77d1f1"
 migrations_dir = "migrations"
 
 # --- Workers AI (fallback de visión) -----------------------------------------
@@ -30,8 +30,8 @@ migrations_dir = "migrations"
 binding = "AI"
 
 # --- SECRETOS: NUNCA en este archivo ni en git -------------------------------
-#   npx wrangler pages secret put AUTH_SECRET          --project-name nutrifit   # ≥ 32 bytes aleatorios
-#   npx wrangler pages secret put TURNSTILE_SECRET_KEY --project-name nutrifit
-#   npx wrangler pages secret put BREVO_API_KEY        --project-name nutrifit
-#   npx wrangler pages secret put GEMINI_API_KEY       --project-name nutrifit
+#   npx wrangler pages secret put AUTH_SECRET          --project-name nutrifit   # ✓ configurado
+#   npx wrangler pages secret put TURNSTILE_SECRET_KEY --project-name nutrifit   # ✓ configurado
+#   npx wrangler pages secret put BREVO_API_KEY        --project-name nutrifit   # pendiente
+#   npx wrangler pages secret put GEMINI_API_KEY       --project-name nutrifit   # pendiente
 # En local van en .dev.vars (ver .dev.vars.example).

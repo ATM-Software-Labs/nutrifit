@@ -17,7 +17,7 @@ rutas anónimas o caras, y rate limiting en D1.
 | POST | `/api/auth/solicitar` | — | **Sí** | 5 / 15 min por IP **y** por email | Envía magic link. Responde siempre el mismo 200 genérico |
 | GET | `/api/auth/verificar?token=` | — | — | 30 / 15 min por IP | Valida el enlace (firma, caducidad 15 min, un solo uso), crea el usuario si es nuevo, pone la cookie `nf_session` y redirige 302 a `/` (error → `/?auth=invalido\|caducado\|usado\|limite`) |
 | POST | `/api/auth/salir` | (cookie) | — | — | Borra la cookie |
-| GET | `/api/auth/yo` | Sí | — | — | Perfil del usuario o 401 |
+| GET | `/api/auth/yo` | No | — | — | Perfil del usuario, o `usuario: null` si no hay sesión (200, sin ruido en consola) |
 | POST | `/api/macros/calcular` | — | — | 60 / min por IP | Mifflin-St Jeor → `{tmb, tdee, calorias, proteinas, carbohidratos, grasas}` |
 | POST | `/api/usuarios/perfil` | Sí | **Sí** | — | Guarda onboarding + objetivos; la 1.ª vez envía la bienvenida (en segundo plano) |
 | POST | `/api/comidas/analizar` | Sí | **Sí** | 20 / min por IP · 10 / día por usuario | Foto (multipart `imagen` o JSON `{imagen: base64\|dataURL}`), ≤ 1,5 MB, JPEG/PNG/WebP reales → `{proveedor, resultado}` |
@@ -70,9 +70,9 @@ futuros: `npx wrangler d1 migrations create nutrifit-db <nombre>`.
 ## 3. Turnstile (anti-bots)
 
 1. Panel de Cloudflare → **Turnstile** → **Add widget**.
-2. *Widget name:* `NutriFit`. *Hostnames:* `nutri.trujillomingorance.com`, `nutrifit.pages.dev` y `localhost` (opcional, para probar con claves reales en local).
-3. *Widget mode:* **Managed** (recomendado; solo muestra un reto si sospecha) o **Invisible**.
-4. Copia la **Site Key** (pública) en `wrangler.toml` → `TURNSTILE_SITE_KEY`.
+2. *Widget name:* `NutriFit`. *Hostnames:* `nutri.trujillomingorance.com`, `nutrifit-ac9.pages.dev` y `localhost` (opcional, para probar con claves reales en local).
+3. *Widget mode:* **Invisible** (el elegido en producción: el frontend lo ejecuta al pulsar el botón, sin casilla visible). *Managed* también funciona con el mismo código.
+4. Copia la **Site Key** (pública) en `wrangler.toml` → `TURNSTILE_SITE_KEY` (ya configurada: `0x4AAAAAAFPhRCuPz21TsJR5`).
 5. Guarda la **Secret Key** como secreto:
    ```bash
    npx wrangler pages secret put TURNSTILE_SECRET_KEY --project-name nutrifit
@@ -82,7 +82,8 @@ futuros: `npx wrangler d1 migrations create nutrifit-db <nombre>`.
 
 | | Valor |
 |---|---|
-| Site key (siempre pasa) | `1x00000000000000000000AA` |
+| Site key invisible (siempre pasa) | `1x00000000000000000000BB` |
+| Site key visible (siempre pasa) | `1x00000000000000000000AA` |
 | Secret key (siempre pasa) | `1x0000000000000000000000000000000AA` |
 | Secret key (siempre falla) | `2x0000000000000000000000000000000AA` |
 
@@ -114,9 +115,10 @@ npx wrangler pages secret list --project-name nutrifit
 > Cambiar `AUTH_SECRET` invalida todas las sesiones y enlaces pendientes (sirve
 > como "cerrar sesión en todos los dispositivos").
 
-**Brevo:** el remitente `hola@nutri.trujillomingorance.com` debe estar
-verificado en Brevo (*Senders, Domains & Dedicated IPs* → autenticar el dominio
-con los registros DKIM/DMARC que indique Brevo en la zona DNS). Sin
+**Brevo:** los emails salen del dominio raíz, ya autenticado en Brevo:
+remitente `nutrifit@trujillomingorance.com` («NutriFit») y respuestas a
+`soporte@trujillomingorance.com`. No se usa `nutri.trujillomingorance.com`
+porque su CNAME hacia Pages no puede convivir con registros MX/TXT. Sin
 `BREVO_API_KEY` (desarrollo), el magic link se imprime en la consola de Wrangler.
 
 ---

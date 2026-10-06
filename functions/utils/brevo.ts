@@ -7,7 +7,10 @@ import type { Env } from './env.ts'
 import type { PlanMacros } from '../../src/lib/macros.ts'
 
 const BREVO_URL = 'https://api.brevo.com/v3/smtp/email'
-const REMITENTE = { name: 'NutriFit', email: 'hola@nutri.trujillomingorance.com' }
+// Los emails salen del dominio raíz (autenticado en Brevo): en nutri.* hay un
+// CNAME a Pages, que no puede convivir con registros MX/TXT.
+const REMITENTE = { name: 'NutriFit', email: 'nutrifit@trujillomingorance.com' }
+const RESPONDER_A = { name: 'Soporte NutriFit', email: 'soporte@trujillomingorance.com' }
 const URL_APP = 'https://nutri.trujillomingorance.com'
 
 const MINT = '#10B981'
@@ -40,6 +43,7 @@ async function enviar(env: Env, c: Correo): Promise<boolean> {
       headers: { 'api-key': env.BREVO_API_KEY, 'content-type': 'application/json', accept: 'application/json' },
       body: JSON.stringify({
         sender: REMITENTE,
+        replyTo: RESPONDER_A,
         to: [{ email: c.para, ...(c.nombre ? { name: c.nombre } : {}) }],
         subject: c.asunto,
         htmlContent: c.html,
@@ -73,7 +77,8 @@ function plantilla(contenido: string, preheader: string): string {
 Nutri<span style="color:${MINT};">Fit</span></td></tr>
 ${contenido}
 <tr><td style="padding-top:40px;font-size:12px;line-height:18px;color:${GRIS};">
-NutriFit · Barcelona · <a href="${URL_APP}" style="color:${GRIS};">nutri.trujillomingorance.com</a></td></tr>
+NutriFit · Barcelona · <a href="${URL_APP}" style="color:${GRIS};">nutri.trujillomingorance.com</a><br>
+¿Dudas? Escríbenos a <a href="mailto:${RESPONDER_A.email}" style="color:${GRIS};">${RESPONDER_A.email}</a></td></tr>
 </table></td></tr></table></body></html>`
 }
 

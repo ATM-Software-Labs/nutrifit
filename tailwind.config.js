@@ -1,15 +1,14 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
+  // Tema: sigue al sistema por defecto; la clase .dark/.light en <html> lo fuerza (ver src/lib/tema.ts).
   darkMode: 'class',
   theme: {
     extend: {
       colors: {
-        // Fondos y superficies (claro / oscuro)
         bg: { DEFAULT: '#FAFAFA', dark: '#09090B' },
         card: { DEFAULT: '#FFFFFF', dark: '#18181B' },
         graphite: '#111827',
-        // Marca
         mint: {
           DEFAULT: '#10B981',
           50: '#ECFDF5',
@@ -20,19 +19,56 @@ export default {
           500: '#10B981',
           600: '#059669',
           700: '#047857',
+          800: '#065F46',
+          900: '#064E3B',
+          950: '#022C22',
         },
-        // Macros
-        protein: '#EF4444',
-        carbs: '#3B82F6',
-        fats: '#F59E0B',
+        protein: { DEFAULT: '#EF4444', soft: '#FEE2E2' },
+        carbs: { DEFAULT: '#3B82F6', soft: '#DBEAFE' },
+        fats: { DEFAULT: '#F59E0B', soft: '#FEF3C7' },
+        water: { DEFAULT: '#0EA5E9' },
       },
       fontFamily: {
         sans: [
-          'Outfit', 'Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont',
-          '"Segoe UI"', 'Roboto', '"Helvetica Neue"', 'Arial', 'sans-serif',
+          'Outfit',
+          'ui-sans-serif',
+          'system-ui',
+          '-apple-system',
+          'BlinkMacSystemFont',
+          '"Segoe UI"',
+          'Roboto',
+          '"Helvetica Neue"',
+          'Arial',
+          'sans-serif',
         ],
       },
+      fontSize: {
+        '2xs': ['0.6875rem', { lineHeight: '1rem' }],
+      },
       borderRadius: { '2xl': '1rem', '3xl': '1.5rem' },
+      boxShadow: {
+        sm: '0 1px 2px 0 rgb(0 0 0 / 0.04)',
+        card: '0 1px 2px 0 rgb(0 0 0 / 0.04), 0 1px 1px -1px rgb(0 0 0 / 0.03)',
+        lift: '0 8px 24px -12px rgb(0 0 0 / 0.18)',
+        sheet: '0 -8px 40px -12px rgb(0 0 0 / 0.25)',
+      },
+      transitionTimingFunction: { suave: 'cubic-bezier(0.22, 1, 0.36, 1)' },
+      keyframes: {
+        'fade-in': { from: { opacity: '0' }, to: { opacity: '1' } },
+        'slide-up': { from: { transform: 'translateY(100%)' }, to: { transform: 'translateY(0)' } },
+        'pop-in': { from: { opacity: '0', transform: 'translateY(8px) scale(0.98)' }, to: { opacity: '1', transform: 'none' } },
+        'paso-in': { from: { opacity: '0', transform: 'translateX(16px)' }, to: { opacity: '1', transform: 'none' } },
+        laser: { '0%': { top: '0%' }, '50%': { top: 'calc(100% - 2px)' }, '100%': { top: '0%' } },
+        'toast-in': { from: { opacity: '0', transform: 'translateY(-8px)' }, to: { opacity: '1', transform: 'none' } },
+      },
+      animation: {
+        'fade-in': 'fade-in 200ms ease-out both',
+        'slide-up': 'slide-up 320ms cubic-bezier(0.22, 1, 0.36, 1) both',
+        'pop-in': 'pop-in 260ms cubic-bezier(0.22, 1, 0.36, 1) both',
+        'paso-in': 'paso-in 280ms cubic-bezier(0.22, 1, 0.36, 1) both',
+        laser: 'laser 2.2s ease-in-out infinite',
+        'toast-in': 'toast-in 220ms cubic-bezier(0.22, 1, 0.36, 1) both',
+      },
     },
   },
   plugins: [],

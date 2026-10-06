@@ -104,7 +104,7 @@ npx wrangler whoami       # verifica la cuenta
 npx wrangler pages project create nutrifit --production-branch main
 ```
 
-Esto crea `nutrifit.pages.dev`.
+Esto crea el subdominio de Pages. Para este proyecto es **`nutrifit-ac9.pages.dev`**: Cloudflare añade un sufijo cuando `nutrifit` ya está cogido. El nombre del proyecto sigue siendo `nutrifit`.
 
 ### 3.3 Desplegar
 
@@ -117,7 +117,7 @@ Wrangler sube `dist/` y compila automáticamente la carpeta `functions/`
 (Pages Functions). Al terminar mostrará la URL del despliegue. Comprueba:
 
 ```bash
-curl https://nutrifit.pages.dev/api/health
+curl https://nutrifit-ac9.pages.dev/api/health
 # {"ok":true,"service":"nutrifit",...}
 ```
 
@@ -146,7 +146,7 @@ Set up a custom domain** → `nutri.trujillomingorance.com`. Si la zona
 CNAME se crea automáticamente; si no, añade a mano:
 
 ```
-CNAME  nutri  nutrifit.pages.dev
+CNAME  nutri  nutrifit-ac9.pages.dev
 ```
 
 ---
