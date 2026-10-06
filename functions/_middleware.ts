@@ -33,9 +33,11 @@ import { claveLimite, exigirLimite, limpiezaOportunista } from './utils/rateLimi
 const ESCRITURA = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 
 /** Escrituras que exigen Turnstile (anónimas o caras). */
-export const RUTAS_TURNSTILE = new Set(['/api/auth/solicitar', '/api/usuarios/perfil', '/api/comidas/analizar', '/api/comidas/analizar-texto'])
+export const RUTAS_TURNSTILE = new Set(['/api/auth/solicitar', '/api/usuarios/perfil', '/api/comidas/analizar', '/api/comidas/analizar-texto', '/api/alimentos/etiqueta'])
 /** Rutas con Turnstile que además requieren sesión: se comprueba ANTES de gastar el token. */
-const RUTAS_SESION_PREVIA = new Set(['/api/usuarios/perfil', '/api/comidas/analizar', '/api/comidas/analizar-texto'])
+const RUTAS_SESION_PREVIA = new Set(['/api/usuarios/perfil', '/api/comidas/analizar', '/api/comidas/analizar-texto', '/api/alimentos/etiqueta'])
+/** Rutas que llaman a la IA: 20/min por IP además del límite diario por usuario. */
+const RUTAS_IA = new Set(['/api/comidas/analizar', '/api/comidas/analizar-texto', '/api/alimentos/etiqueta'])
 
 /** Orígenes del WebView de Capacitor (APK). */
 export const ORIGENES_APP = new Set(['https://localhost', 'capacitor://localhost'])
@@ -87,7 +89,7 @@ async function extraerTokenTurnstile(request: Request, pathname: string): Promis
   const copia = request.clone()
   try {
     if (ct.startsWith('application/json')) {
-      const max = pathname === '/api/comidas/analizar' ? MAX_JSON_ANALIZAR : undefined
+      const max = pathname === '/api/comidas/analizar' || pathname === '/api/alimentos/etiqueta' ? MAX_JSON_ANALIZAR : undefined
       const body = (await leerJson(copia, max)) as Record<string, unknown> | null
       const t = body?.turnstileToken ?? body?.['cf-turnstile-response']
       return typeof t === 'string' ? t : null
@@ -151,7 +153,7 @@ export const onRequest: Handler = async (ctx) => {
       }
       comprobarContentType(request)
 
-      if (url.pathname === '/api/comidas/analizar' || url.pathname === '/api/comidas/analizar-texto') {
+      if (RUTAS_IA.has(url.pathname)) {
         await exigirLimite(env, await claveLimite('analizar:ip', datos.ip), 20, 60)
       }
       if (RUTAS_TURNSTILE.has(url.pathname)) {
