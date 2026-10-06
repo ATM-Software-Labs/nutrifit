@@ -12,9 +12,8 @@
   Strict-Transport-Security: max-age=63072000; includeSubDomains
   Cross-Origin-Opener-Policy: same-origin
 
-# Recursos con hash de Vite: caché de 1 año inmutable.
-/assets/*
-  Cache-Control: public, max-age=31536000, immutable
+# Recursos con hash de Vite: la caché inmutable de 1 año la pone
+# functions/assets/[[ruta]].ts SOLO en respuestas válidas (los 404 salen no-store).
 
 # Iconos y logos (sin hash en el nombre): 30 días + revalidación en segundo plano.
 /icons/*

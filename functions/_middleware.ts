@@ -1,7 +1,8 @@
 /**
  * Middleware global de NutriFit (se ejecuta antes de cada Function).
- * public/_routes.json limita la invocación de Functions a /api/*, así que los
- * estáticos no pasan por aquí (ni consumen peticiones de Workers).
+ * public/_routes.json limita la invocación de Functions a /api/* y /assets/*
+ * (este último solo para fijar bien la caché, ver functions/assets/[[ruta]].ts);
+ * el resto de estáticos no pasa por aquí (ni consume peticiones de Workers).
  *
  * Para /api/*:
  *   0. CORS SOLO para el WebView de la app Android (https://localhost y
