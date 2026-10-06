@@ -55,3 +55,41 @@ con la pantalla de Dashboard ≈ 62 KB. Fuente Outfit variable (subset latino,
 - `/privacidad` (`Privacidad`, lazy): renderiza `PRIVACIDAD.md` (importado `?raw`) con un Markdown mínimo y seguro.
 - `src/lib/config.ts`: **único sitio** para `GITHUB_REPO` (`VITE_GITHUB_REPO`, por defecto `ATM-Software-Labs/nutrifit`), `URL_APK` y `URL_API_NATIVA`.
 - `src/lib/plataforma.ts`: `esNativa` (vía `window.Capacitor.isNativePlatform()`, sin meter `@capacitor/core` en el bundle web) y `API_BASE`. Los plugins nativos (`nativo.ts`, `tokenApp.ts`) se cargan con `import()` solo en el APK.
+
+## Escritorio, historial y altas sin cámara (Fase 9)
+
+- **Rutas** (`src/lib/rutas.ts`, History API sin dependencias): `/` (Hoy),
+  `/historial` y `/vincular#id` (aprobar desde el móvil el acceso de un PC; el
+  id viaja en el fragmento y se borra de la URL al arrancar). `/descargar` y
+  `/privacidad` siguen siendo páginas sueltas.
+- **Escritorio (≥ `lg`, 1024 px):** `BarraLateral` (Hoy, Historial, Añadir comida,
+  Peso, Agua, Ajustes, Descargar app; usuario y «Salir» abajo) y panel en 2
+  columnas (lg) o 3 (xl) con la tarjeta `AnadirRapido` (tipo de comida +
+  Describir / Buscar / Subir foto / Manual, y zona para soltar la foto). El
+  árbol es único: en móvil el orden y el aspecto no cambian (cabecera, botón
+  flotante, una columna); solo se añade el acceso al historial en la cabecera.
+- **Login:** tras pedir el enlace aparece el campo del **código de 6 cifras**
+  (`autocomplete="one-time-code"`, se envía solo al completarlo). En escritorio,
+  `LoginQR` (chunk aparte con el codificador [`uqr`](https://github.com/unjs/uqr),
+  MIT) muestra el QR en SVG, el código corto y una cuenta atrás; consulta el
+  estado cada 2 s solo con la pestaña visible y se renueva unas pocas veces.
+- **Añadir sin cámara:** `HojaAnadir` suma «Describir con texto»
+  (`DescribirComida`, Turnstile `analizar-texto`) y «Buscar alimento»
+  (`BuscarAlimento`: base local + Open Food Facts, gramos y «cesta» de
+  alimentos). Todo acaba en `ModalRevisionPlato`. En escritorio no se ofrece
+  la cámara y se puede arrastrar la foto (misma compresión WebP).
+- **Base de alimentos:** `src/data/alimentos.ts` (≈ 360 alimentos, 16
+  categorías) se genera con `python3 scripts/alimentos/generar.py` a partir de
+  `scripts/alimentos/mapa.txt` y de **USDA FoodData Central — SR Legacy (2018)**,
+  dominio público (CC0): kcal, proteínas, carbohidratos por diferencia y grasas
+  por 100 g, más el FDC ID de cada fila. Los nombres en español y las raciones
+  típicas son nuestros.
+- **Historial** (`Historial.tsx` + `Graficas.tsx`): semana/mes, anterior/siguiente,
+  KPIs, barras de calorías con la línea de objetivo, macros apilados, peso y
+  agua en SVG puro, y la tabla de días (clic → abre ese día en Hoy).
+- **Exportar** (`Exportar.tsx`): CSV vía `fetch` + Blob (la cookie viaja sola;
+  en la app, Bearer) e **informe PDF** = `Informe.tsx` (vista de impresión con
+  `@media print`, A4) + `window.print()` → «Guardar como PDF». Sin librerías.
+- **Presupuesto:** JS inicial ~55 KB gzip + CSS ~9 KB; `Historial`, `LoginQR`,
+  `BuscarAlimento` (incluye la base de alimentos), `DescribirComida`,
+  `Exportar`, `Informe` y `Vincular` son chunks perezosos.

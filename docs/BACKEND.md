@@ -17,11 +17,20 @@ rutas anónimas o caras, y rate limiting en D1.
 | POST | `/api/auth/solicitar` | — | **Sí** | 5 / 15 min por IP **y** por email | Envía magic link (`cliente: "app"` → enlace a `/app-login`). Responde siempre el mismo 200 genérico |
 | GET | `/api/auth/verificar?token=` | — | — | 30 / 15 min por IP | Valida el enlace (firma, caducidad 15 min, un solo uso), crea el usuario si es nuevo, pone la cookie `nf_session` y redirige 302 a `/` (error → `/?auth=invalido\|caducado\|usado\|limite`) |
 | POST | `/api/auth/token` | — | — | 30 / 15 min por IP | App Android: canjea el token del magic link por un token Bearer de 60 días (ver §8) |
+| POST | `/api/auth/codigo` | — | — | 20 / 15 min por IP · 10 / 15 min por email | Código de 6 cifras del email `{email, codigo, cliente}` → cookie (web) o token Bearer (app). Solo se guarda su HMAC ligado al email; 15 min, un uso, 5 intentos (luego se invalida: 410 `codigo_agotado`) |
+| POST | `/api/auth/qr/crear` | — | — | 20 / 10 min por IP | PC: `{secretoHash}` (SHA-256 de un secreto de 32 B que se queda en el navegador) → `{id, codigo, expira, url}`; id de 256 bits guardado con hash, 2 min |
+| POST | `/api/auth/qr/estado` | — | — | 90 / min por IP | PC (cada ~2 s): `{id, secreto}` → `pendiente\|rechazado\|caducado\|invalido` o `aprobado` + cookie `nf_session` nueva (una sola vez) |
+| GET | `/api/auth/qr/info?id=` | Sí | — | 30 / 10 min por usuario | Móvil: código corto, navegador/sistema, ubicación aproximada (país/ciudad de Cloudflare) y hora |
+| POST | `/api/auth/qr/decidir` | Sí | — | 20 / 10 min por usuario | Móvil: `{id, aprobar}`; solo si sigue pendiente y vigente |
 | POST | `/api/auth/salir` | (cookie o Bearer) | — | — | Borra la cookie o revoca el token Bearer |
 | GET | `/api/auth/yo` | No | — | — | Perfil del usuario, o `usuario: null` si no hay sesión (200, sin ruido en consola) |
 | POST | `/api/macros/calcular` | — | — | 60 / min por IP | Mifflin-St Jeor → `{tmb, tdee, calorias, proteinas, carbohidratos, grasas}` |
 | POST | `/api/usuarios/perfil` | Sí | **Sí** | — | Guarda onboarding + objetivos; la 1.ª vez envía la bienvenida (en segundo plano) |
 | POST | `/api/comidas/analizar` | Sí | **Sí** | 20 / min por IP · 10 / día por usuario | Foto (multipart `imagen` o JSON `{imagen: base64\|dataURL}`), ≤ 1,5 MB, JPEG/PNG/WebP reales → `{proveedor, resultado}` |
+| POST | `/api/comidas/analizar-texto` | Sí | **Sí** | 20 / min por IP · 30 / día por usuario | `{descripcion}` (3–300 caracteres) → mismo JSON que las fotos. Gemini si hay `GEMINI_API_KEY`; si no, Workers AI `@cf/google/gemma-4-26b-a4b-it` (sin razonamiento) → `@cf/mistralai/mistral-small-3.1-24b-instruct`. 503 `ia_no_disponible` |
+| GET | `/api/alimentos/off?q=` · `?codigo=` | Sí | — | 12 / min (búsqueda) · 30 / min (código) por usuario | Proxy de Open Food Facts (User-Agent `NutriFit/1.0`, solo se envía el término o el código de barras), normalizado por 100 g; caché en el borde 1 día (búsquedas) / 7 días (códigos). 503 `off_no_disponible` |
+| GET | `/api/historial?desde=&hasta=` | Sí | — | 60 / min por usuario | ≤ 93 días: totales diarios (kcal, P/C/G, nº comidas), agua, peso, medias, días en objetivo (±10 %) y cambio de peso |
+| GET | `/api/exportar?tipo=&desde=&hasta=` | Sí | — | 30 / hora por usuario | `tipo = comidas\|peso\|agua`, ≤ 366 días → CSV UTF-8 con BOM, «;» y coma decimal, `Content-Disposition: attachment`; celdas que empiezan por `= + - @` se neutralizan (inyección de fórmulas) |
 | POST | `/api/comidas/guardar` | Sí | — | 300 / día por usuario | Inserta una comida |
 | GET | `/api/comidas/resumen?fecha=` | Sí | — | — | Comidas por tipo, totales, metas, restante y % (el usuario sale de la cookie, nunca de un parámetro) |
 | DELETE | `/api/comidas/:id` | Sí | — | — | Borra solo comidas propias (404 si no existe o no es tuya) |
@@ -35,6 +44,21 @@ Turnstile se envía en la cabecera `CF-Turnstile-Token`, en el campo JSON
 Errores: `{"ok": false, "error": "mensaje en español", "detalles"?: [{campo, mensaje}], "codigo"?: "..."}`
 con 400 (validación), 401, 403 (`origen`, `turnstile_requerido`, `turnstile_invalido`),
 404, 413, 415, 429 (+ `Retry-After`), 503 (`ia_no_disponible`), 500 (sin detalles internos).
+
+### Login con código y con QR
+
+- **Código:** se genera con muestreo uniforme (sin sesgo de módulo) en el mismo
+  `POST /api/auth/solicitar` que el enlace y se envía en el mismo email. En D1
+  (`codigos_login`, migración `0003`) solo queda `HMAC(AUTH_SECRET, id:email:código)`.
+  Cada intento incrementa `intentos` con un `UPDATE … RETURNING` atómico y se
+  compara en tiempo constante; al 5.º fallo el código se invalida. Entrar por
+  enlace o por código invalida el otro canal.
+- **QR (PC ↔ móvil):** el PC genera un secreto aleatorio y registra solo su
+  SHA-256; el id (256 bits) tampoco se guarda en claro. El móvil, con su propia
+  sesión, ve navegador/sistema, ubicación aproximada, hora y el **código corto**
+  que también muestra el PC (anti-phishing) y aprueba o rechaza. Solo quien
+  conoce el secreto recibe la cookie, una vez y como máximo 60 s después de
+  aprobar. Caduca a los 2 min. La app Android abre `/vincular` como App Link.
 
 ### Modelo de seguridad (resumen)
 

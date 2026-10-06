@@ -25,6 +25,10 @@
 
 ## Capturas
 
+| Escritorio · Panel | Escritorio · Historial | Escritorio · Entrar con QR |
+|:-:|:-:|:-:|
+| <img src="docs/screenshots/desktop-dashboard.png" width="300" alt="Panel en escritorio con barra lateral" /> | <img src="docs/screenshots/desktop-historial.png" width="300" alt="Historial semanal en escritorio" /> | <img src="docs/screenshots/desktop-login-qr.png" width="300" alt="Inicio de sesión con QR en escritorio" /> |
+
 | Inicio | Plan diario | Panel | Modo oscuro |
 |:-:|:-:|:-:|:-:|
 | <img src="docs/screenshots/login.png" width="200" alt="Inicio de sesión" /> | <img src="docs/screenshots/onboarding-4.png" width="200" alt="Plan diario" /> | <img src="docs/screenshots/dashboard-light.png" width="200" alt="Panel" /> | <img src="docs/screenshots/dashboard-dark.png" width="200" alt="Panel en modo oscuro" /> |
@@ -33,13 +37,18 @@
 
 ## Funciones
 
-- **Entrar sin contraseña:** enlace mágico por email (15 min, un solo uso), protegido con Cloudflare Turnstile invisible.
+- **Entrar sin contraseña:** enlace mágico **y código de 6 cifras** en el mismo email (15 min, un solo uso, 5 intentos), protegido con Cloudflare Turnstile invisible.
+- **Entrar en el PC con un QR:** el ordenador muestra un QR y un código corto; lo escaneas con el móvil donde ya tienes sesión, compruebas el código y pulsas «Aprobar» (2 min, un solo uso, ligado a ese navegador).
 - **Plan personalizado:** onboarding en 4 pasos con Mifflin-St Jeor, nivel de actividad y objetivo (perder grasa, mantener, ganar músculo).
 - **Foto → macros:** la foto se comprime en el móvil (800 px, WebP) y la analiza **Gemini**, con **Workers AI (Llama 3.2 Vision)** de respaldo. Revisas ingredientes y gramos y los macros se recalculan al momento.
+- **Sin cámara:** describe la comida con texto («dos huevos revueltos y una tostada») y la IA estima los macros (Gemini o, si no hay clave, Workers AI); **sube una foto** desde el PC (selector o arrastrar y soltar); o **busca alimentos** en una base local de ~360 alimentos habituales en España (valores por 100 g de [USDA FoodData Central](https://fdc.nal.usda.gov/), dominio público) y en **Open Food Facts** por nombre o código de barras.
+- **Escritorio:** a partir de 1024 px, barra lateral (Hoy, Historial, Añadir comida, Peso, Agua, Ajustes, Descargar app) y panel en 2–3 columnas con «Añadir comida» siempre a mano. En el móvil todo sigue igual.
+- **Historial:** vista semanal o mensual con calorías frente al objetivo, macros P/C/G, tendencia de peso y agua (SVG ligero) y la lista de días con sus totales.
+- **Exportar:** CSV de comidas, peso o agua (rango de fechas, formato español para Excel) e **informe PDF** imprimible.
 - **Diario:** anillo de calorías restantes, barras de proteína/carbohidratos/grasas, desayuno, comida, cena y snacks; altas y bajas instantáneas (optimistas).
 - **Agua y peso:** objetivo de 2,5 L y gráfica de 30 días con línea de objetivo.
 - **Instalable:** PWA para iPhone/iPad (funciona sin conexión) y **APK Android** compilado por GitHub Actions.
-- **Accesible y ligera:** modo claro/oscuro, foco visible, `prefers-reduced-motion`, Lighthouse móvil 98–100 y ~53 KB de JS inicial (gzip).
+- **Accesible y ligera:** modo claro/oscuro, foco visible, `prefers-reduced-motion`, Lighthouse móvil 98–100 y ~55 KB de JS inicial (gzip); el resto (historial, búsqueda, QR, informe…) se carga bajo demanda.
 
 ## Stack
 
