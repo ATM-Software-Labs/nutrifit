@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { ModalEntrenamiento } from './ModalEntrenamiento'
 
 export function TarjetaEntrenamientos({ pesoUsuario = 85.5 }: { pesoUsuario?: number }) {
