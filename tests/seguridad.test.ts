@@ -3,6 +3,9 @@ import assert from 'node:assert/strict'
 import { firmar, timingSafeEqual, verificarFirma, base64urlEncode, base64urlDecodeText } from '../functions/utils/crypto.ts'
 import { comidaGuardarSchema, calcularSchema, solicitarSchema } from '../functions/utils/schemas.ts'
 import { detectarMime } from '../functions/utils/ia.ts'
+import { crearCookieSesion, leerSesion, resolverSesion, ROTACION_SESION } from '../functions/utils/session.ts'
+import { exigirLimite } from '../functions/utils/rateLimit.ts'
+import { capturar, entornoTest, SECRETO_TEST } from './d1Sqlite.ts'
 
 const S = 'x'.repeat(40)
 
@@ -54,6 +57,47 @@ test('email normalizado', () => {
   const r = solicitarSchema.parse({ email: '  Alberto@Example.COM ' })
   assert.equal(r.email, 'alberto@example.com')
   assert.ok(!solicitarSchema.safeParse({ email: 'no-es-email' }).success)
+})
+
+test('texto con controles se aplana; HTML sigue rechazado', () => {
+  const r = comidaGuardarSchema.parse({ ...comida, descripcion: 'Tortilla\r\ncon\tpimiento' })
+  assert.equal(r.descripcion, 'Tortilla con pimiento')
+})
+
+test('cookie __Host- con rotación, gracia y revocación si se reutiliza', async () => {
+  const env = entornoTest()
+  env.DB.sqlite.prepare("INSERT INTO usuarios (id, email) VALUES ('u1', 'a@b.es')").run()
+  const ahora = Math.floor(Date.now() / 1000)
+  const emitida = await crearCookieSesion(env, 'u1', 'a@b.es', ahora - ROTACION_SESION - 10)
+  assert.match(emitida, /^__Host-nf_session=[^;]+; HttpOnly; Secure; SameSite=Strict; Path=\/; Max-Age=\d+$/)
+  assert.doesNotMatch(emitida, /Domain=/)
+  const req = (setCookie: string) => new Request('https://n/api/auth/yo', { headers: { Cookie: setCookie.split(';')[0]! } })
+
+  const rotada = await resolverSesion(env, req(emitida))
+  assert.equal(rotada.sesion?.usuarioId, 'u1')
+  assert.equal(rotada.cookies.length, 1)
+  const enGracia = await resolverSesion(env, req(emitida))
+  assert.equal(enGracia.sesion?.usuarioId, 'u1')
+  assert.equal(enGracia.cookies.length, 0)
+
+  const nueva = await resolverSesion(env, req(rotada.cookies[0]!))
+  assert.equal(nueva.sesion?.usuarioId, 'u1')
+  env.DB.sqlite.prepare('UPDATE sesiones_web SET gracia_hasta = ? WHERE reemplazado_por IS NOT NULL').run(ahora - 1)
+  assert.equal((await resolverSesion(env, req(emitida))).sesion, null, 'reusar el sid viejo revoca la familia')
+  assert.equal(await leerSesion(env, req(rotada.cookies[0]!)), null)
+
+  const suelto = await firmar(SECRETO_TEST, 'sesion', { sub: 'u1', em: 'a@b.es', iat: ahora, exp: ahora + 100, v: 2, sid: 'no-esta', fam: 'tampoco' })
+  assert.equal(await leerSesion(env, req(`__Host-nf_session=${suelto}`)), null, 'un sid firmado que no está en D1 no fija sesión')
+})
+
+test('pico anómalo bloquea la clave aunque la ventana siga', async () => {
+  const env = entornoTest()
+  let ultimo: { status?: number; extra?: { codigo?: string } } | undefined
+  for (let i = 0; i < 16; i++) {
+    ultimo = await capturar(exigirLimite(env, 'login:test', 5, 900, 'limite', { factorPico: 3, bloqueoSeg: 3600, mensajeBloqueo: 'bloqueado' }))
+  }
+  assert.equal(ultimo?.status, 429)
+  assert.equal(ultimo?.extra?.codigo, 'bloqueado')
 })
 
 test('detección de imagen por bytes mágicos', () => {

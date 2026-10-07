@@ -1,34 +1,25 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Droplet, Minus } from 'lucide-react'
 import { useToast } from './ui/Toast.tsx'
-import { api } from '../lib/api.ts'
 import { litros } from '../lib/formato.ts'
 import { META_AGUA_ML as META_ML } from '../lib/config.ts'
+import { alFallarSyncAgua, anotarAgua, leerAguaLocal, mlAguaAcotado } from '../lib/syncAgua.ts'
 
-/** Agua del día: barra de progreso y +250/+500 ml con estado optimista. */
+/** Agua del día. El total cambia al momento en local; D1 recibe un solo total consolidado. */
 export function WidgetAgua({ fecha, inicial, onCambio }: { fecha: string; inicial: number; onCambio?: (ml: number) => void }) {
-  const [ml, setMl] = useState(inicial)
-  const confirmado = useRef(inicial)
+  const [ml, setMl] = useState(() => leerAguaLocal(fecha) ?? inicial)
   const toast = useToast()
+  useEffect(() => alFallarSyncAgua((mensaje) => toast({ tipo: 'error', mensaje })), [toast])
   useEffect(() => {
-    setMl(inicial)
-    confirmado.current = inicial
+    setMl(leerAguaLocal(fecha) ?? inicial)
   }, [inicial, fecha])
 
-  async function sumar(delta: number) {
-    const previo = ml
-    const nuevo = Math.max(0, Math.min(10000, previo + delta))
-    if (nuevo === previo) return
+  function sumar(delta: number) {
+    const nuevo = mlAguaAcotado(ml + delta)
+    if (nuevo === ml) return
     setMl(nuevo)
-    try {
-      const r = await api.agua(fecha, delta, 'sumar')
-      confirmado.current = r.ml
-      setMl(r.ml)
-      onCambio?.(r.ml)
-    } catch (e) {
-      setMl(confirmado.current)
-      toast({ tipo: 'error', mensaje: e instanceof Error ? e.message : 'No se pudo guardar el agua.' })
-    }
+    anotarAgua(fecha, nuevo)
+    onCambio?.(nuevo)
   }
 
   const pct = Math.min(100, Math.round((ml / META_ML) * 100))

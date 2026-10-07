@@ -1,19 +1,24 @@
 /**
  * Buscar alimentos sin cámara:
- *  · Base local (≈ 360 alimentos habituales en España, valores por 100 g de
- *    USDA FoodData Central) — instantánea y sin red.
- *  · Productos envasados de Open Food Facts por nombre o código de barras,
- *    a través de nuestro servidor (caché y límites).
+ *  · Al teclear, a los 150 ms: hasta 5 sugerencias locales (USDA + historial).
+ *    Sin red y sin tokens.
+ *  · Enter con sugerencias elige la resaltada. Enter sin resultados, o
+ *    «Estimar con IA», llama a /api/comidas/analizar-texto.
+ *  · Productos envasados: Open Food Facts solo al pulsar Buscar o Enter.
  * Se eligen gramos, se van sumando a una «cesta» y se revisa como un plato.
  */
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
-import { Barcode, Minus, Plus, Search, X } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
+import { Barcode, Minus, Plus, Search, Sparkles, X } from 'lucide-react'
 import { Sheet } from './ui/Sheet.tsx'
 import { Button } from './ui/Button.tsx'
 import { Segmented } from './ui/Segmented.tsx'
 import { cx } from './ui/cx.ts'
+import { useTurnstile } from '../hooks/useTurnstile.ts'
 import { api } from '../lib/api.ts'
-import { buscarLocal, categorias, escalar, type Alimento } from '../lib/buscarAlimentos.ts'
+import { recordarAliasDelAnalisis, resolverAlias, resultadoDesdeAlias } from '../lib/aliasAlimentos.ts'
+import { buscarLocal, categorias, escalar, normalizar, type Alimento } from '../lib/buscarAlimentos.ts'
+import { hidratarHistorial, leerHistorial, recordarAlimento } from '../lib/historialAlimentos.ts'
+import { sugerir } from '../lib/sugerenciasAlimento.ts'
 import { entero } from '../lib/formato.ts'
 import type { ResultadoAnalisis } from '../lib/tipos.ts'
 
@@ -25,6 +30,13 @@ interface EnCesta {
 }
 
 let siguiente = 1
+
+function lineaRacion(a: Alimento) {
+  const g = a.racion ?? 100
+  const m = escalar(a.por100, g)
+  const n = (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(1))
+  return `${entero(m.calorias)} kcal · P ${n(m.proteinas)} · C ${n(m.carbohidratos)} · G ${n(m.grasas)} · ración ${g} g`
+}
 
 function nombrePlato(c: EnCesta[]) {
   const n = c.map((x) => x.alimento.nombre)
@@ -85,44 +97,185 @@ export default function BuscarAlimento({ onClose, onResultado }: { onClose: () =
   const [fuente, setFuente] = useState<Fuente>('local')
   const [consulta, setConsulta] = useState('')
   const [categoria, setCategoria] = useState<number | null>(null)
-  const [abierto, setAbierto] = useState<string | null>(null)
+  const [consultaDebounced, setConsultaDebounced] = useState('')
+  const [historial, setHistorial] = useState(leerHistorial)
+  const [abierto, setAbierto] = useState<Alimento | null>(null)
+  const [ocultas, setOcultas] = useState(false)
+  const [resaltado, setResaltado] = useState(0)
   const [cesta, setCesta] = useState<EnCesta[]>([])
   const [off, setOff] = useState<{ cargando: boolean; resultados: Alimento[] | null; error: string | null }>({ cargando: false, resultados: null, error: null })
+  const [ia, setIa] = useState<{ cargando: boolean; error: string | null }>({ cargando: false, error: null })
   const ctrl = useRef<AbortController | null>(null)
   const entrada = useRef<HTMLInputElement>(null)
+  const esperaOff = useRef<number | null>(null)
+  const esperaSug = useRef<number | null>(null)
+  const { contenedorRef, obtenerToken } = useTurnstile('analizar-texto', false)
 
-  const locales = useMemo(() => (fuente === 'local' ? buscarLocal(consulta, categoria) : []), [fuente, consulta, categoria])
-  useEffect(() => () => ctrl.current?.abort(), [])
+  const alias = useMemo(() => resolverAlias(consulta), [consulta])
+  const textoBusqueda = alias?.display_name ?? consulta
+  const escribiendo = normalizar(consulta).length >= 2
+  const locales = useMemo(() => {
+    if (fuente === 'local') {
+      if (escribiendo) return []
+      return buscarLocal('', categoria, 40)
+    }
+    if (textoBusqueda.trim().length < 1) return []
+    return buscarLocal(textoBusqueda, null, 12)
+  }, [fuente, textoBusqueda, categoria, escribiendo])
+  const sugerencias = useMemo(() => (fuente === 'local' ? sugerir(consultaDebounced, historial, categoria, 5) : []), [fuente, consultaDebounced, historial, categoria])
+  const sugerenciasListas = fuente === 'local' && escribiendo && consultaDebounced === consulta && !ocultas
 
-  async function buscarOff(e?: FormEvent) {
-    e?.preventDefault()
-    const q = consulta.trim()
-    if (q.length < 2) return
+  useEffect(() => {
+    if (esperaSug.current) window.clearTimeout(esperaSug.current)
+    esperaSug.current = window.setTimeout(() => setConsultaDebounced(consulta), 150)
+    return () => {
+      if (esperaSug.current) window.clearTimeout(esperaSug.current)
+    }
+  }, [consulta])
+
+  useEffect(() => {
+    let vivo = true
+    void hidratarHistorial().then((h) => {
+      if (vivo && h) setHistorial(h)
+    })
+    return () => {
+      vivo = false
+    }
+  }, [])
+
+  useEffect(() => () => {
+    ctrl.current?.abort()
+    if (esperaOff.current) window.clearTimeout(esperaOff.current)
+  }, [])
+
+  useEffect(() => {
+    setResaltado(0)
+  }, [consultaDebounced, sugerencias.length])
+
+  function ejecutarOff(q: string) {
     ctrl.current?.abort()
     ctrl.current = new AbortController()
-    setOff({ cargando: true, resultados: null, error: null })
-    try {
-      const esCodigo = /^\d{8,14}$/.test(q)
-      const r = await api.off(esCodigo ? { codigo: q } : { q }, ctrl.current.signal)
-      setOff({
-        cargando: false,
-        error: null,
-        resultados: r.productos.map((p) => ({
-          id: `off-${p.codigo || p.nombre}`,
-          nombre: p.nombre,
-          detalle: [p.marca, p.codigo].filter(Boolean).join(' · '),
-          por100: p.por100,
-          racion: p.racion,
-          fuente: 'off',
-        })),
+    setOff((s) => ({ cargando: true, resultados: s.resultados, error: null }))
+    const esCodigo = /^\d{8,14}$/.test(q)
+    void api
+      .off(esCodigo ? { codigo: q } : { q }, ctrl.current.signal)
+      .then((r) => {
+        setOff({
+          cargando: false,
+          error: null,
+          resultados: r.productos.map((p) => ({
+            id: `off-${p.codigo || p.nombre}`,
+            nombre: p.nombre,
+            detalle: [p.marca, p.codigo].filter(Boolean).join(' · '),
+            por100: p.por100,
+            racion: p.racion,
+            fuente: 'off' as const,
+          })),
+        })
       })
+      .catch((err: unknown) => {
+        if (err instanceof Error && err.name === 'AbortError') return
+        setOff({ cargando: false, resultados: null, error: err instanceof Error ? err.message : 'No se pudo buscar.' })
+      })
+  }
+
+  function programarOff(esperaMs: number) {
+    if (esperaOff.current) window.clearTimeout(esperaOff.current)
+    const q = (alias?.display_name ?? consulta).trim()
+    if (fuente !== 'off' || q.length < 2) {
+      ctrl.current?.abort()
+      setOff({ cargando: false, resultados: null, error: null })
+      return
+    }
+    esperaOff.current = window.setTimeout(() => ejecutarOff(q), esperaMs)
+  }
+
+  useEffect(() => {
+    if (fuente === 'off') return
+    ctrl.current?.abort()
+    if (esperaOff.current) window.clearTimeout(esperaOff.current)
+  }, [fuente])
+
+  function buscarOff(e?: FormEvent) {
+    e?.preventDefault()
+    programarOff(0)
+  }
+
+  function anotar(a: Alimento) {
+    setHistorial(recordarAlimento({ nombre: a.nombre, por100: a.por100, racion: a.racion }))
+  }
+
+  function elegir(a: Alimento) {
+    anotar(a)
+    setAbierto(a)
+    setOcultas(true)
+    setIa((s) => ({ ...s, error: null }))
+  }
+
+  async function estimar() {
+    if (ia.cargando) return
+    const limpio = consulta.trim()
+    if (limpio.length < 3) {
+      setIa({ cargando: false, error: 'Escribe al menos 3 letras para estimar con IA.' })
+      return
+    }
+    const oficial = resolverAlias(limpio)
+    if (oficial) {
+      setIa({ cargando: false, error: null })
+      onResultado(resultadoDesdeAlias(limpio, oficial.display_name))
+      return
+    }
+    setIa({ cargando: true, error: null })
+    try {
+      const token = await obtenerToken()
+      const r = await api.analizarTexto(limpio, token)
+      if (!r.resultado.ingredientes.length && r.resultado.calorias === 0) {
+        setIa({ cargando: false, error: 'No hemos reconocido ninguna comida en el texto. Prueba a describirla de otra forma.' })
+        return
+      }
+      recordarAliasDelAnalisis(limpio, r.resultado)
+      setIa({ cargando: false, error: null })
+      onResultado(r.resultado)
     } catch (err) {
-      if ((err as Error).name === 'AbortError') return
-      setOff({ cargando: false, resultados: null, error: err instanceof Error ? err.message : 'No se pudo buscar.' })
+      setIa({ cargando: false, error: err instanceof Error ? err.message : 'No se pudo estimar la comida.' })
     }
   }
 
-  const lista = fuente === 'local' ? locales : (off.resultados ?? [])
+  function confirmar(e: FormEvent) {
+    e.preventDefault()
+    if (fuente === 'off') {
+      buscarOff()
+      return
+    }
+    const ahora = sugerir(consulta, historial, categoria, 5)
+    if (ahora.length) {
+      const mismas = consulta === consultaDebounced
+      const idx = mismas ? Math.min(resaltado, ahora.length - 1) : 0
+      elegir(ahora[idx]!)
+      return
+    }
+    void estimar()
+  }
+
+  function teclado(e: KeyboardEvent<HTMLInputElement>) {
+    if (fuente !== 'local' || !sugerenciasListas) return
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      setOcultas(true)
+      return
+    }
+    if (!sugerencias.length) return
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setResaltado((i) => (i + 1) % sugerencias.length)
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setResaltado((i) => (i - 1 + sugerencias.length) % sugerencias.length)
+    }
+  }
+
+  const envasados = fuente === 'off' ? (off.resultados ?? []) : []
+  const lista = fuente === 'local' ? locales : [...locales, ...envasados]
   const total = cesta.reduce(
     (t, c) => {
       const m = escalar(c.alimento.por100, c.gramos)
@@ -173,7 +326,7 @@ export default function BuscarAlimento({ onClose, onResultado }: { onClose: () =
           { valor: 'off', etiqueta: 'Productos envasados' },
         ]}
       />
-      <form onSubmit={(e) => (fuente === 'off' ? void buscarOff(e) : e.preventDefault())} className="mt-3 flex gap-2" role="search">
+      <form onSubmit={(e) => void confirmar(e)} className="relative mt-3 flex gap-2" role="search">
         <label className="relative flex-1">
           <span className="sr-only">{fuente === 'local' ? 'Buscar en la base de alimentos' : 'Nombre del producto o código de barras'}</span>
           <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" aria-hidden="true" />
@@ -182,11 +335,19 @@ export default function BuscarAlimento({ onClose, onResultado }: { onClose: () =
             data-autofocus
             type="search"
             enterKeyHint="search"
+            role="combobox"
+            aria-autocomplete="list"
+            aria-expanded={sugerenciasListas}
+            aria-controls="nf-sugerencias"
+            aria-activedescendant={sugerenciasListas && sugerencias[resaltado] ? `nf-sug-${resaltado}` : undefined}
             value={consulta}
             onChange={(e) => {
               setConsulta(e.target.value)
               setAbierto(null)
+              setOcultas(false)
+              setIa((s) => ({ ...s, error: null }))
             }}
+            onKeyDown={teclado}
             placeholder={fuente === 'local' ? 'Pollo, arroz, yogur…' : 'Nombre o código de barras'}
             className="h-11 w-full rounded-2xl border border-neutral-200 bg-card pl-10 pr-3 text-[15px] placeholder:text-neutral-400 focus:border-mint focus:outline-none focus:ring-4 focus:ring-mint/15 dark:border-neutral-800 dark:bg-card-dark"
           />
@@ -196,7 +357,40 @@ export default function BuscarAlimento({ onClose, onResultado }: { onClose: () =
             Buscar
           </Button>
         )}
+        {sugerenciasListas && (
+          <ul id="nf-sugerencias" role="listbox" aria-label="Sugerencias" className="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-2xl border border-neutral-200 bg-card shadow-sheet dark:border-neutral-800 dark:bg-card-dark">
+            {sugerencias.map((a, i) => (
+              <li key={a.id} role="presentation">
+                <button
+                  type="button"
+                  id={`nf-sug-${i}`}
+                  role="option"
+                  aria-selected={i === resaltado}
+                  onMouseEnter={() => setResaltado(i)}
+                  onClick={() => elegir(a)}
+                  className={cx('flex w-full flex-col px-3 py-2 text-left', i === resaltado ? 'bg-mint-50 dark:bg-mint-950' : 'hover:bg-neutral-50 dark:hover:bg-neutral-900')}
+                >
+                  <span className="truncate text-[15px] font-medium">{a.nombre}</span>
+                  <span className="cifra truncate text-xs text-neutral-500 dark:text-neutral-400">{lineaRacion(a)}</span>
+                </button>
+              </li>
+            ))}
+            {!sugerencias.length && (
+              <li role="presentation">
+                <button type="button" onClick={() => void estimar()} disabled={ia.cargando} className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-medium text-mint-800 hover:bg-mint-50 disabled:opacity-60 dark:text-mint-200 dark:hover:bg-mint-950">
+                  <Sparkles size={16} strokeWidth={1.75} aria-hidden="true" />
+                  {ia.cargando ? 'Estimando…' : alias ? `Usar «${alias.display_name}»` : 'Estimar con IA'}
+                </button>
+              </li>
+            )}
+          </ul>
+        )}
       </form>
+      {alias && (
+        <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
+          Nombre oficial: <span className="font-medium text-graphite dark:text-neutral-100">{alias.display_name}</span>
+        </p>
+      )}
 
       {fuente === 'local' && (
         <div className="-mx-6 mt-3 flex gap-1.5 overflow-x-auto px-6 pb-1" aria-label="Categorías">
@@ -227,13 +421,33 @@ export default function BuscarAlimento({ onClose, onResultado }: { onClose: () =
           {off.error}
         </p>
       )}
+      {ia.error && fuente === 'local' && (
+        <p role="alert" className="mt-3 text-sm text-protein">
+          {ia.error}
+        </p>
+      )}
+      <div ref={contenedorRef} className="empty:hidden" />
+      {fuente === 'local' && escribiendo && abierto && (
+        <Detalle
+          a={abierto}
+          onAnadir={(gramos) => {
+            anotar(abierto)
+            setCesta((c) => (c.length >= 30 ? c : [...c, { clave: siguiente++, alimento: abierto, gramos }]))
+            setAbierto(null)
+            entrada.current?.focus()
+          }}
+        />
+      )}
 
+      {!(fuente === 'local' && escribiendo) && (
       <ul className="mt-3 divide-y divide-neutral-100 dark:divide-neutral-800" aria-label="Resultados" aria-busy={off.cargando || undefined}>
-        {lista.map((a) => {
-          const activo = abierto === a.id
+        {lista.map((a, i) => {
+          const activo = abierto?.id === a.id
+          const titulo = fuente === 'off' && i === 0 && a.fuente === 'local' ? 'En el dispositivo' : fuente === 'off' && a.fuente === 'off' && (i === 0 || lista[i - 1]?.fuente === 'local') ? 'Productos envasados' : ''
           return (
             <li key={a.id} className="py-2.5">
-              <button type="button" onClick={() => setAbierto(activo ? null : a.id)} aria-expanded={activo} className="flex w-full items-center gap-3 rounded-xl text-left">
+              {titulo && <p className="pb-1 text-2xs font-medium uppercase tracking-wide text-neutral-400">{titulo}</p>}
+              <button type="button" onClick={() => setAbierto(activo ? null : a)} aria-expanded={activo} className="flex w-full items-center gap-3 rounded-xl text-left">
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[15px] font-medium">{a.nombre}</span>
                   <span className="block truncate text-xs text-neutral-500 dark:text-neutral-400">
@@ -251,6 +465,7 @@ export default function BuscarAlimento({ onClose, onResultado }: { onClose: () =
                 <Detalle
                   a={a}
                   onAnadir={(gramos) => {
+                    anotar(a)
                     setCesta((c) => (c.length >= 30 ? c : [...c, { clave: siguiente++, alimento: a, gramos }]))
                     setAbierto(null)
                     entrada.current?.focus()
@@ -261,9 +476,16 @@ export default function BuscarAlimento({ onClose, onResultado }: { onClose: () =
           )
         })}
       </ul>
-      {fuente === 'local' && !lista.length && <p className="py-8 text-center text-sm text-neutral-500 dark:text-neutral-400">Sin resultados. Prueba en «Productos envasados» o descríbelo con texto.</p>}
-      {fuente === 'off' && off.resultados && !off.resultados.length && <p className="py-8 text-center text-sm text-neutral-500 dark:text-neutral-400">No hemos encontrado ese producto.</p>}
-      {fuente === 'local' && <p className="mt-4 text-center text-2xs text-neutral-400">Valores por 100 g: USDA FoodData Central (dominio público).</p>}
+      )}
+      {fuente === 'local' && !escribiendo && !lista.length && <p className="py-8 text-center text-sm text-neutral-500 dark:text-neutral-400">Sin resultados. Prueba en «Productos envasados» o descríbelo con texto.</p>}
+      {fuente === 'off' && off.cargando && !locales.length && !envasados.length && <p className="py-8 text-center text-sm text-neutral-500 dark:text-neutral-400">Buscando productos…</p>}
+      {fuente === 'off' && off.resultados && !off.resultados.length && !locales.length && <p className="py-8 text-center text-sm text-neutral-500 dark:text-neutral-400">No hemos encontrado ese producto.</p>}
+      {fuente === 'off' && off.resultados && !off.resultados.length && locales.length > 0 && <p className="py-3 text-center text-xs text-neutral-500 dark:text-neutral-400">No hay un envasado con ese nombre. Puedes usar el alimento de arriba.</p>}
+      {fuente === 'local' && (
+        <p className="mt-4 text-center text-2xs text-neutral-400">
+          {escribiendo ? 'Sugerencias en el dispositivo, macros de la ración estándar.' : 'Valores por 100 g: USDA FoodData Central (dominio público).'}
+        </p>
+      )}
     </Sheet>
   )
 }

@@ -30,6 +30,7 @@ function nutrifitSW(): Plugin {
             /^\/assets\/.+\.(js|css)$/.test(u) ||
             u === '/fonts/outfit-latin-var.woff2' ||
             u === '/boot.js' ||
+            u === '/manifest.json' ||
             u === '/manifest.webmanifest' ||
             u === '/favicon.svg' ||
             u === '/logo.svg' ||

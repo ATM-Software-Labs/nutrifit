@@ -1,16 +1,14 @@
 /**
- * /descargar — APK directo (Android), pasos ilustrados para instalar la PWA
- * (iPhone/iPad) y enlace al código. Detecta la plataforma y pone primero la
- * recomendada. No se muestra dentro de la app nativa (App.tsx lo evita).
+ * /descargar — instalación nativa de la PWA (Chrome) y pasos de Safari.
+ * Detecta la plataforma y pone primero la recomendada.
  */
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { ArrowLeft, ChevronDown, Download, ExternalLink, Globe, ShieldCheck, Smartphone } from 'lucide-react'
+import { useMemo, type ReactNode } from 'react'
+import { ArrowLeft, ExternalLink, Globe, Smartphone } from 'lucide-react'
 import { Logo } from './Logo.tsx'
 import { cx } from './ui/cx.ts'
-import { GITHUB_REPO, URL_APK, URL_REPO } from '../lib/config.ts'
-import { detectarPlataforma, formatoMB } from '../lib/instalacion.ts'
-import { api } from '../lib/api.ts'
-import { QrDescarga } from './BloqueDescarga.tsx'
+import { GITHUB_REPO, URL_REPO } from '../lib/config.ts'
+import { detectarPlataforma } from '../lib/instalacion.ts'
+import { BotonInstalar, QrDescarga } from './BloqueDescarga.tsx'
 
 
 function Insignia({ children }: { children: ReactNode }) {
@@ -129,54 +127,12 @@ const PASOS_IOS = [
 ]
 
 function Android({ recomendada }: { recomendada?: string }) {
-  const [info, setInfo] = useState<string | null>(null)
-  useEffect(() => {
-    api
-      .versionApp()
-      .then((r) => setInfo([r.version, formatoMB(r.tamano)].filter(Boolean).join(' · ') || null))
-      .catch(() => {})
-  }, [])
-  const [noDisponible] = useState(() => new URLSearchParams(location.search).get('apk') === 'no-disponible')
   return (
     <Tarjeta icono={<Smartphone size={20} strokeWidth={1.75} />} titulo="Android" recomendada={recomendada}>
-      {noDisponible && (
-        <p role="alert" className="mb-4 rounded-2xl border border-fats/30 bg-fats-soft/60 px-4 py-3 text-sm text-amber-900 dark:border-fats/20 dark:bg-fats/10 dark:text-amber-200">
-          No hemos podido preparar la descarga ahora mismo. Inténtalo de nuevo en unos minutos.
-        </p>
-      )}
-      <a
-        href={URL_APK}
-        download="NutriFit.apk"
-        className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-mint-700 text-base font-semibold text-white shadow-sm transition hover:bg-mint-800 active:scale-[0.98]"
-      >
-        <Download size={20} strokeWidth={2} /> Descargar APK
-      </a>
-      <p className="mt-2.5 text-center text-xs text-neutral-500 dark:text-neutral-400">{info ? `Versión ${info}` : 'Última versión publicada en GitHub Releases'} · Android 7.0 o superior</p>
-      <details className="group mt-4 rounded-2xl border border-neutral-200 dark:border-neutral-800">
-        <summary className="flex cursor-pointer list-none items-center justify-between rounded-2xl px-4 py-3.5 text-[15px] font-medium [&::-webkit-details-marker]:hidden">
-          Cómo instalarlo en 3 pasos
-          <ChevronDown size={18} className="text-neutral-500 transition-transform group-open:rotate-180" />
-        </summary>
-        <ol className="space-y-4 px-4 pb-5 pt-1 text-sm leading-relaxed text-neutral-600 dark:text-neutral-300">
-          {[
-            ['Descarga y abre el archivo', 'Toca el botón de arriba y, al terminar, abre NutriFit.apk desde la notificación o desde la app Archivos › Descargas.'],
-            ['Permite instalar apps desconocidas', 'Si Android lo pide, toca Ajustes y activa «Permitir de esta fuente» para tu navegador (Ajustes › Aplicaciones › Chrome › Instalar apps desconocidas). Solo hace falta una vez.'],
-            ['Instala y entra', 'Toca «Instalar», abre NutriFit y escribe tu email. Abre el enlace del correo en el mismo móvil: se abrirá la app con la sesión iniciada.'],
-          ].map(([t, d], i) => (
-            <li key={t} className="flex gap-3">
-              <span className="cifra flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-graphite text-xs font-semibold text-white dark:bg-white dark:text-graphite">{i + 1}</span>
-              <span>
-                <strong className="block font-semibold text-graphite dark:text-neutral-100">{t}</strong>
-                {d}
-              </span>
-            </li>
-          ))}
-        </ol>
-      </details>
-      <p className="mt-4 flex items-start gap-2 text-xs text-neutral-500 dark:text-neutral-400">
-        <ShieldCheck size={15} className="mt-px shrink-0 text-mint-700 dark:text-mint-400" />
-        El APK se compila automáticamente desde el código público con GitHub Actions.
+      <p className="mb-4 text-sm leading-relaxed text-neutral-600 dark:text-neutral-300">
+        Se instala desde Chrome, a pantalla completa y con el motor del navegador.
       </p>
+      <BotonInstalar />
     </Tarjeta>
   )
 }
@@ -219,7 +175,7 @@ export default function SeccionDescargas() {
         <Logo size={30} className="text-graphite dark:text-neutral-100" />
       </header>
 
-      <h1 className="mt-6 text-[2rem] font-semibold leading-tight tracking-tight">Descarga NutriFit</h1>
+      <h1 className="mt-6 text-[2rem] font-semibold leading-tight tracking-tight">Instala NutriFit</h1>
       {plataforma === 'escritorio' ? (
         <section aria-label="Descargar en el móvil" className="tarjeta mt-6 flex flex-col items-center gap-6 p-6 sm:flex-row">
           <div className="shrink-0 rounded-2xl border border-neutral-200 p-2 dark:border-neutral-800">
@@ -228,7 +184,7 @@ export default function SeccionDescargas() {
           <div>
             <p className="text-lg font-semibold tracking-tight">Escanéalo con tu móvil</p>
             <p className="mt-2 text-[15px] leading-relaxed text-neutral-500 dark:text-neutral-400">
-              Abre la cámara y apunta al código: llegarás a esta página en el móvil, con el botón de descarga para Android o los pasos para iPhone.
+              Abre la cámara y apunta al código: en el móvil verás el botón Instalar o los pasos de Safari.
             </p>
             <p className="mt-3 text-sm text-neutral-500 dark:text-neutral-400">
               O escribe <strong className="font-medium text-graphite dark:text-neutral-100">nutri.trujillomingorance.com/descargar</strong>
@@ -244,7 +200,7 @@ export default function SeccionDescargas() {
       <section className="mt-4 flex flex-col gap-4 rounded-2xl border border-dashed border-neutral-300 p-5 sm:flex-row sm:items-center dark:border-neutral-700" aria-label="Código fuente">
         <div className="flex-1">
           <h2 className="font-semibold">Código abierto</h2>
-          <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">Revisa el código, compila tu propio APK o despliégalo en tu dominio.</p>
+          <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">Revisa el código o despliégalo en tu dominio.</p>
           <span className="mt-3 inline-flex overflow-hidden rounded-md text-2xs font-semibold" aria-label="Licencia MIT">
             <span className="bg-graphite px-2 py-1 text-white dark:bg-neutral-700">licencia</span>
             <span className="bg-mint-700 px-2 py-1 text-white">MIT</span>

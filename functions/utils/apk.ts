@@ -72,9 +72,9 @@ export async function resolverApk(ctx: Ctx): Promise<ApkResuelto | null> {
 
 export function cabecerasApk(version: string, tamano: number | null): Headers {
   const h = new Headers({
-    'content-type': 'application/vnd.android.package-archive',
-    'content-disposition': `attachment; filename="${NOMBRE_APK}"`,
-    'cache-control': 'no-store',
+    'Content-Type': 'application/vnd.android.package-archive',
+    'Content-Disposition': `attachment; filename=${NOMBRE_APK}`,
+    'Cache-Control': 'public, max-age=3600, must-revalidate',
     'x-content-type-options': 'nosniff',
     'x-nutrifit-version': version,
   })

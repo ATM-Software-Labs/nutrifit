@@ -29,7 +29,16 @@ export interface Usuario {
 
 export interface Ingrediente {
   nombre: string
+  /** Fragmento coloquial del usuario, si la IA lo separó. */
+  input_query?: string
+  /** Nombre oficial. La UI usa `nombre`, que ya es este valor. */
+  display_name?: string
+  /** Medida coloquial ya convertida, p. ej. "1 unidad mediana (~120g)". */
+  serving_description?: string
   gramos: number
+  /** Rango visual de la foto. No cambia el cálculo, que usa `gramos`. */
+  min_gramos?: number
+  max_gramos?: number
   calorias?: number
   proteinas?: number
   carbohidratos?: number
@@ -71,6 +80,10 @@ export interface Resumen {
 }
 
 export interface ResultadoAnalisis {
+  /** Texto original del usuario. Vacío en un análisis por foto. */
+  input_query?: string
+  /** Nombre oficial del plato. Coincide con nombre_plato. */
+  display_name?: string
   nombre_plato: string
   ingredientes: Ingrediente[]
   calorias: number

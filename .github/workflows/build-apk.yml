@@ -1,0 +1,272 @@
+# NutriFit · APK de release reproducible, firmado con apksigner.
+#
+#  · Tag v* (p. ej. v1.2.0) → Release con NutriFit-v1.2.0.apk + NutriFit.apk
+#    (nombre fijo para releases/latest/download/NutriFit.apk).
+#  · Manual (workflow_dispatch) → artefacto y, si se pide, pre-release.
+#
+# Toolchain fija: Node 20 LTS y JDK 17 (Temurin). Capacitor 8 genera
+# sourceCompatibility 21; el job lo baja a 17 para que compile el JDK del runner.
+#
+# Firma (obligatoria; el job falla si falta un secreto):
+#   ANDROID_KEYSTORE_BASE64 y la contraseña/alias. Acepta los nombres actuales
+#   del repo (ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD)
+#   o KEYSTORE_PASSWORD, KEY_ALIAS y KEY_PASSWORD.
+#   apksigner firma v2+v3 (minSdk 24; v1 y v4 quedan apagados).
+# La huella SHA-256 del certificado firmado tiene que estar en
+# public/.well-known/assetlinks.json (App Links verificados).
+name: Build APK
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      prerelease:
+        description: 'Publicar también como pre-release (no cambia "latest")'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-apk-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  apk:
+    name: APK Android
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      VITE_GITHUB_REPO: ${{ vars.VITE_GITHUB_REPO || github.repository }}
+      VITE_API_URL: ${{ vars.VITE_API_URL || 'https://nutri.trujillomingorance.com' }}
+
+    steps:
+      - name: Código
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Secretos de firma
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD || secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS || secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD || secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          missing=()
+          [[ -n "${ANDROID_KEYSTORE_BASE64}" ]] || missing+=(ANDROID_KEYSTORE_BASE64)
+          [[ -n "${KEYSTORE_PASSWORD}" ]] || missing+=(KEYSTORE_PASSWORD)
+          [[ -n "${KEY_ALIAS}" ]] || missing+=(KEY_ALIAS)
+          [[ -n "${KEY_PASSWORD}" ]] || missing+=(KEY_PASSWORD)
+          if ((${#missing[@]})); then
+            echo "::error::Faltan secretos de firma: ${missing[*]}"
+            exit 1
+          fi
+
+      - name: Node 20 LTS
+        uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Dependencias (checksums sha512 del lockfile)
+        run: |
+          set -euo pipefail
+          # npm ci rechaza el árbol si el sha512 de algún tarball no coincide con package-lock.json.
+          npm ci
+          node --input-type=module <<'EOF'
+          import { readFileSync } from 'node:fs'
+          const lock = JSON.parse(readFileSync('package-lock.json', 'utf8'))
+          const paquetes = lock.packages ?? {}
+          let n = 0
+          for (const [ruta, meta] of Object.entries(paquetes)) {
+            if (!ruta || meta.link) continue
+            const integridad = String(meta.integrity ?? '')
+            if (!integridad.startsWith('sha512-')) {
+              console.error(`sin checksum sha512: ${ruta}`)
+              process.exit(1)
+            }
+            n++
+          }
+          if (n < 1) {
+            console.error('package-lock.json no declara paquetes')
+            process.exit(1)
+          }
+          console.log(`checksums sha512 presentes: ${n}`)
+          EOF
+
+      - name: Tipos y tests
+        run: npm run typecheck && npm test
+
+      - name: Versión
+        id: version
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            NOMBRE="${GITHUB_REF_NAME#v}"
+          else
+            NOMBRE="$(node -p "require('./package.json').version")-dev.${GITHUB_RUN_NUMBER}"
+          fi
+          IFS='.-' read -r MA MI PA _ <<< "$NOMBRE"
+          CODIGO=$(( ${MA:-0} * 1000000 + ${MI:-0} * 10000 + ${PA:-0} * 100 ))
+          if [[ "$GITHUB_REF_TYPE" != "tag" ]]; then CODIGO=$(( CODIGO + GITHUB_RUN_NUMBER % 100 )); fi
+          echo "nombre=$NOMBRE" >> "$GITHUB_OUTPUT"
+          echo "codigo=$CODIGO" >> "$GITHUB_OUTPUT"
+          echo "Versión $NOMBRE (versionCode $CODIGO)"
+
+      - name: Compilar web
+        run: npm run build
+
+      - name: JDK 17 (Temurin)
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          packages: 'platform-tools'
+
+      - name: Capacitor sync
+        run: npx cap sync android
+
+      - name: Gradle (APK de release sin firmar, JDK 17)
+        working-directory: android
+        env:
+          NUTRIFIT_VERSION_NAME: ${{ steps.version.outputs.nombre }}
+          NUTRIFIT_VERSION_CODE: ${{ steps.version.outputs.codigo }}
+        run: |
+          set -euo pipefail
+          chmod +x gradlew
+          # Los .gradle generados por Capacitor piden Java 21. El runner es JDK 17.
+          find . ../node_modules/@capacitor -name '*.gradle' -print0 \
+            | xargs -0 -r sed -i 's/JavaVersion.VERSION_21/JavaVersion.VERSION_17/g'
+          ./gradlew --no-daemon --no-build-cache assembleRelease
+          test -f app/build/outputs/apk/release/app-release-unsigned.apk
+
+      - name: Firmar con apksigner y verificar SHA-256 de assetlinks.json
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD || secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS || secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD || secrets.ANDROID_KEY_PASSWORD }}
+          NOMBRE: ${{ steps.version.outputs.nombre }}
+        run: |
+          set -euo pipefail
+          umask 077
+          KS="$RUNNER_TEMP/nutrifit-release.jks"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | tr -d '[:space:]' | base64 --decode > "$KS"
+          test -s "$KS"
+          keytool -list -keystore "$KS" -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" >/dev/null
+
+          BUILD_TOOLS="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)"
+          APKSIGNER="$BUILD_TOOLS/apksigner"
+          ZIPALIGN="$BUILD_TOOLS/zipalign"
+          test -x "$APKSIGNER"
+          UNSIGNED="android/app/build/outputs/apk/release/app-release-unsigned.apk"
+          ALIGNED="$RUNNER_TEMP/nutrifit-aligned.apk"
+          "$ZIPALIGN" -p -f 4 "$UNSIGNED" "$ALIGNED"
+          "$APKSIGNER" sign \
+            --ks "$KS" \
+            --ks-pass env:KEYSTORE_PASSWORD \
+            --key-pass env:KEY_PASSWORD \
+            --ks-key-alias "$KEY_ALIAS" \
+            --v1-signing-enabled false \
+            --v2-signing-enabled true \
+            --v3-signing-enabled true \
+            --v4-signing-enabled false \
+            --out NutriFit.apk \
+            "$ALIGNED"
+          "$APKSIGNER" verify --verbose --print-certs NutriFit.apk | tee firma.txt
+          rm -f "$KS" "$ALIGNED"
+
+          python3 <<'PY'
+          import json, re
+          from pathlib import Path
+          texto = Path("firma.txt").read_text()
+          m = re.search(r"SHA-256 digest:\s*([0-9A-Fa-f:]+)", texto)
+          if not m:
+              raise SystemExit("apksigner no imprimió la huella SHA-256 del certificado")
+          crudo = m.group(1).replace(":", "").upper()
+          if len(crudo) != 64 or not re.fullmatch(r"[0-9A-F]{64}", crudo):
+              raise SystemExit(f"huella SHA-256 inesperada: {m.group(1)}")
+          huella = ":".join(crudo[i:i + 2] for i in range(0, 64, 2))
+          Path("fingerprint-sha256.txt").write_text(huella + "\n")
+          asset = json.loads(Path("public/.well-known/assetlinks.json").read_text())
+          if not isinstance(asset, list) or not asset:
+              raise SystemExit("assetlinks.json no es una lista de statements")
+          declaradas = []
+          paquete = "com.trujillomingorance.nutrifit"
+          for entry in asset:
+              relacion = entry.get("relation") or []
+              if "delegate_permission/common.handle_all_urls" not in relacion:
+                  raise SystemExit("assetlinks.json no declara delegate_permission/common.handle_all_urls")
+              destino = entry.get("target") or {}
+              if destino.get("namespace") != "android_app" or destino.get("package_name") != paquete:
+                  raise SystemExit(f"assetlinks.json no apunta a {paquete}")
+              declaradas.extend(destino.get("sha256_cert_fingerprints") or [])
+          esperadas = {f.replace(":", "").upper() for f in declaradas}
+          if crudo not in esperadas:
+              raise SystemExit(
+                  "la huella del APK no está en assetlinks.json; Android marcaría el App Link como no verificado\n"
+                  f"  APK:        {huella}\n"
+                  f"  assetlinks: {', '.join(declaradas) or '(vacío)'}"
+              )
+          print(f"SHA-256 verificado contra assetlinks.json: {huella}")
+          PY
+
+          cp NutriFit.apk "NutriFit-v${NOMBRE}.apk"
+          sha256sum "NutriFit-v${NOMBRE}.apk" NutriFit.apk > SHA256SUMS.txt
+          {
+            echo "### NutriFit v${NOMBRE}"
+            echo '```'
+            echo "SHA-256 cert: $(cat fingerprint-sha256.txt)"
+            cat SHA256SUMS.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: NutriFit-v${{ steps.version.outputs.nombre }}
+          path: |
+            NutriFit-v${{ steps.version.outputs.nombre }}.apk
+            NutriFit.apk
+            SHA256SUMS.txt
+            fingerprint-sha256.txt
+          retention-days: 30
+
+      - name: Release (tag)
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          name: NutriFit v${{ steps.version.outputs.nombre }}
+          generate_release_notes: true
+          make_latest: 'true'
+          body: |
+            Descarga directa: **NutriFit.apk** (o NutriFit-v${{ steps.version.outputs.nombre }}.apk). Guía: https://nutri.trujillomingorance.com/descargar
+          files: |
+            NutriFit-v${{ steps.version.outputs.nombre }}.apk
+            NutriFit.apk
+            SHA256SUMS.txt
+            fingerprint-sha256.txt
+
+      - name: Pre-release (manual)
+        if: github.event_name == 'workflow_dispatch' && inputs.prerelease
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: dev-${{ github.run_number }}
+          target_commitish: ${{ github.sha }}
+          name: NutriFit v${{ steps.version.outputs.nombre }} (pre-release)
+          prerelease: true
+          make_latest: 'false'
+          files: |
+            NutriFit-v${{ steps.version.outputs.nombre }}.apk
+            NutriFit.apk
+            SHA256SUMS.txt
+            fingerprint-sha256.txt

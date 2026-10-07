@@ -1,6 +1,6 @@
 import type { Handler } from '../../utils/env.ts'
 import { json } from '../../utils/response.ts'
-import { cookieBorrada } from '../../utils/session.ts'
+import { cabeceraSetCookies, cookiesBorrado, revocarFamiliaWeb } from '../../utils/session.ts'
 import { obtenerUsuario } from '../../utils/usuarios.ts'
 
 /**
@@ -10,9 +10,12 @@ import { obtenerUsuario } from '../../utils/usuarios.ts'
  */
 export const onRequestGet: Handler = async ({ env, data }) => {
   const anonimo = (borrarCookie: boolean) =>
-    json({ ok: true, usuario: null, perfilCompleto: false }, borrarCookie ? { headers: { 'Set-Cookie': cookieBorrada() } } : {})
+    json({ ok: true, usuario: null, perfilCompleto: false }, borrarCookie ? { headers: cabeceraSetCookies(cookiesBorrado()) } : {})
   if (!data.sesion) return anonimo(false)
   const usuario = await obtenerUsuario(env, data.sesion.usuarioId)
-  if (!usuario) return anonimo(true)
+  if (!usuario) {
+    if (data.sesion.familiaHash) await revocarFamiliaWeb(env, data.sesion.familiaHash)
+    return anonimo(true)
+  }
   return json({ ok: true, usuario, perfilCompleto: usuario.meta_calorias !== null })
 }

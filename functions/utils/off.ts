@@ -1,19 +1,21 @@
 /**
  * Proxy resiliente de Open Food Facts (datos ODbL, millones de productos).
  *
- *   código ─► productos del usuario ─► caché D1 (30 días) ─► OFF v2 (reintentos)
- *   texto  ─► caché D1 (1 día) ─► search-a-licious (España → mundo) ─► cgi/search.pl
+ *   código ─► productos del usuario ─► caché (30 días) ─► OFF v2 (reintentos)
+ *   texto  ─► KV (30 días) ─► caché D1/Turso (1 día) ─► search-a-licious (España → mundo) ─► cgi/search.pl
  *
  *  · Al tercero solo le llega el término o el código: nunca datos del usuario.
  *    User-Agent identificativo, como exige OFF.
  *  · Límites GLOBALES (además de los del usuario) para respetar los de OFF:
  *    90 productos/min y 9 búsquedas/min desde toda la app.
  *  · Si OFF falla o se supera el límite se sirve la copia caducada (stale-on-error).
- *  · La caché D1 es opcional: si la tabla no existe todo sigue funcionando.
+ *  · La caché es opcional: con Turso configurado no toca D1; si no, usa D1.
  */
 import type { Env } from './env.ts'
 import { HttpError } from './response.ts'
 import { limitar } from './rateLimit.ts'
+import { aplazarEnTurso, leerCheckpoint, guardarCheckpoint } from './turso.ts'
+import { foodQuery, guardarKv, leerKv } from './cacheBusquedaKv.ts'
 
 export const USER_AGENT_OFF = 'NutriFit/1.0 (soporte@trujillomingorance.com)'
 const BASE = 'https://world.openfoodfacts.org'
@@ -127,24 +129,34 @@ interface EntradaCache<T> {
 
 async function leerCache<T>(env: Env, clave: string): Promise<EntradaCache<T> | null> {
   try {
+    const externa = await leerCheckpoint(env, 'cache_off', clave)
+    const ahora = Math.floor(Date.now() / 1000)
+    if (externa) return { datos: JSON.parse(externa.datos) as T, fresca: externa.expira_en > ahora }
+    if (externa === null) return null
     const fila = await env.DB.prepare('SELECT datos, expira_en FROM cache_off WHERE clave = ?1').bind(clave).first<{ datos: string; expira_en: number }>()
     if (!fila) return null
-    return { datos: JSON.parse(fila.datos) as T, fresca: fila.expira_en > Math.floor(Date.now() / 1000) }
+    return { datos: JSON.parse(fila.datos) as T, fresca: fila.expira_en > ahora }
   } catch {
     return null // tabla aún no creada o JSON corrupto: se ignora la caché
   }
 }
 
+function guardarCacheD1(ctx: Ctx, clave: string, json: string, expiraEn: number, ahora: number) {
+  return ctx.env.DB.prepare(
+    'INSERT INTO cache_off (clave, datos, expira_en, actualizado) VALUES (?1, ?2, ?3, ?4) ON CONFLICT (clave) DO UPDATE SET datos = excluded.datos, expira_en = excluded.expira_en, actualizado = excluded.actualizado',
+  )
+    .bind(clave, json, expiraEn, ahora)
+    .run()
+    .then(() => undefined)
+}
+
 function guardarCache(ctx: Ctx, clave: string, datos: unknown, ttl: number) {
   const ahora = Math.floor(Date.now() / 1000)
-  ctx.waitUntil(
-    ctx.env.DB.prepare(
-      'INSERT INTO cache_off (clave, datos, expira_en, actualizado) VALUES (?1, ?2, ?3, ?4) ON CONFLICT (clave) DO UPDATE SET datos = excluded.datos, expira_en = excluded.expira_en, actualizado = excluded.actualizado',
-    )
-      .bind(clave, JSON.stringify(datos), ahora + ttl, ahora)
-      .run()
-      .catch((e: unknown) => console.warn('[off] caché no guardada:', e instanceof Error ? e.message : e)),
-  )
+  const json = JSON.stringify(datos)
+  const expiraEn = ahora + ttl
+  const fila = { clave, datos: json, expiraEn, actualizado: ahora }
+  if (aplazarEnTurso(ctx, () => guardarCheckpoint(ctx.env, 'cache_off', fila), () => guardarCacheD1(ctx, clave, json, expiraEn, ahora))) return
+  ctx.waitUntil(guardarCacheD1(ctx, clave, json, expiraEn, ahora).catch((e: unknown) => console.warn('[off] caché no guardada:', e instanceof Error ? e.message : e)))
 }
 
 // ------------------------------------------------------------- red
@@ -174,6 +186,11 @@ async function cupoGlobal(env: Env, tipo: 'producto' | 'busqueda'): Promise<bool
   } catch {
     return true
   }
+}
+
+/** Cupo global compartido con /api/alimentos/off (90 productos/min, 9 búsquedas/min). */
+export async function hayCupoOff(env: Env, tipo: 'producto' | 'busqueda'): Promise<boolean> {
+  return cupoGlobal(env, tipo)
 }
 
 // ------------------------------------------------------------- API
@@ -241,12 +258,24 @@ export const terminoOFF = (q: string) =>
     .replace(/\s+/g, ' ')
     .trim()
 
+function esListaOff(v: unknown): v is ProductoOFF[] {
+  return Array.isArray(v) && v.every((p) => !!p && typeof p === 'object' && typeof (p as ProductoOFF).nombre === 'string' && typeof (p as ProductoOFF).por100?.calorias === 'number')
+}
+
 export async function buscarOFF(q: string, ctx: Ctx): Promise<ProductoOFF[]> {
   const termino = terminoOFF(q)
   if (termino.length < 2) return []
+  const food_query = foodQuery(termino)
+  if (food_query) {
+    const enKv = await leerKv(ctx.env, food_query, esListaOff)
+    if (enKv) return enKv
+  }
   const clave = `q:${termino}`.slice(0, 80)
   const cache = await leerCache<ProductoOFF[]>(ctx.env, clave)
-  if (cache?.fresca) return cache.datos
+  if (cache?.fresca && Array.isArray(cache.datos)) {
+    if (food_query) guardarKv(ctx, food_query, cache.datos)
+    return cache.datos
+  }
   if (!(await cupoGlobal(ctx.env, 'busqueda'))) {
     if (cache) return cache.datos
     throw new HttpError(429, 'Hay muchas búsquedas en Open Food Facts ahora mismo. Usa la base de alimentos o inténtalo en un minuto.')
@@ -261,6 +290,7 @@ export async function buscarOFF(q: string, ctx: Ctx): Promise<ProductoOFF[]> {
       res = await buscarCgi(termino)
     }
     res = priorizarCoincidencias(res, termino)
+    if (food_query) guardarKv(ctx, food_query, res)
     guardarCache(ctx, clave, res, TTL.busqueda)
     return res
   } catch (e) {

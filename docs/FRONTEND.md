@@ -10,7 +10,7 @@ claro/oscuro (sigue al sistema; se puede fijar en Ajustes).
 | `src/components/ui/` | Button, Card, Input, Slider, Segmented/OpcionTarjeta, Sheet (focus trap, Esc), Toast, Spinner |
 | `src/components/` | Login, Onboarding (4 pasos), Dashboard, AnilloCalorias, BarrasMacros, SelectorSemana, SeccionComida, HojaAnadir, ScannerComida, ModalRevisionPlato, WidgetAgua, GraficaPeso, Ajustes, BannerInstalarPWA |
 | `src/hooks/` | `useTurnstile`, `useResumen` (caché en memoria + actualizaciones optimistas), `useTema`, `useNumeroAnimado` |
-| `src/lib/` | `api.ts` (cliente tipado), `imagen.ts` (compresión 800×800 WebP 0.7 → JPEG), `fechas.ts`, `formato.ts`, `resumen.ts`, `tema.ts`, `sw.ts`, `tipos.ts` |
+| `src/lib/` | `api.ts` (cliente tipado), `imagen.ts` (JPEG 1024×1024, calidad 0.85, sin EXIF), `fechas.ts`, `formato.ts`, `resumen.ts`, `tema.ts`, `sw.ts`, `tipos.ts` |
 | `public/sw.js` | Service Worker escrito a mano; la lista de precarga y la versión las inyecta el plugin `nutrifit-sw` de `vite.config.ts` |
 
 ## Turnstile (modo invisible)
@@ -77,7 +77,7 @@ con la pantalla de Dashboard ≈ 62 KB. Fuente Outfit variable (subset latino,
   (`DescribirComida`, Turnstile `analizar-texto`) y «Buscar alimento»
   (`BuscarAlimento`: base local + Open Food Facts, gramos y «cesta» de
   alimentos). Todo acaba en `ModalRevisionPlato`. En escritorio no se ofrece
-  la cámara y se puede arrastrar la foto (misma compresión WebP).
+  la cámara y se puede arrastrar la foto (misma compresión: JPEG 1024×1024, calidad 0.85, sin EXIF).
 - **Base de alimentos:** `src/data/alimentos.ts` (≈ 360 alimentos, 16
   categorías) se genera con `python3 scripts/alimentos/generar.py` a partir de
   `scripts/alimentos/mapa.txt` y de **USDA FoodData Central — SR Legacy (2018)**,

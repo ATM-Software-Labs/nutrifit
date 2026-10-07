@@ -76,7 +76,7 @@ export function precargarTurnstile() {
   void siteKey().catch(() => {})
 }
 
-export function useTurnstile(accion: string) {
+export function useTurnstile(accion: string, preparar = true) {
   const contenedorRef = useRef<HTMLDivElement>(null)
   const widget = useRef<string | null>(null)
   /** Contenedor en el que se renderizó el widget actual (para detectar remontajes). */
@@ -96,9 +96,9 @@ export function useTurnstile(accion: string) {
   }, [])
 
   useEffect(() => {
-    precargarTurnstile()
+    if (preparar) precargarTurnstile()
     return quitarWidget
-  }, [quitarWidget])
+  }, [quitarWidget, preparar])
 
   const obtenerToken = useCallback(async (): Promise<string> => {
     const [ts, clave] = await Promise.all([cargarScript(), siteKey()])

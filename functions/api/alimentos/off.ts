@@ -1,7 +1,8 @@
 /**
  * GET /api/alimentos/off?q=yogur griego  |  ?codigo=8480000610553
- * Open Food Facts a través del servidor (caché D1 + User-Agent propio; al
- * tercero solo le llega el término o el código, nunca datos del usuario).
+ * Open Food Facts a través del servidor. El texto se normaliza y, si ya está
+ * en KV, se responde desde el edge; si no, se consulta OFF y se guarda 30 días.
+ * Al tercero solo le llega el término o el código, nunca datos del usuario.
  * Por código se miran ANTES los productos propios del usuario.
  * Límites por usuario: 12 búsquedas / min y 30 códigos / min (+ globales en utils/off.ts).
  */

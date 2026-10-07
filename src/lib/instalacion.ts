@@ -55,8 +55,3 @@ export async function instalarPWA(): Promise<boolean> {
 }
 
 export const URL_DESCARGAR = 'https://nutri.trujillomingorance.com/descargar'
-
-export function formatoMB(bytes: number | null | undefined): string | null {
-  if (!bytes || bytes <= 0) return null
-  return `${(bytes / 1_048_576).toLocaleString('es-ES', { maximumFractionDigits: 1, minimumFractionDigits: 1 })} MB`
-}

@@ -25,6 +25,12 @@ android {
     }
     signingConfigs {
         release {
+            // minSdk 24: v1 no instala en ningún dispositivo admitido. v4 es un
+            // archivo .idsig aparte (adb incremental), no viaja dentro del APK.
+            enableV1Signing false
+            enableV2Signing true
+            enableV3Signing true
+            enableV4Signing false
             if (nfKeystore) {
                 storeFile file(nfKeystore)
                 storePassword prop('nutrifitKeystorePassword', 'ANDROID_KEYSTORE_PASSWORD')
@@ -35,10 +41,13 @@ android {
     }
     buildTypes {
         release {
-            // Sin keystore, assembleRelease genera un APK sin firmar (el CI usa entonces assembleDebug).
+            // Sin ANDROID_KEYSTORE_PATH (o nutrifitKeystorePath), assembleRelease
+            // queda sin firmar. Con el keystore de producción, firma v2+v3.
             if (nfKeystore) signingConfig signingConfigs.release
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            debuggable false
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
 }

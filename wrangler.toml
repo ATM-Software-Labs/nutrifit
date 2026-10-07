@@ -15,6 +15,9 @@ ALLOWED_ORIGINS = "https://nutri.trujillomingorance.com,https://nutrifit-ac9.pag
 TURNSTILE_SITE_KEY = "0x4AAAAAAFPhRCuPz21TsJR5"
 # Modelo de Gemini (Flash estable con free tier en oct-2026).
 GEMINI_MODEL = "gemini-3.8-flash"
+# Historial de peso, eventos y cachés de alimentos. Vacío = esas escrituras siguen en D1.
+# Crear la base gratuita en Turso y pegar aquí la URL libsql://…. El token es secreto.
+TURSO_DATABASE_URL = ""
 
 # --- Cloudflare D1 -----------------------------------------------------------
 # Creada con `npx wrangler d1 create nutrifit-db` (el id no es secreto).
@@ -33,6 +36,15 @@ binding = "ALIMENTOS"
 database_name = "nutrifit-alimentos"
 database_id = "4ca3a77e-63b4-4090-bfa2-05e4032860c4"
 
+# --- KV: búsquedas públicas de alimentos (binding KV) ------------------------
+# El Worker lee env.KV.get(food_query) y, si no hay copia, guarda el resultado
+# 30 días (expirationTtl 2592000). Sin este binding sigue la caché D1/Turso.
+# Crear el namespace una vez (hace falta `npx wrangler login`) y pegar el id:
+#   npx wrangler kv namespace create nutrifit-alimentos
+# [[kv_namespaces]]
+# binding = "KV"
+# id = ""
+
 # --- Workers AI (fallback de visión) -----------------------------------------
 # Visión sin Gemini: gemma-4 → qwen3.8 → mistral-small (sin licencia de Meta); Llama 3.2
 # Vision queda como último recurso y solo funciona si se aceptó su licencia (docs/BACKEND.md).
@@ -44,4 +56,7 @@ binding = "AI"
 #   npx wrangler pages secret put TURNSTILE_SECRET_KEY --project-name nutrifit   # ✓ configurado
 #   npx wrangler pages secret put BREVO_API_KEY        --project-name nutrifit   # pendiente
 #   npx wrangler pages secret put GEMINI_API_KEY       --project-name nutrifit   # pendiente
+#   npx wrangler pages secret put GROQ_API_KEY         --project-name nutrifit   # pendiente (visión)
+#   npx wrangler pages secret put TRUJILLO_API_KEY     --project-name nutrifit   # opcional (ai.trujillomingorance.com)
+#   npx wrangler pages secret put TURSO_AUTH_TOKEN     --project-name nutrifit   # historial, eventos y cachés
 # En local van en .dev.vars (ver .dev.vars.example).

@@ -40,7 +40,7 @@
 - **Entrar sin contraseña:** enlace mágico **y código de 6 cifras** en el mismo email (15 min, un solo uso, 5 intentos), protegido con Cloudflare Turnstile invisible.
 - **Entrar en el PC con un QR:** el ordenador muestra un QR y un código corto; lo escaneas con el móvil donde ya tienes sesión, compruebas el código y pulsas «Aprobar» (2 min, un solo uso, ligado a ese navegador).
 - **Plan personalizado:** onboarding en 4 pasos con Mifflin-St Jeor, nivel de actividad y objetivo (perder grasa, mantener, ganar músculo).
-- **Foto → macros:** la foto se comprime en el móvil (800 px, WebP) y la analiza **Gemini**, con **Workers AI (Llama 3.2 Vision)** de respaldo. Revisas ingredientes y gramos y los macros se recalculan al momento.
+- **Foto → macros:** la foto se normaliza en el móvil (JPEG 1024×1024, calidad 0.85, sin EXIF) y la analiza **Gemini Flash**. Si falla: **Groq Vision**, **Trujillo AI** y, al final, **Workers AI (Llama 3.2 Vision)**. Revisas ingredientes y gramos y los macros se recalculan al momento.
 - **Sin cámara:** describe la comida con texto («dos huevos revueltos y una tostada») y la IA estima los macros (Gemini o, si no hay clave, Workers AI); **sube una foto** desde el PC (selector o arrastrar y soltar); o **busca alimentos** en una base local de ~360 alimentos habituales en España (valores por 100 g de [USDA FoodData Central](https://fdc.nal.usda.gov/), dominio público) y en **Open Food Facts** por nombre o código de barras.
 - **Escritorio:** a partir de 1024 px, barra lateral (Hoy, Historial, Añadir comida, Peso, Agua, Ajustes, Descargar app) y panel en 2–3 columnas con «Añadir comida» siempre a mano. En el móvil todo sigue igual.
 - **Historial:** vista semanal o mensual con calorías frente al objetivo, macros P/C/G, tendencia de peso y agua (SVG ligero) y la lista de días con sus totales.
@@ -58,7 +58,7 @@
 | Hosting | **Cloudflare Pages** (estáticos + cabeceras de seguridad) |
 | API | **Cloudflare Pages Functions** (`functions/`) con Zod |
 | Base de datos | **Cloudflare D1** (SQLite) |
-| IA | **Google Gemini** (principal) · **Cloudflare Workers AI** (respaldo) |
+| IA | **Gemini Flash** · **Groq Vision** · **Trujillo AI** · **Workers AI** (en ese orden, solo la foto) |
 | Anti-bots | **Cloudflare Turnstile** (modo invisible) |
 | Email | **Brevo** (API transaccional) |
 | Móvil | **PWA** (iPhone/iPad) · **Capacitor 8** (APK Android) |
@@ -81,15 +81,19 @@ flowchart LR
     TS["Turnstile siteverify"]
   end
   GEM["Google Gemini API"]
+  GROQ["Groq Vision"]
+  TRU["Trujillo AI"]
   BREVO["Brevo (email)"]
 
   WEB -->|HTML, JS, SW| PAGES
-  WEB -->|cookie nf_session| MW
+  WEB -->|cookie __Host-nf_session| MW
   APK -->|Authorization: Bearer| MW
   MW --> TS
   MW --> API
   API --> D1
   API -->|foto| GEM
+  API -.->|2.º| GROQ
+  API -.->|3.º| TRU
   API -.->|respaldo| WAI
   API -->|magic link| BREVO
 ```
@@ -98,14 +102,14 @@ Más detalle: [docs/BACKEND.md](docs/BACKEND.md) · [docs/FRONTEND.md](docs/FRON
 
 ## Seguridad (resumen)
 
-- **Sesiones:** cookie `nf_session` firmada con HMAC-SHA256 (`HttpOnly; Secure; SameSite=Strict`, 30 días). En la app, token **Bearer** de 60 días con una clave derivada distinta y **revocable** (tabla `tokens_app`).
+- **Sesiones:** cookie `__Host-nf_session` firmada con HMAC-SHA256 (`HttpOnly; Secure; SameSite=Strict; Path=/`, sin `Domain`, 30 días). Cada login crea un sid nuevo en D1 (solo el hash) y el token se rota a las 12 h. En la app, token **Bearer** de 60 días con una clave derivada distinta y **revocable** (tabla `tokens_app`).
 - **Magic links:** firmados, 15 minutos, un solo uso (consumo atómico en D1, solo se guarda el hash). La respuesta es la misma exista o no el email (sin enumeración de usuarios).
 - **CSRF:** comprobación de `Origin` + `SameSite=Strict` + Content-Type JSON/multipart. Las peticiones con Bearer no llevan credenciales automáticas, así que no aplica.
 - **CORS** solo para el WebView de la app (`https://localhost`, `capacitor://localhost`), sin credenciales.
 - **Turnstile** en las rutas anónimas o caras (pedir enlace, guardar perfil, analizar foto).
-- **Rate limiting** en D1: 5 enlaces/15 min por IP y por email, 20 análisis/min por IP y 10 análisis/día por usuario.
-- **Validación** con Zod (rangos fisiológicos, sin HTML) y SQL siempre con `prepare().bind()`.
-- **Cabeceras:** CSP estricta (sin `unsafe-inline`), HSTS, `X-Frame-Options: DENY`, `nosniff`, Permissions-Policy, COOP.
+- **Rate limiting** en D1: login 5/15 min por IP (y bloqueo 1 h si se triplica el tope), análisis de comidas 20/hora por usuario, más los topes diarios por ruta.
+- **Validación** con Zod (rangos, longitud, sin HTML ni controles) y SQL siempre con `prepare().bind()`.
+- **Cabeceras:** CSP (script solo propio y Turnstile; estilos inline porque la UI los usa), HSTS con preload, `X-Frame-Options: DENY`, `nosniff`, Permissions-Policy, COOP.
 - **IA:** las fotos no se guardan. Mira la [política de privacidad](PRIVACIDAD.md) (borrador) por el uso de datos del nivel gratuito de Gemini.
 
 ## Desarrollo local
@@ -158,9 +162,9 @@ Guía paso a paso con git y GitHub: [docs/SETUP-git-y-despliegue.md](docs/SETUP-
 
 - **Descarga directa:** <https://nutri.trujillomingorance.com/descargar/NutriFit.apk> — servida desde nuestro dominio (`functions/descargar/[archivo].ts` reenvía siempre el `NutriFit.apk` de la release *latest* de GitHub; así el móvil descarga el archivo en vez de abrir la app de GitHub). `GET /api/app/version` devuelve versión y tamaño.
 - **En la web:** el login, `/descargar` y la barra lateral muestran «Descarga la app»: QR a `/descargar` en el PC y botones en el móvil (APK en Android, «Añadir a pantalla de inicio» en iPhone). Se oculta dentro de la app y si la PWA ya está instalada.
-- **CI:** `.github/workflows/compilar-apk.yml` se ejecuta al publicar un tag `v*` (o a mano).
-  - Compila la web, sincroniza Capacitor y genera el APK.
-  - Si están los secretos `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` y `ANDROID_KEY_PASSWORD`, lo firma en release; si no, publica uno de depuración.
+- **CI:** `.github/workflows/build-apk.yml` se ejecuta al publicar un tag `v*` (o a mano).
+  - Node 20 LTS, JDK 17, `npm ci` (sha512 del lockfile), Capacitor y APK de release sin firmar.
+  - Firma con `apksigner` usando `ANDROID_KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS` y `KEY_PASSWORD`. El job falla si falta alguno o si la huella SHA-256 no coincide con `public/.well-known/assetlinks.json`.
   - Sube `NutriFit-vX.Y.Z.apk` y `NutriFit.apk` a la Release.
 - **Firma:** `bash scripts/crear-keystore.sh` crea el keystore e imprime los secretos y la huella SHA-256 para `public/.well-known/assetlinks.json` (App Links). Detalles en [docs/ANDROID.md](docs/ANDROID.md).
 
@@ -176,7 +180,7 @@ resources/           icono y splash de origen para Capacitor
 scripts/             marca, servidor local sin cuenta, keystore
 tests/               tests unitarios (node --test)
 docs/                guías, banner y capturas
-.github/workflows/   compilar-apk.yml
+.github/workflows/   build-apk.yml, ci.yml
 ```
 
 ## Contribuir

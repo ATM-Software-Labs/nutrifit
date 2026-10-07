@@ -21,7 +21,11 @@ const config: CapacitorConfig = {
   plugins: {
     SplashScreen: {
       launchShowDuration: 1200,
-      launchAutoHide: true,
+      // false: el splash no se cierra solo. App.tsx llama a SplashScreen.hide()
+      // al montar y, si el puente aún no responde, un watchdog a los 3000 ms.
+      // Con launchAutoHide el splash de Android 12 y el de Capacitor se esperan
+      // el uno al otro y la app no llega a pintar.
+      launchAutoHide: false,
       backgroundColor: '#FFFFFF',
       androidScaleType: 'CENTER_CROP',
       showSpinner: false,

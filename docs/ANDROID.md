@@ -70,20 +70,20 @@ no se pueden publicar actualizaciones que se instalen encima.
 | Secreto | Valor |
 |---|---|
 | `ANDROID_KEYSTORE_BASE64` | contenido de `nutrifit-release.jks.b64` |
-| `ANDROID_KEYSTORE_PASSWORD` | contraseña del keystore |
-| `ANDROID_KEY_ALIAS` | `nutrifit` |
-| `ANDROID_KEY_PASSWORD` | la misma contraseña (PKCS12) |
+| `KEYSTORE_PASSWORD` | contraseña del keystore |
+| `KEY_ALIAS` | `nutrifit` |
+| `KEY_PASSWORD` | la misma contraseña (PKCS12) |
 
 ```bash
 gh secret set ANDROID_KEYSTORE_BASE64 < ~/nutrifit-release.jks.b64
-gh secret set ANDROID_KEYSTORE_PASSWORD
-gh secret set ANDROID_KEY_ALIAS --body nutrifit
-gh secret set ANDROID_KEY_PASSWORD
+gh secret set KEYSTORE_PASSWORD
+gh secret set KEY_ALIAS --body nutrifit
+gh secret set KEY_PASSWORD
 ```
 
-Sin estos secretos el workflow publica un APK **de depuración** (avisa en el
-resumen). Ojo: un APK de depuración y uno firmado no se actualizan entre sí
-(hay que desinstalar), así que conviene configurar la firma antes del primer tag.
+Sin estos secretos `.github/workflows/build-apk.yml` **falla**: no publica un
+APK de depuración. Un APK de depuración y uno firmado no se actualizan entre sí
+(hay que desinstalar), así que la firma tiene que estar antes del primer tag.
 
 ### 3. Huella para App Links → `public/.well-known/assetlinks.json`
 
@@ -117,7 +117,7 @@ npm version 1.0.0 --no-git-tag-version   # opcional: sube package.json
 git commit -am "chore: v1.0.0" && git tag v1.0.0 && git push --follow-tags
 ```
 
-`.github/workflows/compilar-apk.yml` compila y crea la Release con
+`.github/workflows/build-apk.yml` compila y crea la Release con
 `NutriFit-v1.0.0.apk`, `NutriFit.apk` (nombre fijo → enlace estable
 `https://github.com/ATM-Software-Labs/nutrifit/releases/latest/download/NutriFit.apk`)
 y `SHA256SUMS.txt`. La web NO enlaza a GitHub (en muchos móviles abre la app de
@@ -126,7 +126,8 @@ GitHub en vez de descargar): ofrece **`https://nutri.trujillomingorance.com/desc
 release *latest* con ese redirect (sin la API de GitHub), guarda la resolución
 10 min en la caché del borde y reenvía el binario en streaming con
 `Content-Type: application/vnd.android.package-archive`,
-`Content-Disposition: attachment; filename="NutriFit.apk"` y `Content-Length`.
+`Content-Disposition: attachment; filename=NutriFit.apk`,
+`Cache-Control: public, max-age=3600, must-revalidate` y `Content-Length`.
 Una release nueva se sirve como mucho 10 min después de publicarse.
 `GET /api/app/version` → `{ version, tamano, url }` para los botones. versionCode = X·1 000 000 + Y·10 000 + Z·100.
 También se puede lanzar a mano (Actions → Compilar APK → Run workflow): deja el

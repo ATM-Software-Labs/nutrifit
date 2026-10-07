@@ -1,12 +1,17 @@
 /**
  * Cliente de la API (/api/*).
- *  · Web: mismo origen → la cookie nf_session viaja sola (HttpOnly, SameSite=Strict).
+ *  · Web: mismo origen → la cookie __Host-nf_session viaja sola (HttpOnly, Secure, SameSite=Strict).
  *  · App Android: URL absoluta a producción + `Authorization: Bearer`, sin cookies.
  * Los errores se normalizan en ApiError.
  */
 import { API_BASE, esNativa } from './plataforma.ts'
 import { borrarTokenApp, obtenerTokenApp } from './tokenApp.ts'
-import type { PlanMacros } from './macros.ts'
+import { calcularMacros, type PlanMacros } from './macros.ts'
+import { camposPerfil, hashContenido } from '../../functions/utils/contenidoHash.ts'
+import { guardarHashSincronizado, leerHashSincronizado } from './hashSync.ts'
+import { debeVolcar } from './ventanaCliente.ts'
+import { guardarPesoLocal, olvidarPesoLocal } from './pesoLocal.ts'
+import { hoy } from '../../functions/utils/fechas.ts'
 import type { Comida, DatosPerfil, Historial, InfoVinculo, NuevaComida, ProductoOFF, Resumen, ResultadoAnalisis, Usuario } from './tipos.ts'
 
 export class ApiError extends Error {
@@ -34,10 +39,17 @@ interface Opciones {
   signal?: AbortSignal
   /** No disparar onSesionPerdida (p. ej. en /auth/yo al arrancar). */
   silencio401?: boolean
+  /** Mantiene el POST vivo si la pestaña se cierra o pasa a segundo plano. */
+  keepalive?: boolean
+  /** Hash SHA-256 del contenido. Si el Worker ya lo tiene, responde 304. */
+  ifNoneMatch?: string
+  /** `alta` sube fuera de la ventana diaria. `normal` es el volcado diferido. */
+  prioridad?: 'alta' | 'normal'
 }
 
 async function pedir<T>(ruta: string, o: Opciones = {}): Promise<T> {
   const res = await enviar(ruta, o, 'application/json')
+  if (res.status === 304) return { ok: true, sinCambios: true } as T
   const data = (await res.json().catch(() => ({}))) as Record<string, unknown>
   if (!res.ok) await lanzar(res, data, o)
   return data as T
@@ -73,11 +85,20 @@ async function enviar(ruta: string, o: Opciones, accept: string): Promise<Respon
     body = JSON.stringify(o.body)
   }
   if (o.turnstile) headers['CF-Turnstile-Token'] = o.turnstile
+  if (o.ifNoneMatch) headers['if-none-match'] = `"${o.ifNoneMatch}"`
+  if (o.prioridad) headers['x-sync-prioridad'] = o.prioridad
   const token = esNativa ? await obtenerTokenApp() : null
   if (token) headers.authorization = `Bearer ${token}`
 
   try {
-    return await fetch(API_BASE + ruta, { method: o.method ?? 'GET', headers, body, signal: o.signal, credentials: esNativa ? 'omit' : 'same-origin' })
+    return await fetch(API_BASE + ruta, {
+      method: o.method ?? 'GET',
+      headers,
+      body,
+      signal: o.signal,
+      keepalive: o.keepalive,
+      credentials: esNativa ? 'omit' : 'same-origin',
+    })
   } catch (e) {
     if ((e as Error).name === 'AbortError') throw e
     throw new ApiError(0, 'Sin conexión. Revisa tu red e inténtalo de nuevo.', 'red')
@@ -102,8 +123,13 @@ export const api = {
     pedir<{ ok: true; mensaje: string }>('/api/auth/solicitar', { method: 'POST', body: { email, cliente: esNativa ? 'app' : 'web' }, turnstile }),
   salir: () => pedir<{ ok: true }>('/api/auth/salir', { method: 'POST' }),
   /** Código de 6 cifras del email. Web → cookie; app → token Bearer en la respuesta. */
-  entrarConCodigo: (email: string, codigo: string) =>
-    pedir<Entrada & { token?: string }>('/api/auth/codigo', { method: 'POST', body: { email, codigo, cliente: esNativa ? 'app' : 'web' }, silencio401: true }),
+  entrarConCodigo: (email: string, codigo: string, turnstile: string) =>
+    pedir<Entrada & { token?: string }>('/api/auth/codigo', {
+      method: 'POST',
+      body: { email, codigo, cliente: esNativa ? 'app' : 'web' },
+      turnstile,
+      silencio401: true,
+    }),
 
   // Login en el PC con QR: el PC crea y consulta; el móvil (con sesión) ve y decide.
   qrCrear: (secretoHash: string) => pedir<{ ok: true; id: string; codigo: string; expira: number; url: string }>('/api/auth/qr/crear', { method: 'POST', body: { secretoHash } }),
@@ -117,17 +143,32 @@ export const api = {
   qrInfo: (id: string) => pedir<{ ok: true } & InfoVinculo>(`/api/auth/qr/info?${q({ id })}`),
   qrDecidir: (id: string, aprobar: boolean) => pedir<{ ok: true; aprobado: boolean }>('/api/auth/qr/decidir', { method: 'POST', body: { id, aprobar } }),
 
-  guardarPerfil: (datos: DatosPerfil, turnstile: string) =>
-    pedir<{ ok: true; usuario: Usuario; plan: PlanMacros }>('/api/usuarios/perfil', { method: 'POST', body: datos, turnstile }),
+  guardarPerfil: async (datos: DatosPerfil, turnstile: string) => {
+    const plan = calcularMacros(datos)
+    const hash = await hashContenido(
+      camposPerfil({ ...datos, calorias: plan.calorias, proteinas: plan.proteinas, carbohidratos: plan.carbohidratos, grasas: plan.grasas }),
+    )
+    if (leerHashSincronizado('perfil') === hash) return { ok: true as const, sinCambios: true as const, usuario: null, plan }
+    const res = await pedir<{ ok: true; usuario: Usuario | null; plan: PlanMacros; sinCambios?: boolean }>('/api/usuarios/perfil', {
+      method: 'POST',
+      body: datos,
+      turnstile,
+      ifNoneMatch: hash,
+      prioridad: 'alta',
+    })
+    if (res.ok) guardarHashSincronizado('perfil', hash)
+    if (res.sinCambios) return { ok: true as const, sinCambios: true as const, usuario: null, plan }
+    return res
+  },
 
   resumen: (fecha: string, signal?: AbortSignal) =>
     pedir<Resumen & { ok: true }>(`/api/comidas/resumen?fecha=${encodeURIComponent(fecha)}`, { signal }),
-  guardarComida: (c: NuevaComida) => pedir<{ ok: true; comida: Comida }>('/api/comidas/guardar', { method: 'POST', body: c }),
-  borrarComida: (id: string) => pedir<{ ok: true }>(`/api/comidas/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  guardarComida: (c: NuevaComida) => pedir<{ ok: true; comida: Comida }>('/api/comidas/guardar', { method: 'POST', body: c, prioridad: 'alta' }),
+  borrarComida: (id: string) => pedir<{ ok: true }>(`/api/comidas/${encodeURIComponent(id)}`, { method: 'DELETE', prioridad: 'alta' }),
   analizar: (imagen: Blob, turnstile: string) => {
     const fd = new FormData()
     fd.append('imagen', imagen, imagen.type === 'image/webp' ? 'plato.webp' : 'plato.jpg')
-    return pedir<{ ok: true; proveedor: 'gemini' | 'workers-ai'; resultado: ResultadoAnalisis }>('/api/comidas/analizar', {
+    return pedir<{ ok: true; proveedor: 'gemini' | 'groq' | 'trujillo' | 'workers-ai'; resultado: ResultadoAnalisis }>('/api/comidas/analizar', {
       method: 'POST',
       body: fd,
       turnstile,
@@ -150,10 +191,49 @@ export const api = {
   historial: (desde: string, hasta: string, signal?: AbortSignal) => pedir<{ ok: true } & Historial>(`/api/historial?${q({ desde, hasta })}`, { signal }),
   exportarCsv: (tipo: 'comidas' | 'peso' | 'agua', desde: string, hasta: string) => descargar(`/api/exportar?${q({ tipo, desde, hasta })}`),
 
-  agua: (fecha: string, ml: number, modo: 'sumar' | 'fijar' = 'sumar') =>
-    pedir<{ ok: true; fecha: string; ml: number }>('/api/agua', { method: 'POST', body: { fecha, ml, modo } }),
+  agua: async (fecha: string, ml: number, modo: 'sumar' | 'fijar' = 'sumar', keepalive = false) => {
+    const total = modo === 'fijar' ? Math.max(0, Math.min(10000, Math.round(ml))) : null
+    const hash = total === null ? null : await hashContenido({ fecha, ml: total })
+    const clave = `agua:${fecha}`
+    if (hash && leerHashSincronizado(clave) === hash) return { ok: true as const, fecha, ml: total as number }
+    if (!(await debeVolcar('normal'))) return { ok: true as const, aplazado: true as const, fecha, ml: total ?? ml }
+    const res = await pedir<{ ok: true; fecha: string; ml: number; sinCambios?: boolean; aplazado?: boolean }>('/api/agua', {
+      method: 'POST',
+      body: { fecha, ml, modo },
+      keepalive,
+      ifNoneMatch: hash ?? undefined,
+      prioridad: 'normal',
+    })
+    if (res.aplazado) return { ok: true as const, aplazado: true as const, fecha, ml: total ?? ml }
+    if (hash && res.ok) guardarHashSincronizado(clave, hash)
+    if (res.sinCambios && total !== null) return { ok: true as const, fecha, ml: total }
+    return res
+  },
 
   pesos: (dias = 30) => pedir<{ ok: true; dias: number; registros: { fecha: string; peso: number }[] }>(`/api/peso?dias=${dias}`),
-  registrarPeso: (peso: number, fecha?: string) =>
-    pedir<{ ok: true; registro: { fecha: string; peso: number } }>('/api/peso', { method: 'POST', body: { peso, fecha } }),
+  registrarPeso: async (peso: number, fecha?: string, keepalive = false) => {
+    const f = fecha ?? hoy()
+    const hash = await hashContenido({ fecha: f, peso })
+    const clave = `peso:${f}`
+    if (leerHashSincronizado(clave) === hash) {
+      olvidarPesoLocal(f)
+      return { ok: true as const, sinCambios: true as const, registro: { fecha: f, peso } }
+    }
+    guardarPesoLocal(f, peso)
+    if (!(await debeVolcar('normal'))) return { ok: true as const, aplazado: true as const, registro: { fecha: f, peso } }
+    const res = await pedir<{ ok: true; registro: { fecha: string; peso: number }; sinCambios?: boolean; aplazado?: boolean }>('/api/peso', {
+      method: 'POST',
+      body: { peso, fecha: f },
+      keepalive,
+      ifNoneMatch: hash,
+      prioridad: 'normal',
+    })
+    if (res.aplazado) return { ok: true as const, aplazado: true as const, registro: { fecha: f, peso } }
+    if (res.ok) {
+      guardarHashSincronizado(clave, hash)
+      olvidarPesoLocal(f)
+    }
+    if (res.sinCambios) return { ok: true as const, sinCambios: true as const, registro: { fecha: f, peso } }
+    return res
+  },
 }

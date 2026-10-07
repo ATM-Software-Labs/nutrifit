@@ -2,7 +2,7 @@
 // Ejecutar: npm test   (Node ≥ 22.18, TypeScript nativo)
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { ErrorParseo, extraerJson, normalizarAnalisis, parsearRespuestaModelo } from '../functions/utils/iaParseo.ts'
+import { ErrorParseo, extraerJson, FotoIlegible, MENSAJE_FOTO_ILEGIBLE, normalizarAnalisis, parsearRespuestaModelo } from '../functions/utils/iaParseo.ts'
 
 const BASE = {
   nombre_plato: 'Ensalada de pollo',
@@ -86,9 +86,135 @@ test('extraerJson devuelve el PRIMER objeto', () => {
   assert.deepEqual(extraerJson('a {"x":1} b {"y":2}'), { x: 1 })
 })
 
+test('quita etiquetas markdown y el razonamiento <think>', () => {
+  const json = JSON.stringify(BASE)
+  const r = parsearRespuestaModelo(`<think>pollo a la plancha, arroz, salsa de soja, unos 350 g</think>\n\`\`\`json\n${json}\n\`\`\``)
+  assert.equal(r.nombre_plato, 'Ensalada de pollo')
+  assert.equal(r.calorias, 210)
+})
+
 // ---------------------------------------------------------------- texto (Workers AI)
-import { contenidoWorkersAI } from '../functions/utils/ia.ts'
+import { contenidoWorkersAI, cuentaFalloGateway, ErrorIA, ESQUEMA_FOTO, MODELOS_GROQ_VISION, PROMPT_SISTEMA, PROMPT_SISTEMA_TEXTO, REGLA_NOMBRE_OFICIAL, RESPONSE_SCHEMA, TIMEOUT_GATEWAY_FOTO_MS } from '../functions/utils/ia.ts'
 import { normalizarProducto } from '../functions/utils/off.ts'
+
+test('el prompt obliga al nombre oficial y el esquema pide input_query y display_name', () => {
+  for (const prompt of [PROMPT_SISTEMA, PROMPT_SISTEMA_TEXTO]) {
+    assert.ok(prompt.includes(REGLA_NOMBRE_OFICIAL))
+    assert.match(prompt, /pechu plancha/)
+    assert.match(prompt, /monstercita blanca/)
+    assert.match(prompt, /pan bimbo inte/)
+    assert.match(prompt, /input_query/)
+    assert.match(prompt, /display_name/)
+    assert.match(prompt, /crudo o cocinado/)
+  }
+  assert.match(PROMPT_SISTEMA, /Output ONLY valid JSON, with no Markdown and no code fences\./)
+  assert.match(PROMPT_SISTEMA, /desglósalo obligatoriamente/)
+  assert.match(PROMPT_SISTEMA, /Arroz blanco hervido/)
+  assert.match(PROMPT_SISTEMA, /min_grams/)
+  assert.match(PROMPT_SISTEMA, /No se distingue el alimento con claridad/)
+  assert.doesNotMatch(PROMPT_SISTEMA, /```/)
+  assert.equal(RESPONSE_SCHEMA.required.includes('input_query'), true)
+  assert.equal(RESPONSE_SCHEMA.required.includes('display_name'), true)
+  assert.deepEqual(RESPONSE_SCHEMA.properties.ingredientes.items.required, ['input_query', 'display_name', 'gramos', 'calorias', 'proteinas', 'carbohidratos', 'grasas'])
+  assert.equal(ESQUEMA_FOTO.required.includes('is_food'), true)
+  assert.deepEqual(ESQUEMA_FOTO.properties.items.items.required, ['input_query', 'display_name', 'grams', 'min_grams', 'max_grams', 'calories', 'protein', 'carbs', 'fat'])
+  assert.equal(TIMEOUT_GATEWAY_FOTO_MS, 5_000)
+  assert.deepEqual(MODELOS_GROQ_VISION, ['llama-3.2-11b-vision-preview', 'llama-3.2-90b-vision-preview'])
+})
+
+test('un coloquialismo queda en input_query y el nombre oficial en display_name', () => {
+  const r = parsearRespuestaModelo({
+    input_query: 'pechu plancha',
+    display_name: 'Pechuga de pollo a la plancha',
+    nombre_plato: 'pechu plancha',
+    ingredientes: [
+      {
+        input_query: 'pechu plancha',
+        display_name: 'Pechuga de pollo a la plancha',
+        nombre: 'pechu plancha',
+        gramos: 150,
+        calorias: 248,
+        proteinas: 46,
+        carbohidratos: 0,
+        grasas: 6,
+      },
+    ],
+    calorias: 248,
+    proteinas: 46,
+    carbohidratos: 0,
+    grasas: 6,
+  })
+  assert.equal(r.input_query, 'pechu plancha')
+  assert.equal(r.display_name, 'Pechuga de pollo a la plancha')
+  assert.equal(r.nombre_plato, 'Pechuga de pollo a la plancha')
+  assert.equal(r.ingredientes[0]?.nombre, 'Pechuga de pollo a la plancha')
+  assert.equal(r.ingredientes[0]?.display_name, 'Pechuga de pollo a la plancha')
+  assert.equal(r.ingredientes[0]?.input_query, 'pechu plancha')
+})
+
+test('el esquema corto de la foto se traduce al resultado de la app', () => {
+  const r = parsearRespuestaModelo({
+    is_food: true,
+    items: [{ input_query: 'arroz basmati cocio', display_name: 'Arroz basmati cocido', grams: 150, min_grams: 120, max_grams: 180, calories: 195, protein: 4, carbs: 42, fat: 0.5 }],
+    total: { calories: 195, protein: 4, carbs: 42, fat: 0.5 },
+  })
+  assert.equal(r.nombre_plato, 'Arroz basmati cocido')
+  assert.equal(r.display_name, 'Arroz basmati cocido')
+  assert.equal(r.ingredientes[0]?.input_query, 'arroz basmati cocio')
+  assert.equal(r.ingredientes[0]?.gramos, 150)
+  assert.equal(r.ingredientes[0]?.min_gramos, 120)
+  assert.equal(r.ingredientes[0]?.max_gramos, 180)
+  assert.equal(r.calorias, 195)
+  assert.equal(r.carbohidratos, 42)
+  assert.equal(r.grasas, 0.5)
+})
+
+test('un plato combinado queda en ingredientes separados, no en un solo alimento', () => {
+  const r = parsearRespuestaModelo({
+    is_food: true,
+    items: [
+      { input_query: 'arroz', display_name: 'Arroz blanco hervido', grams: 180, min_grams: 150, max_grams: 220, calories: 234, protein: 4.3, carbs: 52, fat: 0.5 },
+      { input_query: 'pollo', display_name: 'Pechuga de pollo a la plancha', grams: 140, min_grams: 110, max_grams: 170, calories: 231, protein: 43, carbs: 0, fat: 5 },
+      { input_query: 'aceite', display_name: 'Aceite de oliva virgen extra', grams: 8, min_grams: 5, max_grams: 12, calories: 72, protein: 0, carbs: 0, fat: 8 },
+    ],
+    total: { calories: 537, protein: 47.3, carbs: 52, fat: 13.5 },
+  })
+  assert.deepEqual(
+    r.ingredientes.map((i) => i.nombre),
+    ['Arroz blanco hervido', 'Pechuga de pollo a la plancha', 'Aceite de oliva virgen extra'],
+  )
+  assert.equal(r.ingredientes[2]?.gramos, 8)
+  assert.equal(r.calorias, 537)
+})
+
+test('una foto ilegible no inventa comida y conserva el mensaje fijo', () => {
+  const crudo = '{"is_food": false, "error_message": "No se distingue el alimento con claridad. Intenta enfocar más cerca o con mejor luz."}'
+  assert.throws(() => parsearRespuestaModelo(crudo), FotoIlegible)
+  assert.throws(
+    () => parsearRespuestaModelo({ is_food: false, error_message: 'otra cosa', items: [{ display_name: 'Pizza', grams: 300, calories: 800, protein: 30, carbs: 80, fat: 30 }] }),
+    (e: unknown) => e instanceof FotoIlegible && e.message === MENSAJE_FOTO_ILEGIBLE,
+  )
+})
+
+test('una foto antigua, solo con name, sigue siendo un resultado válido', () => {
+  const r = parsearRespuestaModelo({
+    items: [{ name: 'Rice', grams: 150, calories: 195, protein: 4, carbs: 42, fat: 0.5 }],
+    total: { calories: 195, protein: 4, carbs: 42, fat: 0.5 },
+  })
+  assert.equal(r.nombre_plato, 'Rice')
+  assert.equal(r.display_name, 'Rice')
+})
+
+test('el circuito no cuenta un JSON inválido, una clave ausente ni un rechazo definitivo', () => {
+  assert.equal(cuentaFalloGateway(new ErrorParseo('json')), false)
+  assert.equal(cuentaFalloGateway(new ErrorIA('GROQ_API_KEY no configurada')), false)
+  assert.equal(cuentaFalloGateway(new ErrorIA('Binding AI no disponible')), false)
+  const definitivo = new ErrorIA('no es comida')
+  definitivo.definitivo = true
+  assert.equal(cuentaFalloGateway(definitivo), false)
+  assert.equal(cuentaFalloGateway(new ErrorIA('Gemini HTTP 503')), true)
+  assert.equal(cuentaFalloGateway(new ErrorIA('Workers AI: timeout 5000 ms')), true)
+})
 
 test('contenidoWorkersAI: formato OpenAI (choices) y clásico (response)', () => {
   const json = '{"nombre_plato":"Tostada","ingredientes":[],"calorias":200,"proteinas":5,"carbohidratos":30,"grasas":6}'

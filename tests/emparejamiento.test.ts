@@ -93,7 +93,8 @@ test('endpoints: crear → info/decidir (móvil con sesión) → estado (PC) rec
   await decidir(ctx(env, postJson('/api/auth/qr/decidir', { id, aprobar: true }), USUARIO))
   const p2 = await estado(ctx(env, postJson('/api/auth/qr/estado', { id, secreto })))
   const cookie = p2.headers.get('Set-Cookie') ?? ''
-  assert.match(cookie, /^nf_session=.+HttpOnly; Secure; SameSite=Strict/)
+  assert.match(cookie, /^__Host-nf_session=.+HttpOnly; Secure; SameSite=Strict; Path=\//)
+  assert.doesNotMatch(cookie, /Domain=/)
   const s = await leerSesion(env, new Request('https://n/', { headers: { Cookie: cookie.split(';')[0]! } }))
   assert.equal(s?.usuarioId, 'u-1')
 

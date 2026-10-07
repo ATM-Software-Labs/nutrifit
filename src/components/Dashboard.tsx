@@ -4,7 +4,7 @@
  * Móvil: una columna + botón flotante. Escritorio (≥ lg): barra lateral y
  * panel en 2–3 columnas con «Añadir comida» siempre visible.
  */
-import { lazy, Suspense, useCallback, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import { ChartColumn, House, Plus, Settings } from 'lucide-react'
 import { Logo } from './Logo.tsx'
 import { AnilloCalorias } from './AnilloCalorias.tsx'
@@ -23,6 +23,7 @@ import { api } from '../lib/api.ts'
 import { conComida, reemplazarComida, sinComida } from '../lib/resumen.ts'
 import { fechaLarga, hoyISO, tipoPorHora } from '../lib/fechas.ts'
 import { navegar } from '../lib/rutas.ts'
+import { fijarUsuarioSync } from '../lib/ventanaCliente.ts'
 import { TIPOS_COMIDA, type Comida, type NuevaComida, type ResultadoAnalisis, type TipoComida, type Usuario } from '../lib/tipos.ts'
 
 const ScannerComida = lazy(() => import('./ScannerComida.tsx'))
@@ -77,6 +78,11 @@ export default function Dashboard({
   const { resumen, error, actualizar, recargar } = useResumen(fecha)
   const toast = useToast()
   const cerrar = useCallback(() => setHoja(null), [])
+
+  useEffect(() => {
+    fijarUsuarioSync(usuario.id)
+    return () => fijarUsuarioSync(null)
+  }, [usuario.id])
 
   const metas = resumen?.metas ?? {
     calorias: usuario.meta_calorias ?? 2000,

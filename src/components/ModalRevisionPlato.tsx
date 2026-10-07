@@ -17,6 +17,11 @@ import { NOMBRE_TIPO, TIPOS_COMIDA, type Ingrediente, type NuevaComida, type Res
 interface Fila {
   id: number
   nombre: string
+  /** Texto coloquial del usuario, si la IA lo separó de este ingrediente. */
+  input_query?: string
+  serving_description?: string
+  minGramos?: number
+  maxGramos?: number
   gramos: number
   ref: { gramos: number } & Totales
   /** Fila añadida a mano: sus macros se editan directamente. */
@@ -40,7 +45,7 @@ function filasIniciales(r: ResultadoAnalisis | null): Fila[] {
       carbohidratos: conMacros ? i.carbohidratos! : r.carbohidratos * parte,
       grasas: conMacros ? i.grasas! : r.grasas * parte,
     }
-    return { id: siguienteId++, nombre: i.nombre, gramos: i.gramos, ref, manual: false }
+    return { id: siguienteId++, nombre: i.display_name || i.nombre, input_query: i.input_query, serving_description: i.serving_description, minGramos: i.min_gramos, maxGramos: i.max_gramos, gramos: i.gramos, ref, manual: false }
   })
 }
 
@@ -90,7 +95,7 @@ export default function ModalRevisionPlato({
   onClose: () => void
   onConfirmar: (c: NuevaComida) => void
 }) {
-  const [nombre, setNombre] = useState(resultado?.nombre_plato ?? '')
+  const [nombre, setNombre] = useState(resultado?.display_name || resultado?.nombre_plato || '')
   const [tipo, setTipo] = useState<TipoComida>(tipoInicial)
   const [filas, setFilas] = useState<Fila[]>(() => filasIniciales(resultado))
   const [manuales, setManuales] = useState<Totales>(() =>
@@ -131,7 +136,20 @@ export default function ModalRevisionPlato({
     const kcal = Math.round(Math.max(totales.calorias, (P * 4 + C * 4 + G * 9) / 1.4 - 50))
     const ingredientes: Ingrediente[] = filas.map((f) => {
       const m = macrosFila(f)
-      return { nombre: f.nombre.trim().slice(0, 80), gramos: r1(f.gramos), calorias: r1(m.calorias), proteinas: r1(m.proteinas), carbohidratos: r1(m.carbohidratos), grasas: r1(m.grasas) }
+      const nombreOficial = f.nombre.trim().slice(0, 80)
+      return {
+        nombre: nombreOficial,
+        display_name: nombreOficial,
+        ...(f.input_query ? { input_query: f.input_query.slice(0, 200) } : {}),
+        ...(f.serving_description ? { serving_description: f.serving_description.slice(0, 80) } : {}),
+        ...(f.minGramos !== undefined ? { min_gramos: r1(f.minGramos) } : {}),
+        ...(f.maxGramos !== undefined ? { max_gramos: r1(f.maxGramos) } : {}),
+        gramos: r1(f.gramos),
+        calorias: r1(m.calorias),
+        proteinas: r1(m.proteinas),
+        carbohidratos: r1(m.carbohidratos),
+        grasas: r1(m.grasas),
+      }
     })
     onConfirmar({ tipo_comida: tipo, descripcion: desc.slice(0, 200), calorias: kcal, proteinas: P, carbohidratos: C, grasas: G, ingredientes, fecha })
   }
@@ -162,6 +180,9 @@ export default function ModalRevisionPlato({
             data-autofocus={!resultado || undefined}
           />
         </div>
+        {resultado?.input_query && resultado.input_query !== nombre && (
+          <p className="-mt-4 text-xs text-neutral-500 dark:text-neutral-400">Texto original: {resultado.input_query}</p>
+        )}
 
         <Segmented label="Tipo de comida" valor={tipo} onChange={setTipo} opciones={TIPOS_COMIDA.map((t) => ({ valor: t, etiqueta: NOMBRE_TIPO[t] }))} />
 
@@ -220,6 +241,11 @@ export default function ModalRevisionPlato({
                         <X size={16} />
                       </button>
                     </div>
+                    {f.input_query && f.input_query !== f.nombre && <p className="pl-2 text-xs text-neutral-500 dark:text-neutral-400">Texto original: {f.input_query}</p>}
+                    {f.serving_description && <p className="pl-2 text-xs text-neutral-500 dark:text-neutral-400">{f.serving_description}</p>}
+                    {f.minGramos !== undefined && f.maxGramos !== undefined && (
+                      <p className="pl-2 text-xs text-neutral-500 dark:text-neutral-400">Rango visual: {entero(f.minGramos)}–{entero(f.maxGramos)} g</p>
+                    )}
                     {f.manual ? (
                       <div className="mt-2 grid grid-cols-4 gap-2 pl-2 pr-9">
                         {CLAVES.map((k) => (

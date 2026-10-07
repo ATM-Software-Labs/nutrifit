@@ -26,10 +26,11 @@ test('tagDesdeLocation: solo acepta el APK de nuestro repo en github.com', () =>
   assert.equal(tagDesdeLocation('https://github.com/ATM-Software-Labs/nutrifit/releases/download/v1/Otro.apk'), null)
 })
 
-test('cabecerasApk: descarga directa con tipo Android y tamaño', () => {
+test('cabecerasApk: descarga directa con tipo Android, caché de una hora y tamaño', () => {
   const h = cabecerasApk('v1.0.1', 3795644)
   assert.equal(h.get('content-type'), 'application/vnd.android.package-archive')
-  assert.equal(h.get('content-disposition'), 'attachment; filename="NutriFit.apk"')
+  assert.equal(h.get('content-disposition'), 'attachment; filename=NutriFit.apk')
+  assert.equal(h.get('cache-control'), 'public, max-age=3600, must-revalidate')
   assert.equal(h.get('content-length'), '3795644')
   assert.equal(cabecerasApk('v1', null).get('content-length'), null)
 })

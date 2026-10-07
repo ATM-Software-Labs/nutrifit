@@ -11,6 +11,7 @@ import { onRequest } from '../functions/_middleware.ts'
 /** D1 mínimo en memoria: solo lo que usan tokens_app y la limpieza. */
 function d1Falso() {
   const tokens = new Map<string, { usuario_id: string; expira_en: number; revocado_en: number | null }>()
+  const sesiones = new Map<string, Record<string, unknown>>()
   const db = {
     tokens,
     prepare(sql: string) {
@@ -26,13 +27,26 @@ function d1Falso() {
             const t = tokens.get(args[1] as string)
             if (t && t.revocado_en === null) t.revocado_en = args[0] as number
           }
-          return { success: true }
+          if (sql.includes('INSERT INTO sesiones_web')) {
+            sesiones.set(args[0] as string, {
+              usuario_id: args[2],
+              email: args[3],
+              expira_en: args[5],
+              revocado_en: null,
+              reemplazado_por: null,
+              gracia_hasta: null,
+              familia_hash: args[1],
+              visto_en: null,
+            })
+          }
+          return { success: true, meta: { changes: 1 } }
         },
         async first() {
           if (sql.includes('FROM tokens_app')) {
             const t = tokens.get(args[0] as string)
             return t && t.usuario_id === args[1] && t.revocado_en === null && t.expira_en > (args[2] as number) ? { ok: 1 } : null
           }
+          if (sql.includes('FROM sesiones_web')) return sesiones.get(args[0] as string) ?? null
           return null
         },
       }
@@ -75,7 +89,7 @@ test('Bearer manipulado, de otro tipo, caducado o mal formado → null', async (
   const huerfano = await firmar(SECRETO, 'app', { sub: 'u1', em: 'a@b.es', iat: 1, exp: 9999999999, v: 1, jti: 'nuevo', typ: 'app' })
   assert.equal(await verificarTokenApp(env, huerfano), null)
   // Cabecera mal formada: no cae a la cookie
-  const r = new Request('https://x/api/auth/yo', { headers: { Authorization: 'Basic abc', Cookie: `nf_session=${cookie}` } })
+  const r = new Request('https://x/api/auth/yo', { headers: { Authorization: 'Basic abc', Cookie: `__Host-nf_session=${cookie}` } })
   assert.equal(await leerSesion(env, r), null)
 })
 
@@ -95,6 +109,12 @@ test('CORS: preflight solo para el WebView de la app', async () => {
     assert.match(res.headers.get('Access-Control-Allow-Headers')!, /Authorization/)
     assert.match(res.headers.get('Access-Control-Allow-Headers')!, /CF-Turnstile-Token/)
     assert.equal(res.headers.get('Access-Control-Allow-Credentials'), null)
+    assert.equal(res.headers.get('X-Content-Type-Options'), 'nosniff')
+    assert.equal(res.headers.get('X-Frame-Options'), 'DENY')
+    assert.equal(res.headers.get('Permissions-Policy'), 'camera=(self), microphone=(), geolocation=(), payment=()')
+    assert.equal(res.headers.get('Strict-Transport-Security'), 'max-age=31536000; includeSubDomains; preload')
+    assert.match(res.headers.get('Content-Security-Policy') ?? '', /default-src 'none'/)
+    assert.match(res.headers.get('Content-Security-Policy') ?? '', /frame-ancestors 'none'/)
   }
   const malo = await onRequest(ctx(new Request('https://nutri.trujillomingorance.com/api/comidas/guardar', { method: 'OPTIONS', headers: { Origin: 'https://evil.example' } })).c)
   assert.equal(malo.status, 403)

@@ -1,18 +1,13 @@
 /**
- * «Descarga la app»: bloque reutilizable (login, /descargar y barra lateral).
- *  · Escritorio → QR a /descargar («Escanéalo con tu móvil»). El codificador
- *    va en un chunk aparte (el mismo que usa el login con QR).
- *  · Android → «Descargar APK» (versión y tamaño de GitHub si responde) y, si
- *    el navegador lo permite, instalar la app web.
- *  · iPhone/iPad → «Añadir a pantalla de inicio»: diálogo nativo si existe;
- *    si no (Safari), los dos pasos a mano.
- * No se muestra dentro del APK ni si la PWA ya está instalada.
+ * Instalación de la PWA (login, /descargar y barra lateral).
+ *  · Chrome/Android con beforeinstallprompt → ventana nativa al pulsar.
+ *  · iPhone/iPad, o Chrome sin ese evento → guía Compartir → Añadir a inicio.
+ *  · Escritorio → QR a /descargar. El codificador va en un chunk aparte.
+ * No se muestra dentro de la app nativa ni si ya está instalada.
  */
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
-import { Download, SquarePlus } from 'lucide-react'
-import { api } from '../lib/api.ts'
-import { URL_APK } from '../lib/config.ts'
-import { alCambiarPrompt, detectarPlataforma, formatoMB, instalarPWA, ofrecerDescarga, promptInstalar, URL_DESCARGAR, type Plataforma } from '../lib/instalacion.ts'
+import { SquarePlus } from 'lucide-react'
+import { alCambiarPrompt, detectarPlataforma, instalada, instalarPWA, ofrecerDescarga, promptInstalar, URL_DESCARGAR, type Plataforma } from '../lib/instalacion.ts'
 import { cx } from './ui/cx.ts'
 
 const QrSvg = lazy(() => import('./QrSvg.tsx').then((m) => ({ default: m.QrSvg })))
@@ -30,7 +25,7 @@ export function IconoCompartirIOS({ size = 18 }: { size?: number }) {
 export function QrDescarga({ tamano = 132 }: { tamano?: number }) {
   return (
     <Suspense fallback={<div style={{ width: tamano, height: tamano }} className="animate-pulse rounded-2xl bg-neutral-100 dark:bg-neutral-800" />}>
-      <QrSvg texto={URL_DESCARGAR} tamano={tamano} titulo="Código QR para descargar NutriFit en el móvil" />
+      <QrSvg texto={URL_DESCARGAR} tamano={tamano} titulo="Código QR para instalar NutriFit en el móvil" />
     </Suspense>
   )
 }
@@ -41,31 +36,55 @@ function usePrompt() {
   return hay
 }
 
-function BotonAPK() {
-  const [info, setInfo] = useState<string | null>(null)
-  useEffect(() => {
-    let vivo = true
-    api
-      .versionApp()
-      .then((r) => {
-        const partes = [r.version, formatoMB(r.tamano)].filter(Boolean)
-        if (vivo && partes.length) setInfo(partes.join(' · '))
-      })
-      .catch(() => {})
-    return () => {
-      vivo = false
-    }
-  }, [])
+const CLASE_BOTON =
+  'flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-mint-700/30 bg-mint-50 px-5 text-[15px] font-semibold text-mint-800 transition hover:bg-mint-100 active:scale-[0.98] dark:border-mint-400/30 dark:bg-mint-950 dark:text-mint-200 dark:hover:bg-mint-900'
+
+/** Abre el diálogo nativo de Chrome o, si no existe, la guía de pantalla de inicio. */
+export function BotonInstalar() {
+  const hayPrompt = usePrompt()
+  const [guia, setGuia] = useState(false)
+  const plataforma = useMemo(() => detectarPlataforma(), [])
+  if (instalada()) return <p className="text-sm text-neutral-500 dark:text-neutral-400">NutriFit ya está instalada en este dispositivo.</p>
+
+  const pulsar = async () => {
+    if (plataforma !== 'ios' && (await instalarPWA())) return
+    setGuia(true)
+  }
+
   return (
-    <a
-      href={URL_APK}
-      download="NutriFit.apk"
-      className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-mint-700/30 bg-mint-50 px-5 text-[15px] font-semibold text-mint-800 transition hover:bg-mint-100 active:scale-[0.98] dark:border-mint-400/30 dark:bg-mint-950 dark:text-mint-200 dark:hover:bg-mint-900"
-    >
-      <Download size={18} strokeWidth={2} aria-hidden="true" />
-      <span>Descargar APK</span>
-      {info && <span className="cifra text-sm font-medium text-mint-700/70 dark:text-mint-300/70">{info}</span>}
-    </a>
+    <div>
+      <button type="button" onClick={() => void pulsar()} className={CLASE_BOTON}>
+        <SquarePlus size={18} strokeWidth={2} aria-hidden="true" />
+        Instalar
+      </button>
+      {guia && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-neutral-950/40 p-4 sm:items-center" role="presentation" onClick={() => setGuia(false)}>
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="guia-instalar"
+            className="w-full max-w-md rounded-3xl border border-neutral-200 bg-card p-5 shadow-lift dark:border-neutral-800 dark:bg-card-dark"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 id="guia-instalar" className="text-lg font-semibold tracking-tight">
+              {plataforma === 'ios' ? 'Añadir a la pantalla de inicio' : 'Instalar desde Chrome'}
+            </h3>
+            {plataforma === 'ios' ? (
+              <PasosIOS />
+            ) : (
+              <p className="mt-3 text-sm leading-relaxed text-neutral-600 dark:text-neutral-300">
+                {hayPrompt
+                  ? 'Chrome no ha podido abrir la instalación. Vuelve a pulsar Instalar.'
+                  : 'Abre el menú de Chrome (⋮) y elige «Instalar app» o «Añadir a pantalla de inicio».'}
+              </p>
+            )}
+            <button type="button" onClick={() => setGuia(false)} className="mt-4 h-11 w-full rounded-2xl bg-graphite text-sm font-semibold text-white dark:bg-white dark:text-graphite">
+              Entendido
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -93,37 +112,7 @@ function PasosIOS() {
 }
 
 function BotonesMovil({ plataforma }: { plataforma: Exclude<Plataforma, 'escritorio'> }) {
-  const hayPrompt = usePrompt()
-  const [pasos, setPasos] = useState(false)
-  const anadirInicio = async () => {
-    if (!(await instalarPWA())) setPasos((v) => !v)
-  }
-  if (plataforma === 'android') {
-    return (
-      <div className="space-y-2">
-        <BotonAPK />
-        {hayPrompt && (
-          <button type="button" onClick={() => void instalarPWA()} className="h-11 w-full rounded-2xl text-[15px] font-medium text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800">
-            O instálala como app web
-          </button>
-        )}
-      </div>
-    )
-  }
-  return (
-    <div>
-      <button
-        type="button"
-        onClick={() => void anadirInicio()}
-        aria-expanded={hayPrompt ? undefined : pasos}
-        className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-mint-700/30 bg-mint-50 px-5 text-[15px] font-semibold text-mint-800 transition hover:bg-mint-100 active:scale-[0.98] dark:border-mint-400/30 dark:bg-mint-950 dark:text-mint-200 dark:hover:bg-mint-900"
-      >
-        <SquarePlus size={18} strokeWidth={2} aria-hidden="true" />
-        Añadir a pantalla de inicio
-      </button>
-      {pasos && <PasosIOS />}
-    </div>
-  )
+  return <BotonInstalar key={plataforma} />
 }
 
 /**
@@ -143,7 +132,7 @@ export function BloqueDescarga({ variante = 'tarjeta', className, conEnlace = tr
         </div>
         <p className="mt-2 text-xs font-medium">Escanéalo con tu móvil</p>
         <a href="/descargar" className="mt-0.5 block text-2xs text-neutral-500 hover:text-graphite dark:text-neutral-400 dark:hover:text-white">
-          Android (APK) · iPhone (app web)
+          Instalar en el móvil
         </a>
       </div>
     )
@@ -158,10 +147,10 @@ export function BloqueDescarga({ variante = 'tarjeta', className, conEnlace = tr
           </div>
           <div className="min-w-0">
             <h2 id="titulo-descarga" className="text-lg font-semibold tracking-tight">
-              Descarga la app
+              Instala la app
             </h2>
             <p className="mt-1 text-sm font-medium text-mint-700 dark:text-mint-400">Escanéalo con tu móvil</p>
-            <p className="mt-1.5 text-sm leading-relaxed text-neutral-500 dark:text-neutral-400">Android (APK) o iPhone (app web), gratis y sin anuncios.</p>
+            <p className="mt-1.5 text-sm leading-relaxed text-neutral-500 dark:text-neutral-400">Se abre a pantalla completa desde Chrome o Safari, gratis y sin anuncios.</p>
             {conEnlace && (
               <a href="/descargar" className="mt-2 inline-block text-sm font-medium text-graphite underline decoration-neutral-300 underline-offset-4 hover:decoration-mint dark:text-neutral-100 dark:decoration-neutral-600">
                 Ver todas las opciones
@@ -172,10 +161,10 @@ export function BloqueDescarga({ variante = 'tarjeta', className, conEnlace = tr
       ) : (
         <>
           <h2 id="titulo-descarga" className="text-lg font-semibold tracking-tight">
-            Descarga la app
+            Instala la app
           </h2>
           <p className="mb-4 mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-            {plataforma === 'android' ? 'Instala NutriFit en tu Android: gratis, sin anuncios.' : 'Úsala como una app más en tu iPhone, a pantalla completa.'}
+            {plataforma === 'android' ? 'Chrome la instala como una app, a pantalla completa.' : 'Úsala como una app más en tu iPhone, a pantalla completa.'}
           </p>
           <BotonesMovil plataforma={plataforma} />
           {conEnlace && (

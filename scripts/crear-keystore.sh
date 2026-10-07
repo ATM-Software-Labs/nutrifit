@@ -48,16 +48,16 @@ cat <<FIN
 ✔ Keystore creado: $KS   (alias: $ALIAS)
 
 Secretos de GitHub (Settings → Secrets and variables → Actions → New repository secret):
-  ANDROID_KEYSTORE_BASE64   = contenido de $KS.b64
-  ANDROID_KEYSTORE_PASSWORD = la contraseña que acabas de escribir
-  ANDROID_KEY_ALIAS         = $ALIAS
-  ANDROID_KEY_PASSWORD      = la misma contraseña (PKCS12)
+  ANDROID_KEYSTORE_BASE64 = contenido de $KS.b64
+  KEYSTORE_PASSWORD       = la contraseña que acabas de escribir
+  KEY_ALIAS               = $ALIAS
+  KEY_PASSWORD            = la misma contraseña (PKCS12)
 
 Con gh CLI:
   gh secret set ANDROID_KEYSTORE_BASE64 < "$KS.b64"
-  gh secret set ANDROID_KEYSTORE_PASSWORD
-  gh secret set ANDROID_KEY_ALIAS --body "$ALIAS"
-  gh secret set ANDROID_KEY_PASSWORD
+  gh secret set KEYSTORE_PASSWORD
+  gh secret set KEY_ALIAS --body "$ALIAS"
+  gh secret set KEY_PASSWORD
 
 Huella SHA-256 para public/.well-known/assetlinks.json:
   $SHA

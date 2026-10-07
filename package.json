@@ -31,6 +31,7 @@
     "pages:dev:offline": "npm run build && bash scripts/pages-dev-offline.sh",
     "android:sync": "npm run build && cap sync android",
     "android:debug": "npm run android:sync && cd android && ./gradlew assembleDebug",
+    "android:release": "npm run android:sync && node --input-type=module -e \"import { spawnSync } from 'node:child_process'; const w = process.platform === 'win32'; const r = spawnSync(w ? 'gradlew.bat' : './gradlew', ['assembleRelease'], { cwd: 'android', stdio: 'inherit', shell: w }); process.exit(r.status ?? 1)\"",
     "android:assets": "npx --yes @capacitor/assets@3 generate --android --iconBackgroundColor '#FFFFFF' --splashBackgroundColor '#FFFFFF' --splashBackgroundColorDark '#09090B'"
   },
   "dependencies": {
@@ -40,6 +41,7 @@
     "@capacitor/preferences": "^8.0.1",
     "@capacitor/splash-screen": "^8.0.2",
     "@capacitor/status-bar": "^8.0.4",
+    "@libsql/client": "^0.18.0",
     "canvas-confetti": "^1.9.4",
     "lucide-react": "^1.52.0",
     "react": "^18.3.1",
@@ -61,5 +63,9 @@
     "typescript": "^7.0.2",
     "vite": "^8.3.3",
     "wrangler": "^4.147.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.1": true,
+    "workerd@1.20261001.1": true
   }
 }

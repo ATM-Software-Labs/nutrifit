@@ -4,6 +4,8 @@ import { Scale } from 'lucide-react'
 import { Button } from './ui/Button.tsx'
 import { useToast } from './ui/Toast.tsx'
 import { api } from '../lib/api.ts'
+import { leerPesosLocales } from '../lib/pesoLocal.ts'
+import { alFallarSyncPeso, anotarPeso } from '../lib/syncPeso.ts'
 import { decimal } from '../lib/formato.ts'
 import { desdeISO, fechaCorta, hoyISO } from '../lib/fechas.ts'
 import type { Usuario } from '../lib/tipos.ts'
@@ -26,14 +28,23 @@ type Registro = { fecha: string; peso: number }
 export default function GraficaPeso({ usuario }: { usuario: Usuario }) {
   const [registros, setRegistros] = useState<Registro[] | null>(null)
   const [valor, setValor] = useState('')
-  const [guardando, setGuardando] = useState(false)
   const toast = useToast()
   const objetivo = pesoObjetivo(usuario)
+
+  useEffect(() => alFallarSyncPeso((mensaje) => toast({ tipo: 'error', mensaje })), [toast])
 
   useEffect(() => {
     api
       .pesos(30)
-      .then((r) => setRegistros(r.registros))
+      .then((r) => {
+        const porFecha = new Map(r.registros.map((x) => [x.fecha, x]))
+        const hoy = desdeISO(hoyISO()).getTime()
+        for (const [fecha, peso] of Object.entries(leerPesosLocales())) {
+          const dias = Math.round((hoy - desdeISO(fecha).getTime()) / 86_400_000)
+          if (dias >= 0 && dias <= 30) porFecha.set(fecha, { fecha, peso })
+        }
+        setRegistros([...porFecha.values()].sort((a, b) => a.fecha.localeCompare(b.fecha)))
+      })
       .catch(() => setRegistros([]))
   }, [])
 
@@ -58,24 +69,18 @@ export default function GraficaPeso({ usuario }: { usuario: Usuario }) {
     return { puntos, linea, area, min, max, sy, yObjetivo: objetivo ? sy(objetivo) : null }
   }, [registros, objetivo])
 
-  async function guardar(e: FormEvent) {
+  function guardar(e: FormEvent) {
     e.preventDefault()
-    const p = Number(valor.replace(',', '.'))
+    const p = Math.round(Number(valor.replace(',', '.')) * 10) / 10
     if (!(p >= 30 && p <= 300)) {
       toast({ tipo: 'error', mensaje: 'Introduce un peso entre 30 y 300 kg.' })
       return
     }
-    setGuardando(true)
-    try {
-      const r = await api.registrarPeso(Math.round(p * 10) / 10)
-      setRegistros((rs) => [...(rs ?? []).filter((x) => x.fecha !== r.registro.fecha), r.registro].sort((a, b) => a.fecha.localeCompare(b.fecha)))
-      setValor('')
-      toast({ tipo: 'exito', mensaje: 'Peso registrado' })
-    } catch (err) {
-      toast({ tipo: 'error', mensaje: err instanceof Error ? err.message : 'No se pudo guardar.' })
-    } finally {
-      setGuardando(false)
-    }
+    const fecha = hoyISO()
+    anotarPeso(fecha, p)
+    setRegistros((rs) => [...(rs ?? []).filter((x) => x.fecha !== fecha), { fecha, peso: p }].sort((a, b) => a.fecha.localeCompare(b.fecha)))
+    setValor('')
+    toast({ tipo: 'exito', mensaje: 'Peso registrado' })
   }
 
   const ultimo = registros?.at(-1)
@@ -169,7 +174,7 @@ export default function GraficaPeso({ usuario }: { usuario: Usuario }) {
           />
           <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-neutral-500 dark:text-neutral-400">kg</span>
         </label>
-        <Button type="submit" size="sm" variant="outline" className="h-10" loading={guardando} disabled={!valor}>
+        <Button type="submit" size="sm" variant="outline" className="h-10" disabled={!valor}>
           Registrar
         </Button>
       </form>

@@ -1,8 +1,9 @@
 /**
  * POST /api/auth/codigo  { email, codigo, cliente?: 'web' | 'app' }
+ * Turnstile lo valida el middleware (siteverify) antes de llegar aquí.
  * Alternativa al magic link: el código de 6 cifras del mismo email.
  * Límites: 20 / 15 min por IP y 10 / 15 min por email, además de 5 intentos
- * por código (al 5.º fallo se invalida). Web → cookie nf_session; app → Bearer.
+ * por código (al 5.º fallo se invalida). Web → cookie __Host-nf_session; app → Bearer.
  */
 import type { Handler } from '../../utils/env.ts'
 import { HttpError, json } from '../../utils/response.ts'

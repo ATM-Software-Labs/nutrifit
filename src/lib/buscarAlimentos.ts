@@ -1,4 +1,7 @@
-/** Búsqueda local en la base de alimentos (sin acentos, por palabras). */
+/**
+ * Nivel 1 de la búsqueda: la base estática de alimentos habituales (macros por 100 g)
+ * ya está en memoria. Filtrar no espera a la red.
+ */
 import { ALIMENTOS, CATEGORIAS, type FilaAlimento } from '../data/alimentos.ts'
 import type { Totales } from './tipos.ts'
 

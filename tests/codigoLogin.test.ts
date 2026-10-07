@@ -58,7 +58,8 @@ test('POST /api/auth/codigo: web → cookie nf_session; app → Bearer; incorrec
   assert.equal(mal.status, 400)
   const res = await postCodigo(ctx(env, postJson('/api/auth/codigo', { email: 'ana@ejemplo.es', codigo: `${c.slice(0, 3)} ${c.slice(3)}` })))
   assert.equal(res.status, 200)
-  assert.match(res.headers.get('Set-Cookie') ?? '', /^nf_session=.+HttpOnly; Secure; SameSite=Strict/)
+  assert.match(res.headers.get('Set-Cookie') ?? '', /^__Host-nf_session=.+HttpOnly; Secure; SameSite=Strict; Path=\//)
+  assert.doesNotMatch(res.headers.get('Set-Cookie') ?? '', /Domain=/)
   const body = (await res.json()) as any
   assert.equal(body.usuario.email, 'ana@ejemplo.es')
   assert.equal(body.perfilCompleto, false)

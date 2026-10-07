@@ -1,8 +1,9 @@
 /**
  * POST /api/comidas/analizar-texto  { descripcion, turnstileToken }
- * «2 huevos revueltos y una tostada con aceite» → mismo JSON que el análisis
- * de fotos (se revisa en el cliente antes de guardar). Middleware: sesión
- * previa + Turnstile + 20 / min por IP. Aquí: 30 análisis de texto / día por usuario.
+ * «2 plátanos» o «un vaso de leche» → mismo JSON que el análisis de fotos.
+ * Las medidas coloquiales pasan por la tabla de raciones (functions/utils/raciones.ts)
+ * y los macros se escalan a esos gramos. Middleware: sesión
+ * previa + Turnstile + 20 / hora por usuario. Aquí: 30 análisis de texto / día por usuario.
  */
 import type { Handler } from '../../utils/env.ts'
 import { error, json } from '../../utils/response.ts'

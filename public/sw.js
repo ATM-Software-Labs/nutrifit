@@ -69,7 +69,7 @@ self.addEventListener('message', (event) => {
   if (tipo === 'LIMPIAR_DATOS') event.waitUntil(Promise.all([caches.delete(C_API), caches.delete(C_PAGINAS)]))
 })
 
-const ESTATICO = /^\/(assets|fonts|icons)\/|^\/(logo[\w-]*\.svg|favicon\.(svg|ico)|manifest\.webmanifest|boot\.js)$/
+const ESTATICO = /^\/(assets|fonts|icons)\/|^\/(logo[\w-]*\.svg|favicon\.(svg|ico)|manifest\.(webmanifest|json)|boot\.js)$/
 
 self.addEventListener('fetch', (event) => {
   const req = event.request
@@ -83,7 +83,7 @@ self.addEventListener('fetch', (event) => {
   }
   // /app-login lleva el token del magic link: que lo gestione solo la red.
   if (url.pathname.startsWith('/app-login')) return
-  // El APK (/descargar/NutriFit.apk) siempre de la red, sin tocarlo.
+  // /descargar es la página de instalación: el HTML lo resuelve la navegación.
   if (url.pathname.startsWith('/descargar/')) return
   if (req.mode === 'navigate') {
     event.respondWith(navegacion(event, url))

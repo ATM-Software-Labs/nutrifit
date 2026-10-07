@@ -19,7 +19,7 @@ El peso y los hábitos de alimentación pueden considerarse **datos relativos a 
 
 ## Fotos, descripciones e inteligencia artificial
 
-- Cuando analizas una foto, la imagen (comprimida en tu dispositivo) se envía a la **API de Google Gemini** para estimar ingredientes y macros. Si falla, se usa **Cloudflare Workers AI** como alternativa.
+- Cuando analizas una foto, tu dispositivo la convierte a JPEG de 1024×1024 y **descarta el EXIF** (incluida la geolocalización) antes de enviarla. Esa imagen va a la **API de Google Gemini** para estimar ingredientes y macros. Si ese paso falla, se prueba en este orden: **Groq** (modelo de visión), el gateway **Trujillo AI** (`ai.trujillomingorance.com`) y, al final, **Cloudflare Workers AI**. Cada uno solo recibe la foto si el anterior no ha respondido.
 - Si describes una comida con texto, ese texto se envía del mismo modo (Gemini o, si no está disponible, Cloudflare Workers AI) solo para estimar los macros. **No escribas datos personales** en la descripción.
 - **NutriFit no guarda la foto ni el texto**: solo el resultado que confirmas.
 - **Importante (nivel gratuito de Gemini):** mientras NutriFit use el nivel gratuito de la API, Google puede usar el contenido enviado para mejorar sus productos, y personas revisoras pueden verlo, según los [términos adicionales de la API de Gemini](https://ai.google.dev/gemini-api/terms). No subas fotos con personas o información privada. Si pasamos al nivel de pago, esto dejará de aplicarse y lo indicaremos aquí.
@@ -29,6 +29,8 @@ El peso y los hábitos de alimentación pueden considerarse **datos relativos a 
 
 - **Cloudflare** (alojamiento, base de datos D1, protección anti-bots Turnstile y Workers AI).
 - **Google** (análisis de fotos con Gemini, ver arriba).
+- **Groq** (análisis de fotos, solo si Gemini no responde).
+- **Trujillo AI** (`ai.trujillomingorance.com`, análisis de fotos, solo si Gemini y Groq no responden).
 - **Brevo** (envío del email con el enlace y el código de acceso).
 - **Open Food Facts** (base de datos abierta de productos): cuando buscas un producto envasado, nuestro servidor consulta Open Food Facts **solo con el término de búsqueda o el código de barras**, sin tu email, tu IP ni ningún dato de tu cuenta, y guarda la respuesta en caché unos días. La base de alimentos genéricos está incluida en la app y no hace ninguna consulta externa.
 
@@ -40,7 +42,7 @@ Cuando el ordenador muestra un QR para entrar con el móvil, guardamos durante *
 
 ## Cookies y almacenamiento local
 
-- Una única cookie técnica, `nf_session`, para mantener tu sesión (30 días). En la app Android se usa un token guardado en el almacenamiento privado de la app.
+- Una única cookie técnica, `__Host-nf_session`, para mantener tu sesión (30 días). Es HttpOnly: el JavaScript de la página no puede leerla. El identificador de esa sesión se guarda solo como huella y se puede invalidar al cerrar sesión. En la app Android se usa un token guardado en el almacenamiento privado de la app.
 - En tu navegador se guardan preferencias (tema, peso objetivo, aviso de instalación) y una copia en caché de la app para que funcione sin conexión.
 
 ## Cuánto tiempo

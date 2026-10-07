@@ -12,12 +12,5 @@ export const URL_PRIVACIDAD_REPO = `${URL_REPO}/blob/main/PRIVACIDAD.md`
 /** API de producción: la usa la app Android (su web corre en https://localhost). */
 export const URL_API_NATIVA: string = (env.VITE_API_URL || 'https://nutri.trujillomingorance.com').replace(/\/$/, '')
 
-/**
- * Último APK publicado, servido desde NUESTRO dominio (functions/descargar/[archivo].ts
- * lo reenvía desde la release «latest» de GitHub): así el móvil lo descarga
- * directamente en vez de abrir la app de GitHub.
- */
-export const URL_APK = `${URL_API_NATIVA}/descargar/NutriFit.apk`
-
 /** Meta diaria de agua (ml) del widget y del historial. */
 export const META_AGUA_ML = 2500

@@ -13,6 +13,8 @@ import { CLAVE_PESO_OBJETIVO, pesoObjetivo } from './GraficaPeso.tsx'
 import { useTurnstile } from '../hooks/useTurnstile.ts'
 import { useTema } from '../hooks/useTema.ts'
 import { api } from '../lib/api.ts'
+import { camposPerfil, hashContenido } from '../../functions/utils/contenidoHash.ts'
+import { leerHashSincronizado } from '../lib/hashSync.ts'
 import { calcularMacros, type NivelActividad, type Objetivo, type Sexo } from '../lib/macros.ts'
 import { entero } from '../lib/formato.ts'
 import type { Usuario } from '../lib/tipos.ts'
@@ -59,10 +61,18 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
       const op = Number(objetivoPeso.replace(',', '.'))
       if (op >= 30 && op <= 300) localStorage.setItem(CLAVE_PESO_OBJETIVO, String(op))
       else localStorage.removeItem(CLAVE_PESO_OBJETIVO)
+      const datos = { nombre: nombre.trim(), sexo, actividad, objetivo, ...n }
+      if (plan) {
+        const hash = await hashContenido(camposPerfil({ ...datos, calorias: plan.calorias, proteinas: plan.proteinas, carbohidratos: plan.carbohidratos, grasas: plan.grasas }))
+        if (leerHashSincronizado('perfil') === hash) {
+          onClose()
+          return
+        }
+      }
       const token = await obtenerToken()
-      const r = await api.guardarPerfil({ nombre: nombre.trim(), sexo, actividad, objetivo, ...n }, token)
-      onUsuario(r.usuario)
-      toast({ tipo: 'exito', mensaje: 'Perfil y objetivos actualizados' })
+      const r = await api.guardarPerfil(datos, token)
+      if (r.usuario) onUsuario(r.usuario)
+      if (!r.sinCambios) toast({ tipo: 'exito', mensaje: 'Perfil y objetivos actualizados' })
       onClose()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudo guardar.')
@@ -157,7 +167,7 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
             {!esNativa && (
               <a href="/descargar" className="flex items-center gap-3 px-4 py-3.5 text-[15px] hover:bg-neutral-50 dark:hover:bg-neutral-900">
                 <Download size={18} className="text-neutral-500 dark:text-neutral-400" />
-                <span className="flex-1">Descargar la app (Android · iPhone)</span>
+                <span className="flex-1">Instalar la app</span>
                 <ChevronRight size={16} className="text-neutral-400" />
               </a>
             )}

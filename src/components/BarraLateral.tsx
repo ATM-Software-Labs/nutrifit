@@ -100,11 +100,11 @@ export function BarraLateral({
           </Item>
           {conQr ? (
             <Item icono={<Download {...i} />} onClick={() => setQr((v) => !v)} expandido={qr}>
-              Descargar app
+              Instalar app
             </Item>
           ) : (
             <Item icono={<Download {...i} />} href="/descargar">
-              Descargar app
+              Instalar app
             </Item>
           )}
         </ul>

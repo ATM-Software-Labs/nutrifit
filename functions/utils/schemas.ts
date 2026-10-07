@@ -1,9 +1,12 @@
 /**
  * Esquemas Zod de TODAS las entradas de la API. Nada llega a D1 ni a la IA sin
  * pasar por aquí. Reglas generales:
- *   · strings recortados, con longitud máxima y sin HTML (< >) ni caracteres de control;
+ *   · strings recortados, con longitud máxima y sin HTML (< >);
+ *   · saltos y controles se aplastan a espacio (no hay shell: esto corta CRLF,
+ *     caracteres de control e inyección de cabeceras si un texto se reutiliza);
  *   · números finitos dentro de rangos fisiológicamente coherentes;
- *   · fechas 'YYYY-MM-DD' reales.
+ *   · fechas 'YYYY-MM-DD' reales;
+ *   · objetos JSON con tope de profundidad y sin claves de prototipo.
  */
 import { z } from 'zod'
 import { NIVELES_ACTIVIDAD, OBJETIVOS, SEXOS } from '../../src/lib/macros.ts'
@@ -11,14 +14,21 @@ import { NIVELES_ACTIVIDAD, OBJETIVOS, SEXOS } from '../../src/lib/macros.ts'
 // ------------------------------------------------------------------ primitivas
 const SIN_HTML = /^[^<>\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]*$/
 
-/** Texto recortado, 1..max caracteres, sin HTML. */
+/**
+ * Texto 1..max. Controles y saltos pasan a un espacio (mitiga CRLF y metacaracteres
+ * de control). Sigue sin HTML. `&` y comillas se quedan: son comida, no un shell.
+ */
 export const texto = (max: number, min = 1) =>
   z
     .string({ error: 'Debe ser un texto.' })
-    .trim()
-    .min(min, { error: min === 1 ? 'No puede estar vacío.' : `Mínimo ${min} caracteres.` })
-    .max(max, { error: `Máximo ${max} caracteres.` })
-    .regex(SIN_HTML, { error: 'Contiene caracteres no permitidos.' })
+    .transform((s) => s.replace(/[\u0000-\u001F\u007F]+/g, ' ').replace(/[ \t\f\v]+/g, ' ').trim())
+    .pipe(
+      z
+        .string()
+        .min(min, { error: min === 1 ? 'No puede estar vacío.' : `Mínimo ${min} caracteres.` })
+        .max(max, { error: `Máximo ${max} caracteres.` })
+        .regex(SIN_HTML, { error: 'Contiene caracteres no permitidos.' }),
+    )
 
 /** Número finito en [min, max]; acepta strings numéricos ("72.5"). */
 export const numero = (min: number, max: number, nombre = 'El valor') =>
@@ -62,10 +72,20 @@ export const solicitarSchema = z.object({
   cliente: z.enum(['web', 'app']).default('web'),
 })
 
+const tokenFirmado = z
+  .string()
+  .trim()
+  .min(20, { error: 'Enlace no válido.' })
+  .max(2048, { error: 'Enlace no válido.' })
+  .regex(/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/, { error: 'Enlace no válido.' })
+
 /** Canje del token del magic link por un token Bearer (app Android). */
 export const canjeTokenSchema = z.object({
-  token: z.string().trim().min(20, { error: 'Enlace no válido.' }).max(1024, { error: 'Enlace no válido.' }),
+  token: tokenFirmado,
 })
+
+/** GET /api/auth/verificar?token= — misma forma que el canje, sin ejecutar nada si no cuadra. */
+export const verificarQuery = z.object({ token: tokenFirmado })
 
 /** Código de 6 cifras del email (se aceptan espacios: «123 456»). */
 export const codigoSchema = z.object({
@@ -106,7 +126,12 @@ export const MAX = { calorias: 5000, proteinas: 500, carbohidratos: 1000, grasas
 
 export const ingredienteSchema = z.object({
   nombre: texto(80),
+  input_query: texto(200).optional(),
+  display_name: texto(80).optional(),
+  serving_description: texto(80).optional(),
   gramos: numero(0, MAX.gramos, 'Los gramos'),
+  min_gramos: numero(0, MAX.gramos, 'Los gramos').optional(),
+  max_gramos: numero(0, MAX.gramos, 'Los gramos').optional(),
   calorias: numero(0, MAX.calorias, 'Las calorías').optional(),
   proteinas: numero(0, MAX.proteinas, 'Las proteínas').optional(),
   carbohidratos: numero(0, MAX.carbohidratos, 'Los carbohidratos').optional(),
@@ -180,6 +205,11 @@ export const offQuery = z.union([
 ])
 
 export const buscarQuery = z.object({ q: texto(60, 2) })
+
+/** GET /api/alimentos/barcode?codigo= — EAN-8, EAN-13 o UPC. */
+export const barcodeQuery = z.object({
+  codigo: z.string().trim().regex(/^\d{8,14}$/, { error: 'El código de barras tiene de 8 a 14 cifras.' }),
+})
 
 const g100 = (nombre: string) => numero(0, 100, nombre)
 const g100Opcional = (nombre: string) => z.union([z.null(), g100(nombre)]).optional().default(null)

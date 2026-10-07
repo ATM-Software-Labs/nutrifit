@@ -68,7 +68,7 @@ export default function Onboarding({ usuario, onCompletado }: { usuario: Usuario
       if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
         void confetti({ particleCount: 120, spread: 75, startVelocity: 38, origin: { y: 0.65 }, colors: ['#10B981', '#34D399', '#A7F3D0', '#111827'] })
       }
-      setTimeout(() => onCompletado(r.usuario), 900)
+      if (r.usuario) setTimeout(() => onCompletado(r.usuario!), 900)
     } catch (e) {
       setError(e instanceof ApiError || e instanceof Error ? e.message : 'No se pudo guardar.')
       setGuardando(false)

@@ -3,8 +3,8 @@
 Cloudflare Pages Functions (`/functions`) + D1 + Turnstile + Brevo + Gemini /
 Workers AI. Seguridad desde el diseño: validación Zod de todas las entradas,
 SQL siempre parametrizado (`prepare().bind()`), sesiones firmadas en cookie
-`HttpOnly; Secure; SameSite=Strict`, comprobación de Origin, Turnstile en las
-rutas anónimas o caras, y rate limiting en D1.
+`__Host-nf_session` (`HttpOnly; Secure; SameSite=Strict; Path=/`, sin `Domain`),
+comprobación de Origin, Turnstile en las rutas anónimas o caras, y rate limiting en D1.
 
 ---
 
@@ -17,20 +17,22 @@ rutas anónimas o caras, y rate limiting en D1.
 | GET | `/api/app/version` | — | — | — | Último APK: `{ version, tamano, url }` (caché 10 min) |
 | GET/HEAD | `/descargar/NutriFit.apk` | — | — | — | APK de la release *latest* servido desde nuestro dominio (no es `/api`; ver docs/ANDROID.md) |
 | POST | `/api/auth/solicitar` | — | **Sí** | 5 / 15 min por IP **y** por email | Envía magic link (`cliente: "app"` → enlace a `/app-login`). Responde siempre el mismo 200 genérico |
-| GET | `/api/auth/verificar?token=` | — | — | 30 / 15 min por IP | Valida el enlace (firma, caducidad 15 min, un solo uso), crea el usuario si es nuevo, pone la cookie `nf_session` y redirige 302 a `/` (error → `/?auth=invalido\|caducado\|usado\|limite`) |
-| POST | `/api/auth/token` | — | — | 30 / 15 min por IP | App Android: canjea el token del magic link por un token Bearer de 60 días (ver §8) |
-| POST | `/api/auth/codigo` | — | — | 20 / 15 min por IP · 10 / 15 min por email | Código de 6 cifras del email `{email, codigo, cliente}` → cookie (web) o token Bearer (app). Solo se guarda su HMAC ligado al email; 15 min, un uso, 5 intentos (luego se invalida: 410 `codigo_agotado`) |
+| GET | `/api/auth/verificar?token=` | — | — | 5 / 15 min por IP | Valida el enlace (firma, caducidad 15 min, un solo uso), crea el usuario si es nuevo, pone la cookie `__Host-nf_session` y redirige 302 a `/` (error → `/?auth=invalido\|caducado\|usado\|limite`) |
+| POST | `/api/auth/token` | — | — | 5 / 15 min por IP | App Android: canjea el token del magic link por un token Bearer de 60 días (ver §8) |
+| POST | `/api/auth/codigo` | — | **Sí** | 5 / 15 min por IP · 10 / 15 min por email | Código de 6 cifras del email `{email, codigo, cliente}` → cookie (web) o token Bearer (app). Solo se guarda su HMAC ligado al email; 15 min, un uso, 5 intentos (luego se invalida: 410 `codigo_agotado`) |
 | POST | `/api/auth/qr/crear` | — | — | 20 / 10 min por IP | PC: `{secretoHash}` (SHA-256 de un secreto de 32 B que se queda en el navegador) → `{id, codigo, expira, url}`; id de 256 bits guardado con hash, 2 min |
-| POST | `/api/auth/qr/estado` | — | — | 90 / min por IP | PC (cada ~2 s): `{id, secreto}` → `pendiente\|rechazado\|caducado\|invalido` o `aprobado` + cookie `nf_session` nueva (una sola vez) |
+| POST | `/api/auth/qr/estado` | — | — | 90 / min por IP | PC (cada ~2 s): `{id, secreto}` → `pendiente\|rechazado\|caducado\|invalido` o `aprobado` + cookie `__Host-nf_session` nueva (una sola vez) |
 | GET | `/api/auth/qr/info?id=` | Sí | — | 30 / 10 min por usuario | Móvil: código corto, navegador/sistema, ubicación aproximada (país/ciudad de Cloudflare) y hora |
 | POST | `/api/auth/qr/decidir` | Sí | — | 20 / 10 min por usuario | Móvil: `{id, aprobar}`; solo si sigue pendiente y vigente |
 | POST | `/api/auth/salir` | (cookie o Bearer) | — | — | Borra la cookie o revoca el token Bearer |
 | GET | `/api/auth/yo` | No | — | — | Perfil del usuario, o `usuario: null` si no hay sesión (200, sin ruido en consola) |
 | POST | `/api/macros/calcular` | — | — | 60 / min por IP | Mifflin-St Jeor → `{tmb, tdee, calorias, proteinas, carbohidratos, grasas}` |
 | POST | `/api/usuarios/perfil` | Sí | **Sí** | — | Guarda onboarding + objetivos; la 1.ª vez envía la bienvenida (en segundo plano) |
-| POST | `/api/comidas/analizar` | Sí | **Sí** | 20 / min por IP · 10 / día por usuario | Foto (multipart `imagen` o JSON `{imagen: base64\|dataURL}`), ≤ 1,5 MB, JPEG/PNG/WebP reales → `{proveedor, resultado}` |
-| POST | `/api/comidas/analizar-texto` | Sí | **Sí** | 20 / min por IP · 30 / día por usuario | `{descripcion}` (3–300 caracteres) → mismo JSON que las fotos. Gemini si hay `GEMINI_API_KEY`; si no, Workers AI `@cf/google/gemma-4-26b-a4b-it` (sin razonamiento) → `@cf/mistralai/mistral-small-3.1-24b-instruct`. 503 `ia_no_disponible` |
-| GET | `/api/alimentos/off?q=` · `?codigo=` | Sí | — | 12 / min (búsqueda) · 30 / min (código) por usuario | Proxy de Open Food Facts (User-Agent `NutriFit/1.0`, solo se envía el término o el código de barras), normalizado por 100 g; caché en el borde 1 día (búsquedas) / 7 días (códigos). 503 `off_no_disponible` |
+| POST | `/api/comidas/analizar` | Sí | **Sí** | 20 / hora por usuario · 10 / día por usuario | Foto (multipart `imagen` o JSON `{imagen: base64\|dataURL}`), ≤ 1,5 MB, JPEG/PNG/WebP reales → `{proveedor, resultado}` |
+| POST | `/api/comidas/analizar-texto` | Sí | **Sí** | 20 / hora por usuario · 30 / día por usuario | `{descripcion}` (3–300 caracteres) → mismo JSON que las fotos. Gemini si hay `GEMINI_API_KEY`; si no, Workers AI `@cf/google/gemma-4-26b-a4b-it` (sin razonamiento) → `@cf/mistralai/mistral-small-3.1-24b-instruct`. 503 `ia_no_disponible` |
+| GET | `/api/alimentos/off?q=` · `?codigo=` | Sí | — | 12 / min (búsqueda) · 30 / min (código) por usuario | Proxy de Open Food Facts (User-Agent `NutriFit/1.0`, solo se envía el término o el código de barras), normalizado por 100 g; caché en D1 (`cache_off`) 1 día (búsquedas) / 30 días (códigos). 503 `off_no_disponible` |
+| GET | `/api/alimentos/barcode?codigo=` | Sí | — | 30 / min por usuario | Código de barras en Open Food Facts v2. Marca la cadena española (Mercadona/Hacendado, Carrefour, Caprabo, Eroski, Dia, Lidl) y devuelve `por_100g` y `por_porcion` (`energia_kcal`, proteínas, carbohidratos, azúcares, grasas, grasas saturadas, fibra, sal). Acierto en `catalogo_alimentos_cache` 30 días. 503 `off_no_disponible` |
+| GET | `/api/alimentos/buscar?q=` | Sí | — | 60 / min por usuario | Genéricos USDA/Ciqual + productos propios, y en paralelo el catálogo: OFF España (`/api/v2/search?search_terms&countries_tags_en=spain`; si v2 no devuelve texto, `cgi/search.pl`) y ficha BEDCA para carnes, pescados, frutas y verduras no envasadas. Mismo TTL de 30 días |
 | GET | `/api/historial?desde=&hasta=` | Sí | — | 60 / min por usuario | ≤ 93 días: totales diarios (kcal, P/C/G, nº comidas), agua, peso, medias, días en objetivo (±10 %) y cambio de peso |
 | GET | `/api/exportar?tipo=&desde=&hasta=` | Sí | — | 30 / hora por usuario | `tipo = comidas\|peso\|agua`, ≤ 366 días → CSV UTF-8 con BOM, «;» y coma decimal, `Content-Disposition: attachment`; celdas que empiezan por `= + - @` se neutralizan (inyección de fórmulas) |
 | POST | `/api/comidas/guardar` | Sí | — | 300 / día por usuario | Inserta una comida |
@@ -44,8 +46,12 @@ Turnstile se envía en la cabecera `CF-Turnstile-Token`, en el campo JSON
 `cf-turnstile-response`.
 
 Errores: `{"ok": false, "error": "mensaje en español", "detalles"?: [{campo, mensaje}], "codigo"?: "..."}`
-con 400 (validación), 401, 403 (`origen`, `turnstile_requerido`, `turnstile_invalido`),
+con 400 (validación), 401, 403 (`origen`, `turnstile_requerido`, `turnstile_invalido`, `score_anomalo`),
 404, 413, 415, 429 (+ `Retry-After`), 503 (`ia_no_disponible`), 500 (sin detalles internos).
+
+En `/api/auth/*` y en la IA, si Cloudflare envía bot score entre 1 y 29, la petición acaba en 403 `score_anomalo` (0 o ausente no bloquea). Turnstile se canjea en siteverify con el secreto, el token y `remoteip`. El enlace mágico (`verificar`, `token`) y el QR no llevan widget: el token es de un solo uso y el QR hace polling.
+
+Cada `auth_attempt`, `quota_exceeded` y `sql_error` deja una línea JSON (`timestamp`, `client_ip` como HMAC diario, `endpoint` sin query, `method`, `latencia_ms`, `status_code`, `event_type`). No se escribe la IP, el email, el código ni ningún token.
 
 ### Login con código y con QR
 
@@ -64,16 +70,18 @@ con 400 (validación), 401, 403 (`origen`, `turnstile_requerido`, `turnstile_inv
 
 ### Modelo de seguridad (resumen)
 
-- **`functions/_middleware.ts`** (solo `/api/*` gracias a `public/_routes.json`):
-  - carga la sesión;
+- **`functions/_middleware.ts`** (auth y límites en `/api/*`; cabeceras en toda Function):
+  - carga la sesión (`__Host-nf_session` o Bearer) y rota el token web si tiene 12 h o más;
+  - login (`solicitar`, `codigo`, `verificar`, `token`): 5 / 15 min por IP; al triplicar el tope, bloqueo 1 h;
+  - análisis de comidas: 20 / hora por usuario, con el mismo bloqueo por pico;
   - en POST/PUT/PATCH/DELETE exige que `Origin` esté en la lista permitida (su propio origen + `ALLOWED_ORIGINS`), rechaza `Sec-Fetch-Site: cross-site` y solo acepta JSON o multipart;
-  - aplica Turnstile y el límite de `analizar`;
-  - añade cabeceras de seguridad;
+  - aplica Turnstile;
+  - añade cabeceras OWASP ASVS (CSP de API `default-src 'none'`, `nosniff`, `X-Frame-Options: DENY`, Permissions-Policy, HSTS);
   - devuelve errores genéricos.
 - **Escrituras autenticadas sin Turnstile** (`guardar`, `peso`, `agua`, `DELETE`, `salir`): se protegen con sesión + `SameSite=Strict` + Origin. Pedir Turnstile en cada guardado sería impracticable.
 - **Magic links:** el token es `base64url(payload).HMAC-SHA256`, con claves derivadas por propósito (un token de sesión nunca vale como enlace y viceversa). En D1 solo se guarda `SHA-256(jti)`. El consumo es atómico (`UPDATE … WHERE usado_en IS NULL RETURNING`). La URL del enlace sale de `APP_URL`, nunca de la cabecera `Host`.
 - **Rate limit:** ventana fija con un único `INSERT … ON CONFLICT DO UPDATE … RETURNING` (atómico). Las claves llevan hash de IP/email, nunca en claro.
-- **Cabeceras de los estáticos:** `public/_headers` (CSP sin `unsafe-inline`, HSTS, etc.). Las respuestas de la API tienen las suyas propias (`default-src 'none'`).
+- **Cabeceras de los estáticos:** `public/_headers`. CSP con `script-src` propio + Turnstile, `style-src 'unsafe-inline'` (estilos en el elemento), `frame-src` de Turnstile y `worker-src blob:` (confetti). HSTS `max-age=31536000; includeSubDomains; preload`. La API usa `default-src 'none'`.
 
 ---
 
@@ -130,12 +138,16 @@ Nunca en git ni en `wrangler.toml`. En local van en `.dev.vars` (copia de `.dev.
 | `TURNSTILE_SECRET_KEY` | Verificar Turnstile | Panel de Turnstile (ver §3) |
 | `BREVO_API_KEY` | Enviar emails | Brevo → *SMTP & API* → *API Keys* → *Generate* |
 | `GEMINI_API_KEY` | Análisis de fotos (proveedor principal) | Google AI Studio (ver §6) |
+| `GROQ_API_KEY` | Foto del plato si Gemini falla (`llama-3.2-11b-vision-preview`, luego `llama-3.2-90b-vision-preview`) | [console.groq.com](https://console.groq.com/keys) |
+| `TRUJILLO_API_KEY` | Opcional. Bearer de `ai.trujillomingorance.com` si el gateway lo exige | Gateway propio |
 
 ```bash
 npx wrangler pages secret put AUTH_SECRET          --project-name nutrifit
 npx wrangler pages secret put TURNSTILE_SECRET_KEY --project-name nutrifit
 npx wrangler pages secret put BREVO_API_KEY        --project-name nutrifit
 npx wrangler pages secret put GEMINI_API_KEY       --project-name nutrifit
+npx wrangler pages secret put GROQ_API_KEY         --project-name nutrifit
+npx wrangler pages secret put TRUJILLO_API_KEY     --project-name nutrifit   # opcional
 npx wrangler pages secret list --project-name nutrifit
 ```
 
@@ -150,9 +162,26 @@ porque su CNAME hacia Pages no puede convivir con registros MX/TXT. Sin
 
 ---
 
-## 5. Workers AI (fallback de visión)
+## 5. Cadena de la foto del plato
 
-Modelo: `@cf/meta/llama-3.2-11b-vision-instruct`. Meta exige aceptar su licencia
+`POST /api/comidas/analizar` llama a `analizarImagen` (`functions/utils/ia.ts`).
+Un fallo (sin clave, 429, 5xx, timeout o JSON inválido) prueba el siguiente.
+Cada gateway tiene 5 s y un circuit breaker propio (3 fallos de transporte
+seguidos lo abren 30 s; luego una sola sonda). Un JSON inválido o una clave
+ausente no lo abre. El estado es del isolate: solo contadores.
+
+1. **Gemini Flash** (`GEMINI_API_KEY`, modelo `GEMINI_MODEL` o `gemini-3.8-flash`, 5 s).
+2. **Groq Vision** (`GROQ_API_KEY`, 5 s para todo el gateway). Primero `llama-3.2-11b-vision-preview`. Si falla antes de que venza el plazo, `llama-3.2-90b-vision-preview`. Sin clave se salta.
+3. **Trujillo AI** `POST https://ai.trujillomingorance.com/v1/chat/completions` con el formato de OpenAI Vision (imagen en data URL). Modelo `TRUJILLO_MODEL` o `llama-3.2-11b-vision-instruct`. Bearer solo si hay `TRUJILLO_API_KEY` (5 s).
+4. **Workers AI** `@cf/meta/llama-3.2-11b-vision-instruct` (5 s). El binding no acepta `AbortSignal`: se abandona la espera.
+
+El cliente envía un JPEG 1024×1024 (calidad 0.85) sin EXIF. El prompt pide, en razonamiento interno, segmentar el plato, estimar gramajes y calcular macros con Atwater (4/4/9 kcal/g), y responder solo el JSON (`nombre_plato`, `ingredientes`, `calorias`, `proteinas`, `carbohidratos`, `grasas`). `iaParseo.ts` quita fences Markdown y bloques `<think>` y valida con Zod.
+
+Las **etiquetas** no usan Groq ni Trujillo: Gemini y después Gemma, Qwen, Mistral y Llama en Workers AI.
+
+### Workers AI (respaldo)
+
+Modelo de la foto: `@cf/meta/llama-3.2-11b-vision-instruct`. Meta exige aceptar su licencia
 y su política de uso aceptable **una sola vez por cuenta**, enviando el prompt
 `agree`. Se hace a mano (no automáticamente desde el código, porque aceptar una
 licencia es una decisión del titular de la cuenta):
@@ -180,9 +209,9 @@ El binding `[ai]` siempre es **remoto**: `npm run pages:dev` necesita
 3. Modelo por defecto: **`gemini-3.8-flash`** (Flash estable con free tier, oct-2026). Se cambia sin tocar código en `wrangler.toml` → `GEMINI_MODEL` (p. ej. `gemini-flash-latest`).
 
 Se usa REST `v1beta/models/{modelo}:generateContent` con `inline_data` (imagen
-base64), `responseMimeType: application/json` y `responseSchema`. Si Gemini falla
-por cualquier motivo (sin clave, 429, 5xx, timeout de 25 s o JSON inválido) se
-pasa a Workers AI. La salida de ambos se limpia (fences, prosa, comas
+base64), `responseMimeType: application/json` y `responseSchema`. En la foto del
+plato el timeout es 5 s y el fallo pasa a Groq (§5). El texto y la etiqueta
+siguen con 25 s. La salida se limpia (fences, `<think>`, prosa, comas
 colgantes), se valida con Zod y se redondea a 1 decimal (`functions/utils/iaParseo.ts`).
 
 > Ojo: en el free tier, Google puede usar las entradas para mejorar sus

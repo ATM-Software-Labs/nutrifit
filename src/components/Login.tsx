@@ -91,7 +91,8 @@ export default function Login({ onEntrar, vinculando = false }: { onEntrar: (u: 
     setErrorCodigo(null)
     setComprobando(true)
     try {
-      const r = await api.entrarConCodigo(email.trim().toLowerCase(), limpio)
+      const token = await obtenerToken()
+      const r = await api.entrarConCodigo(email.trim().toLowerCase(), limpio, token)
       if (esNativa && r.token) await guardarTokenApp(r.token)
       onEntrar(r.usuario, r.perfilCompleto)
     } catch (err) {
@@ -231,7 +232,7 @@ export default function Login({ onEntrar, vinculando = false }: { onEntrar: (u: 
         <nav aria-label="Enlaces" className="flex justify-center gap-4 font-medium">
           {!esNativa && (
             <a href="/descargar" className="hover:text-graphite dark:hover:text-white">
-              Descargar la app
+              Instalar la app
             </a>
           )}
           <a href="/privacidad" className="hover:text-graphite dark:hover:text-white">

@@ -124,6 +124,21 @@ export default function App() {
     [comprobar, entrar, toast],
   )
 
+  // APK: el splash nativo no se auto-oculta (launchAutoHide: false).
+  // hide() en el primer ciclo de vida y otra vez a los 3000 ms por si la
+  // primera llamada llega antes de que el puente Capacitor esté listo.
+  useEffect(() => {
+    if (!esNativa) return
+    const ocultarSplash = () => {
+      void import('@capacitor/splash-screen')
+        .then(({ SplashScreen }) => SplashScreen.hide())
+        .catch(() => {})
+    }
+    ocultarSplash()
+    const watchdog = window.setTimeout(ocultarSplash, 3000)
+    return () => window.clearTimeout(watchdog)
+  }, [])
+
   useEffect(() => {
     if (!esNativa) return
     void import('./lib/nativo.ts').then((m) =>

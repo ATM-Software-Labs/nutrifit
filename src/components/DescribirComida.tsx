@@ -8,6 +8,7 @@ import { Sparkles } from 'lucide-react'
 import { Sheet } from './ui/Sheet.tsx'
 import { Button } from './ui/Button.tsx'
 import { useTurnstile } from '../hooks/useTurnstile.ts'
+import { recordarAliasDelAnalisis, resolverAlias, resultadoDesdeAlias } from '../lib/aliasAlimentos.ts'
 import { api, ApiError } from '../lib/api.ts'
 import type { ResultadoAnalisis } from '../lib/tipos.ts'
 
@@ -27,6 +28,12 @@ export default function DescribirComida({ onClose, onResultado, onManual }: { on
       setError({ mensaje: 'Describe un poco más lo que has comido.', manual: false })
       return
     }
+    const alias = resolverAlias(limpio)
+    if (alias) {
+      setError(null)
+      onResultado(resultadoDesdeAlias(limpio, alias.display_name))
+      return
+    }
     setError(null)
     setCargando(true)
     try {
@@ -36,6 +43,7 @@ export default function DescribirComida({ onClose, onResultado, onManual }: { on
         setError({ mensaje: 'No hemos reconocido ninguna comida en el texto. Prueba a describirla de otra forma.', manual: false })
         return
       }
+      recordarAliasDelAnalisis(limpio, r.resultado)
       onResultado(r.resultado)
     } catch (err) {
       const manual = err instanceof ApiError && (err.status === 429 || err.status === 503)

@@ -18,8 +18,15 @@ TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
 #   node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
 AUTH_SECRET=REEMPLAZAR_con_un_valor_aleatorio_de_al_menos_32_caracteres
 
-# Opcionales en local: sin BREVO_API_KEY el magic link se imprime en consola;
-# sin GEMINI_API_KEY se salta directamente al fallback de Workers AI.
+# Opcionales en local: sin BREVO_API_KEY el magic link se imprime en consola.
+# Foto: Gemini → Groq → Trujillo AI → Workers AI. Sin clave, ese paso se salta.
 BREVO_API_KEY=
 GEMINI_API_KEY=
 GEMINI_MODEL=gemini-3.8-flash
+GROQ_API_KEY=
+TRUJILLO_API_KEY=
+# TRUJILLO_MODEL=llama-3.2-11b-vision-instruct
+
+# Historial de peso, eventos y cachés. Sin las dos variables, esas escrituras siguen en D1.
+# TURSO_DATABASE_URL=libsql://nutrifit-xxxx.turso.io
+# TURSO_AUTH_TOKEN=

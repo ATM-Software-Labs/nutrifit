@@ -8,6 +8,7 @@ import { claveLimite, limitar } from '../../utils/rateLimit.ts'
 import { consumirMagicToken } from '../../utils/magicLink.ts'
 import { cerrarSolicitudesLogin } from '../../utils/codigoLogin.ts'
 import { crearCookieSesion } from '../../utils/session.ts'
+import { verificarQuery } from '../../utils/schemas.ts'
 import { asegurarUsuario } from '../../utils/usuarios.ts'
 
 function redirigir(destino: string, cookie?: string): Response {
@@ -20,8 +21,9 @@ export const onRequestGet: Handler = async ({ request, env, data }) => {
   const lim = await limitar(env, await claveLimite('verificar:ip', data.ip), 30, 900)
   if (!lim.permitido) return redirigir('/?auth=limite')
 
-  const token = new URL(request.url).searchParams.get('token') ?? ''
-  const r = await consumirMagicToken(env, token)
+  const consulta = verificarQuery.safeParse({ token: new URL(request.url).searchParams.get('token') ?? '' })
+  if (!consulta.success) return redirigir('/?auth=invalido')
+  const r = await consumirMagicToken(env, consulta.data.token)
   if (!r.ok) return redirigir(`/?auth=${r.motivo}`)
 
   const u = await asegurarUsuario(env, r.email)

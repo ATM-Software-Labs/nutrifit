@@ -48,10 +48,31 @@ export async function leerJson(request: Request, maxBytes = MAX_JSON_BYTES): Pro
     throw new HttpError(415, 'El cuerpo debe ser application/json.')
   }
   const texto = await leerTextoLimitado(request, maxBytes)
+  let datos: unknown
   try {
-    return JSON.parse(texto)
+    datos = JSON.parse(texto)
   } catch {
     throw new HttpError(400, 'JSON mal formado.')
+  }
+  rechazarFormaPeligrosa(datos)
+  return datos
+}
+
+/** Tope de anidación y de listas, y rechazo de claves que pisan el prototipo. */
+function rechazarFormaPeligrosa(valor: unknown, profundidad = 0): void {
+  if (profundidad > 8) throw new HttpError(400, 'JSON demasiado anidado.')
+  if (Array.isArray(valor)) {
+    if (valor.length > 100) throw new HttpError(400, 'JSON demasiado grande.')
+    for (const v of valor) rechazarFormaPeligrosa(v, profundidad + 1)
+    return
+  }
+  if (!valor || typeof valor !== 'object') return
+  const obj = valor as Record<string, unknown>
+  const claves = Object.keys(obj)
+  if (claves.length > 40) throw new HttpError(400, 'JSON demasiado grande.')
+  for (const k of claves) {
+    if (k === '__proto__' || k === 'constructor' || k === 'prototype') throw new HttpError(400, 'JSON no válido.')
+    rechazarFormaPeligrosa(obj[k], profundidad + 1)
   }
 }
 

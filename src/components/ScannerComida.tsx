@@ -1,15 +1,15 @@
 /**
- * Análisis de una foto: compresión en cliente (≤ 800 px, WebP 0.7 / JPEG) →
- * /api/comidas/analizar con Turnstile, con animación de "escáner" encima de la
- * miniatura. Errores: 429 (límite diario) y 503 (IA no disponible) → manual.
+ * Análisis de una foto: lado mayor 768 px, WebP 0.70 (JPEG si no hay WebP),
+ * como mucho 100 KB y sin EXIF → /api/comidas/analizar con Turnstile.
+ * Errores: 429 (límite diario) y 503 (IA no disponible) → manual.
  */
 import { useEffect, useRef, useState } from 'react'
-import { CircleAlert, PenLine, RotateCcw, ScanLine } from 'lucide-react'
+import { CircleAlert, PenLine, RotateCcw } from 'lucide-react'
 import { Sheet } from './ui/Sheet.tsx'
 import { Button } from './ui/Button.tsx'
 import { useTurnstile } from '../hooks/useTurnstile.ts'
 import { api, ApiError } from '../lib/api.ts'
-import { comprimirImagen, ErrorImagen } from '../lib/imagen.ts'
+import { blobDesdeDataUrl, compressFoodImage, ErrorImagen } from '../lib/imagen.ts'
 import type { ResultadoAnalisis } from '../lib/tipos.ts'
 
 type Estado = { fase: 'procesando' } | { fase: 'error'; mensaje: string; manual: boolean; reintentar: boolean }
@@ -33,19 +33,17 @@ export default function ScannerComida({
 
   useEffect(() => {
     let cancelado = false
-    let url: string | null = null
     setEstado({ fase: 'procesando' })
     ;(async () => {
       try {
-        const blob = await comprimirImagen(archivo)
-        url = URL.createObjectURL(blob)
+        const dataUrl = await compressFoodImage(archivo)
         if (cancelado) return
-        setMiniatura(url)
+        setMiniatura(dataUrl)
         const token = await obtenerToken()
-        const r = await api.analizar(blob, token)
+        const r = await api.analizar(blobDesdeDataUrl(dataUrl), token)
         if (cancelado) return
         entregado.current = true
-        onResultado(r.resultado, url)
+        onResultado(r.resultado, dataUrl)
       } catch (e) {
         if (cancelado) return
         if (e instanceof ErrorImagen) setEstado({ fase: 'error', mensaje: e.message, manual: true, reintentar: false })
@@ -58,20 +56,17 @@ export default function ScannerComida({
     })()
     return () => {
       cancelado = true
-      if (url && !entregado.current) URL.revokeObjectURL(url)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [archivo, intento])
 
   return (
-    <Sheet abierto onClose={onClose} titulo={estado.fase === 'procesando' ? 'Analizando tu plato' : 'No hemos podido analizarlo'} ancho="sm">
+    <Sheet abierto onClose={onClose} titulo={estado.fase === 'procesando' ? 'Analizando foto...' : 'No hemos podido analizarlo'} ancho="sm">
       <div className="relative mx-auto aspect-square w-full max-w-[280px] overflow-hidden rounded-3xl bg-neutral-100 dark:bg-neutral-900">
         {miniatura ? (
           <img src={miniatura} alt="Foto del plato" className="h-full w-full object-cover" />
         ) : (
-          <div className="flex h-full items-center justify-center text-neutral-300 dark:text-neutral-700">
-            <ScanLine size={48} strokeWidth={1.25} />
-          </div>
+          <div className="h-full w-full animate-pulse bg-neutral-200 dark:bg-neutral-800" role="status" aria-label="Analizando foto..." />
         )}
         {estado.fase === 'procesando' && (
           <div className="absolute inset-0" aria-hidden="true">
@@ -90,7 +85,7 @@ export default function ScannerComida({
 
       {estado.fase === 'procesando' ? (
         <p className="mt-6 text-center text-sm text-neutral-500 dark:text-neutral-400" role="status" aria-live="polite">
-          Identificando ingredientes y estimando macros…
+          Analizando foto...
         </p>
       ) : (
         <div className="mt-6 space-y-4" role="alert">

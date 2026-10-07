@@ -11,21 +11,25 @@ import { exigirSesion } from '../utils/session.ts'
 import { exigirLimite } from '../utils/rateLimit.ts'
 import { obtenerUsuario } from '../utils/usuarios.ts'
 import { agregarHistorial, type FilaComidasDia } from '../utils/historial.ts'
+import { listarPesos } from '../utils/turso.ts'
 
 export const onRequestGet: Handler = async ({ request, env, data }) => {
   const sesion = exigirSesion(data.sesion)
   await exigirLimite(env, `historial:u:${sesion.usuarioId}`, 60, 60)
   const { desde, hasta } = validar(historialQuery, queryObj(request.url))
   const u = sesion.usuarioId
-  const [comidas, agua, peso] = await env.DB.batch([
-    env.DB.prepare(
-      `SELECT fecha, SUM(calorias) AS calorias, SUM(proteinas) AS proteinas, SUM(carbohidratos) AS carbohidratos,
-              SUM(grasas) AS grasas, COUNT(*) AS num_comidas
-         FROM diario_comidas WHERE usuario_id = ?1 AND fecha BETWEEN ?2 AND ?3 GROUP BY fecha`,
-    ).bind(u, desde, hasta),
-    env.DB.prepare('SELECT fecha, ml FROM registro_agua WHERE usuario_id = ?1 AND fecha BETWEEN ?2 AND ?3').bind(u, desde, hasta),
-    env.DB.prepare('SELECT fecha, peso FROM historico_peso WHERE usuario_id = ?1 AND fecha BETWEEN ?2 AND ?3 ORDER BY fecha').bind(u, desde, hasta),
+  const [lote, pesos] = await Promise.all([
+    env.DB.batch([
+      env.DB.prepare(
+        `SELECT fecha, SUM(calorias) AS calorias, SUM(proteinas) AS proteinas, SUM(carbohidratos) AS carbohidratos,
+                SUM(grasas) AS grasas, COUNT(*) AS num_comidas
+           FROM diario_comidas WHERE usuario_id = ?1 AND fecha BETWEEN ?2 AND ?3 GROUP BY fecha`,
+      ).bind(u, desde, hasta),
+      env.DB.prepare('SELECT fecha, ml FROM registro_agua WHERE usuario_id = ?1 AND fecha BETWEEN ?2 AND ?3').bind(u, desde, hasta),
+    ]),
+    listarPesos(env, u, desde, hasta),
   ])
+  const [comidas, agua] = lote
   const usuario = await obtenerUsuario(env, u)
   const metas =
     usuario && usuario.meta_calorias !== null
@@ -36,7 +40,7 @@ export const onRequestGet: Handler = async ({ request, env, data }) => {
     hasta,
     (comidas?.results ?? []) as FilaComidasDia[],
     (agua?.results ?? []) as { fecha: string; ml: number }[],
-    (peso?.results ?? []) as { fecha: string; peso: number }[],
+    pesos,
     metas,
   )
   return json({ ok: true, ...h })

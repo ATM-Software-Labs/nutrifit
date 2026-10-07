@@ -2,6 +2,7 @@
 import type { Env } from './env.ts'
 import { generarCsv } from './csv.ts'
 import { aComidaApi, type FilaComida } from './comidas.ts'
+import { listarPesos } from './turso.ts'
 
 const NOMBRE_TIPO: Record<string, string> = { desayuno: 'Desayuno', comida: 'Comida', cena: 'Cena', snack: 'Snack' }
 
@@ -22,9 +23,7 @@ export async function csvExportacion(env: Env, usuarioId: string, tipo: 'comidas
     )
   }
   if (tipo === 'peso') {
-    const { results } = await env.DB.prepare('SELECT fecha, peso FROM historico_peso WHERE usuario_id = ?1 AND fecha BETWEEN ?2 AND ?3 ORDER BY fecha')
-      .bind(usuarioId, desde, hasta)
-      .all<{ fecha: string; peso: number }>()
+    const results = await listarPesos(env, usuarioId, desde, hasta)
     return generarCsv(['Fecha', 'Peso (kg)'], results.map((r) => [r.fecha, r.peso]))
   }
   const { results } = await env.DB.prepare('SELECT fecha, ml FROM registro_agua WHERE usuario_id = ?1 AND fecha BETWEEN ?2 AND ?3 ORDER BY fecha')
