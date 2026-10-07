@@ -128,13 +128,12 @@ async function extraerTokenTurnstile(request: Request, pathname: string): Promis
   return null
 }
 
-function conCabecerasSeguridad(res: Response, originApp?: string | null, cookies: string[] = []): Response {
+function conCabecerasSeguridad(res: Response, pathname: string = "/", originApp?: string | null, cookies: string[] = []): Response {
   const r = new Response(res.body, res) // copia mutable
   const h = r.headers
   if (originApp) for (const [k, v] of Object.entries(cabecerasCors(originApp))) h.set(k, v)
   else h.append('Vary', 'Origin')
-    const urlObj = new URL(context.request.url)
-  const esRutaApi = urlObj.pathname.startsWith('/api/')
+  const esRutaApi = pathname.startsWith('/api/')
   aplicarCabecerasAsvs(h, esRutaApi ? CSP_API : CSP_DOCUMENTO)
   if (!h.has('cache-control')) h.set('Cache-Control', 'no-store')
   if (!respuestaBorraSesion(h)) for (const c of cookies) h.append('Set-Cookie', c)
@@ -178,13 +177,17 @@ function registrar(env: Env, request: Request, pathname: string, ip: string, sta
 }
 
 export const onRequest: Handler = async (ctx) => {
+  const urlObj = new URL(ctx.request.url)
+  if (urlObj.pathname.startsWith('/assets/') || urlObj.pathname.startsWith('/fonts/') || urlObj.pathname.startsWith('/icons/') || urlObj.pathname.endsWith('.svg') || urlObj.pathname.endsWith('.ico') || urlObj.pathname.endsWith('.json')) {
+    return ctx.next()
+  }
   const { request, env } = ctx
   const url = new URL(request.url)
   if (!url.pathname.startsWith('/api/')) {
     try {
-      return conCabecerasSeguridad(await ctx.next())
+      return conCabecerasSeguridad(await ctx.next(, new URL(request.url).pathname))
     } catch (e) {
-      return conCabecerasSeguridad(manejarError(e))
+      return conCabecerasSeguridad(manejarError(e, new URL(request.url).pathname))
     }
   }
 
@@ -245,11 +248,11 @@ export const onRequest: Handler = async (ctx) => {
     const res = await ctx.next()
     const log = registrar(env, request, url.pathname, datos.ip, res.status, inicio, false)
     ctx.waitUntil(Promise.all([limpiezaOportunista(env), log ?? Promise.resolve()]))
-    return conCabecerasSeguridad(res, originApp, datos.cookiesRotacion)
+    return conCabecerasSeguridad(res, new URL(request.url).pathname, originApp, datos.cookiesRotacion)
   } catch (e) {
     const res = manejarError(e)
     const log = registrar(env, request, url.pathname, datos.ip ?? '', res.status, inicio, esErrorSql(e))
     if (log) ctx.waitUntil(log)
-    return conCabecerasSeguridad(res, originApp, datos.cookiesRotacion)
+    return conCabecerasSeguridad(res, new URL(request.url).pathname, originApp, datos.cookiesRotacion)
   }
 }
