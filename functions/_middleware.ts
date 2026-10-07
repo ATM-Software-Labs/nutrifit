@@ -185,9 +185,9 @@ export const onRequest: Handler = async (ctx) => {
   const url = new URL(request.url)
   if (!url.pathname.startsWith('/api/')) {
     try {
-      return conCabecerasSeguridad(await ctx.next(, new URL(request.url).pathname))
+      return conCabecerasSeguridad(await ctx.next(), new URL(ctx.request.url).pathname)
     } catch (e) {
-      return conCabecerasSeguridad(manejarError(e, new URL(request.url).pathname))
+      return conCabecerasSeguridad(manejarError(e), new URL(ctx.request.url).pathname)
     }
   }
 
@@ -248,11 +248,11 @@ export const onRequest: Handler = async (ctx) => {
     const res = await ctx.next()
     const log = registrar(env, request, url.pathname, datos.ip, res.status, inicio, false)
     ctx.waitUntil(Promise.all([limpiezaOportunista(env), log ?? Promise.resolve()]))
-    return conCabecerasSeguridad(res, new URL(request.url).pathname, originApp, datos.cookiesRotacion)
+    return conCabecerasSeguridad(res, new URL(ctx.request.url).pathname, originApp, datos.cookiesRotacion)
   } catch (e) {
     const res = manejarError(e)
     const log = registrar(env, request, url.pathname, datos.ip ?? '', res.status, inicio, esErrorSql(e))
     if (log) ctx.waitUntil(log)
-    return conCabecerasSeguridad(res, new URL(request.url).pathname, originApp, datos.cookiesRotacion)
+    return conCabecerasSeguridad(res, new URL(ctx.request.url).pathname, originApp, datos.cookiesRotacion)
   }
 }
