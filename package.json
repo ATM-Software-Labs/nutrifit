@@ -1,71 +1,83 @@
-﻿{
-  "name": "nutrifit",
-  "version": "0.2.0",
-  "private": true,
-  "description": "NutriFit — app open source de seguimiento de nutrición y macros (Vite + React + Cloudflare Pages).",
-  "license": "MIT",
-  "author": "Alberto Trujillo Mingorance",
-  "homepage": "https://nutri.trujillomingorance.com",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/ATM-Software-Labs/nutrifit.git"
-  },
-  "bugs": {
-    "url": "https://github.com/ATM-Software-Labs/nutrifit/issues"
-  },
-  "type": "module",
-  "engines": {
-    "node": ">=22"
-  },
-  "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "preview": "vite preview",
-    "typecheck": "tsc -b && tsc -p functions/tsconfig.json --noEmit && tsc -p tests/tsconfig.json --noEmit",
-    "pages:dev": "npm run build && wrangler pages dev dist --port 8788",
-    "deploy": "npm run build && wrangler pages deploy dist --project-name nutrifit",
-    "brand": "python3 scripts/generate-brand.py && bash scripts/svg-to-png.sh",
-    "db:migrate:local": "wrangler d1 migrations apply nutrifit-db --local",
-    "db:migrate:remote": "wrangler d1 migrations apply nutrifit-db --remote",
-    "test": "node --test \"tests/**/*.test.ts\"",
-    "pages:dev:offline": "npm run build && bash scripts/pages-dev-offline.sh",
-    "android:sync": "npm run build && cap sync android",
-    "android:debug": "npm run android:sync && cd android && ./gradlew assembleDebug",
-    "android:release": "npm run android:sync && node --input-type=module -e \"import { spawnSync } from 'node:child_process'; const w = process.platform === 'win32'; const r = spawnSync(w ? 'gradlew.bat' : './gradlew', ['assembleRelease'], { cwd: 'android', stdio: 'inherit', shell: w }); process.exit(r.status ?? 1)\"",
-    "android:assets": "npx --yes @capacitor/assets@3 generate --android --iconBackgroundColor '#FFFFFF' --splashBackgroundColor '#FFFFFF' --splashBackgroundColorDark '#09090B'"
-  },
-  "dependencies": {
-    "@capacitor/android": "^8.5.2",
-    "@capacitor/app": "^8.1.2",
-    "@capacitor/core": "^8.5.2",
-    "@capacitor/preferences": "^8.0.1",
-    "@capacitor/splash-screen": "^8.0.2",
-    "@capacitor/status-bar": "^8.0.4",
-    "@libsql/client": "^0.18.0",
-    "canvas-confetti": "^1.9.4",
-    "lucide-react": "^1.52.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "uqr": "^0.1.3",
-    "zod": "^4.6.5"
-  },
-  "devDependencies": {
-    "@capacitor/cli": "^8.5.2",
-    "@cloudflare/workers-types": "^5.20261006.1",
-    "@types/canvas-confetti": "^1.9.0",
-    "@types/node": "^22.0.0",
-    "@types/react": "^18.3.31",
-    "@types/react-dom": "^18.3.7",
-    "@vitejs/plugin-react": "^6.1.2",
-    "autoprefixer": "^10.6.1",
-    "postcss": "^8.5.29",
-    "tailwindcss": "^3.4.19",
-    "typescript": "^7.0.2",
-    "vite": "^8.3.3",
-    "wrangler": "^4.147.0"
-  },
-  "allowScripts": {
-    "esbuild@0.28.1": true,
-    "workerd@1.20261001.1": true
-  }
+{
+    "name":  "nutrifit",
+    "version":  "0.2.0",
+    "private":  true,
+    "description":  "NutriFit — app open source de seguimiento de nutrición y macros (Vite + React + Cloudflare Pages).",
+    "license":  "MIT",
+    "author":  "Alberto Trujillo Mingorance",
+    "homepage":  "https://nutri.trujillomingorance.com",
+    "repository":  {
+                       "type":  "git",
+                       "url":  "git+https://github.com/ATM-Software-Labs/nutrifit.git"
+                   },
+    "bugs":  {
+                 "url":  "https://github.com/ATM-Software-Labs/nutrifit/issues"
+             },
+    "type":  "module",
+    "engines":  {
+                    "node":  "\u003e=22"
+                },
+    "scripts":  {
+                    "dev":  "vite",
+                    "build":  "tsc -b \u0026\u0026 vite build",
+                    "preview":  "vite preview",
+                    "typecheck":  "tsc -b \u0026\u0026 tsc -p functions/tsconfig.json --noEmit \u0026\u0026 tsc -p tests/tsconfig.json --noEmit",
+                    "pages:dev":  "npm run build \u0026\u0026 wrangler pages dev dist --port 8788",
+                    "deploy":  "npm run build \u0026\u0026 wrangler pages deploy dist --project-name nutrifit",
+                    "brand":  "python3 scripts/generate-brand.py \u0026\u0026 bash scripts/svg-to-png.sh",
+                    "db:migrate:local":  "wrangler d1 migrations apply nutrifit-db --local",
+                    "db:migrate:remote":  "wrangler d1 migrations apply nutrifit-db --remote",
+                    "test":  "node --test \"tests/**/*.test.ts\"",
+                    "pages:dev:offline":  "npm run build \u0026\u0026 bash scripts/pages-dev-offline.sh",
+                    "android:sync":  "npm run build \u0026\u0026 cap sync android",
+                    "android:debug":  "npm run android:sync \u0026\u0026 cd android \u0026\u0026 ./gradlew assembleDebug",
+                    "android:release":  "npm run android:sync \u0026\u0026 node --input-type=module -e \"import { spawnSync } from \u0027node:child_process\u0027; const w = process.platform === \u0027win32\u0027; const r = spawnSync(w ? \u0027gradlew.bat\u0027 : \u0027./gradlew\u0027, [\u0027assembleRelease\u0027], { cwd: \u0027android\u0027, stdio: \u0027inherit\u0027, shell: w }); process.exit(r.status ?? 1)\"",
+                    "android:assets":  "npx --yes @capacitor/assets@3 generate --android --iconBackgroundColor \u0027#FFFFFF\u0027 --splashBackgroundColor \u0027#FFFFFF\u0027 --splashBackgroundColorDark \u0027#09090B\u0027"
+                },
+    "dependencies":  {
+                         "@capacitor/android":  "^8.5.2",
+                         "@capacitor/app":  "^8.1.2",
+                         "@capacitor/core":  "^8.5.2",
+                         "@capacitor/preferences":  "^8.0.1",
+                         "@capacitor/splash-screen":  "^8.0.2",
+                         "@capacitor/status-bar":  "^8.0.4",
+                         "@libsql/client":  "^0.18.0",
+                         "canvas-confetti":  "^1.9.4",
+                         "lucide-react":  "^1.52.0",
+                         "react":  "^18.3.1",
+                         "react-dom":  "^18.3.1",
+                         "uqr":  "^0.1.3",
+                         "zod":  "^4.6.5"
+                     },
+    "devDependencies":  {
+                            "@capacitor/cli":  "^8.5.2",
+                            "@cloudflare/workers-types":  "^5.20261006.1",
+                            "@types/canvas-confetti":  "^1.9.0",
+                            "@types/node":  "^22.0.0",
+                            "@types/react":  "^18.3.31",
+                            "@types/react-dom":  "^18.3.7",
+                            "@vitejs/plugin-react":  "^6.1.2",
+                            "autoprefixer":  "^10.6.1",
+                            "postcss":  "^8.5.29",
+                            "tailwindcss":  "^3.4.19",
+                            "typescript":  "^7.0.2",
+                            "vite":  "^8.3.3",
+                            "wrangler":  "^4.147.0"
+                        },
+    "allowScripts":  {
+                         "esbuild@0.28.1":  true,
+                         "workerd@1.20261001.1":  true
+                     },
+    "overrides":  {
+                      "sharp":  "^0.35.5",
+                      "uuid":  "^11.1.1",
+                      "postcss-selector-parser":  "^7.1.6",
+                      "tailwindcss":  {
+                                          "micromatch":  "^4.0.8",
+                                          "chokidar":  "^3.6.0"
+                                      },
+                      "chokidar":  "^3.6.0",
+                      "micromatch":  "^4.0.8",
+                      "braces":  "3.0.3"
+                  }
 }
