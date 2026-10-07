@@ -1,60 +1,64 @@
-/**
- * GET /api/alimentos/barcode?codigo=8480000610553
- * Open Food Facts v2. Prioriza las cadenas españolas (Mercadona / Hacendado,
- * Carrefour, Caprabo, Eroski, Dia, Lidl) y normaliza por 100 g y por porción.
- * Un acierto se guarda 30 días en catalogo_alimentos_cache.
- * El producto propio del usuario, si existe, gana al catálogo público.
- * Límite: 30 códigos/min por usuario.
- */
-import type { Handler } from '../../utils/env.ts'
-import { error, HttpError, json } from '../../utils/response.ts'
-import { queryObj, validar } from '../../utils/http.ts'
-import { barcodeQuery } from '../../utils/schemas.ts'
-import { exigirSesion } from '../../utils/session.ts'
-import { exigirLimite } from '../../utils/rateLimit.ts'
-import { productoPropioPorCodigo, type ProductoPropio } from '../../utils/productos.ts'
-import { cerrarNutrientes, detectarCadenas, escalarNutrientes, productoCatalogoPorCodigo, type AlimentoCatalogo } from '../../utils/catalogoAlimentos.ts'
+﻿import type { PagesFunction } from '@cloudflare/workers-types'
 
-function desdePropio(p: ProductoPropio): AlimentoCatalogo {
-  const por100 = cerrarNutrientes({
-    energia_kcal: p.por100.calorias,
-    proteinas: p.por100.proteinas,
-    carbohidratos: p.por100.carbohidratos,
-    azucares: p.extra.azucares,
-    grasas: p.por100.grasas,
-    grasas_saturadas: p.extra.saturadas,
-    fibra: p.extra.fibra,
-    sal: p.extra.sal,
-  })
-  const cadenas = detectarCadenas({ brands: p.marca })
-  return {
-    id: p.id,
-    codigo: p.codigo || null,
-    nombre: p.nombre,
-    marca: p.marca,
-    cadenas,
-    cadena_prioritaria: cadenas[0] ?? null,
-    unidad: p.unidad,
-    por_100g: por100,
-    gramos_porcion: p.racion,
-    por_porcion: p.racion ? escalarNutrientes(por100, p.racion) : null,
-    fuente: 'propio',
-  }
+interface Env {
+  DB_ALIMENTOS?: D1Database
 }
 
-export const onRequestGet: Handler = async (ctx) => {
-  const { request, env, data } = ctx
-  const sesion = exigirSesion(data.sesion)
-  const { codigo } = validar(barcodeQuery, queryObj(request.url))
-  await exigirLimite(env, `barcode:u:${sesion.usuarioId}`, 30, 60, 'Demasiados códigos seguidos. Espera un momento.')
-  const propio = await productoPropioPorCodigo(env, sesion.usuarioId, codigo)
-  if (propio) return json({ ok: true, producto: desdePropio(propio), cache: false })
+export const onRequestGet: PagesFunction<Env> = async (context) => {
+  const { request, env } = context
+  const url = new URL(request.url)
+  const ean = url.searchParams.get('ean')?.trim()
+
+  if (!ean || !/^\d{8,14}$/.test(ean)) {
+    return Response.json({ error: 'Código de barras no válido' }, { status: 400 })
+  }
+
+  if (env.DB_ALIMENTOS) {
+    try {
+      const prodLocal = await env.DB_ALIMENTOS.prepare(
+        `SELECT id, nombre, marca, calorias, proteinas, carbohidratos, grasas, codigo_barras 
+         FROM alimentos WHERE codigo_barras = ? LIMIT 1`
+      ).bind(ean).first()
+
+      if (prodLocal) {
+        return Response.json({ origen: 'd1_local', producto: prodLocal })
+      }
+    } catch (e) {
+      console.warn('Error leyendo D1 alimentos:', e)
+    }
+  }
+
   try {
-    const { producto, cache } = await productoCatalogoPorCodigo(codigo, { env, waitUntil: ctx.waitUntil.bind(ctx) })
-    return json({ ok: true, producto, cache })
-  } catch (e) {
-    if (e instanceof HttpError) throw e
-    console.warn('[barcode] fallo:', e instanceof Error ? e.message : e)
-    return error(503, 'Open Food Facts no responde ahora mismo. Prueba de nuevo en unos minutos.', { codigo: 'off_no_disponible' })
+    const resOff = await fetch(`https://world.openfoodfacts.org/api/v2/product/${ean}.json`, {
+      headers: { 'User-Agent': 'NutriFit-App/1.0 (nutri@trujillomingorance.com)' },
+      signal: AbortSignal.timeout(5000)
+    })
+
+    if (!resOff.ok) {
+      return Response.json({ error: 'Producto no encontrado' }, { status: 404 })
+    }
+
+    const data = await resOff.json()
+    if (data.status !== 1 || !data.product) {
+      return Response.json({ error: 'Producto no registrado en Open Food Facts' }, { status: 404 })
+    }
+
+    const p = data.product
+    const nutriments = p.nutriments || {}
+
+    const producto = {
+      id: crypto.randomUUID(),
+      nombre: p.product_name_es || p.product_name || 'Producto sin nombre',
+      marca: p.brands || 'Genérico',
+      calorias: Math.round(nutriments['energy-kcal_100g'] || (nutriments['energy_100g'] ? nutriments['energy_100g'] / 4.184 : 0)),
+      proteinas: Number(nutriments['proteins_100g'] || 0),
+      carbohidratos: Number(nutriments['carbohydrates_100g'] || 0),
+      grasas: Number(nutriments['fat_100g'] || 0),
+      codigo_barras: ean
+    }
+
+    return Response.json({ origen: 'openfoodfacts', producto })
+  } catch (err: any) {
+    return Response.json({ error: 'Fallo al consultar proveedor de alimentos', detalle: err.message }, { status: 502 })
   }
 }
