@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Middleware global de NutriFit (se ejecuta antes de cada Function).
  * public/_routes.json limita la invocación de Functions a /api/* y /assets/*
  * (este último solo para fijar bien la caché, ver functions/assets/[[ruta]].ts);
@@ -35,7 +35,7 @@ import { puntuacionBot, scoreAnomalo } from './utils/bot.ts'
 import { esErrorSql, formatearLog, hashIp, tiposDeEvento, type EventoLog } from './utils/log.ts'
 import { guardarEventos } from './utils/turso.ts'
 import { claveLimite, exigirLimite, limpiezaOportunista } from './utils/rateLimit.ts'
-import { aplicarCabecerasAsvs, CSP_API } from './utils/cabeceras.ts'
+import { aplicarCabecerasAsvs, CSP_API, CSP_DOCUMENTO } from './utils/cabeceras.ts'
 
 const ESCRITURA = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 
@@ -133,7 +133,9 @@ function conCabecerasSeguridad(res: Response, originApp?: string | null, cookies
   const h = r.headers
   if (originApp) for (const [k, v] of Object.entries(cabecerasCors(originApp))) h.set(k, v)
   else h.append('Vary', 'Origin')
-  aplicarCabecerasAsvs(h, CSP_API)
+    const urlObj = new URL(context.request.url)
+  const esRutaApi = urlObj.pathname.startsWith('/api/')
+  aplicarCabecerasAsvs(h, esRutaApi ? CSP_API : CSP_DOCUMENTO)
   if (!h.has('cache-control')) h.set('Cache-Control', 'no-store')
   if (!respuestaBorraSesion(h)) for (const c of cookies) h.append('Set-Cookie', c)
   return r
