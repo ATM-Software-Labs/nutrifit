@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
+﻿import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import { Logo } from './components/Logo.tsx'
 import { Button } from './components/ui/Button.tsx'
 import { useToast } from './components/ui/Toast.tsx'
@@ -15,7 +15,7 @@ const cargarLogin = () => import('./components/Login.tsx')
 const cargarDashboard = () => import('./components/Dashboard.tsx')
 const cargarOnboarding = () => import('./components/Onboarding.tsx')
 const Login = lazy(cargarLogin)
-const Dashboard = lazy(cargarDashboard)
+const Dashboard = lazy(async () => { const m = await cargarDashboard(); return { default: (m as any).Dashboard || (m as any).default } }) as React.ComponentType<any>
 const Onboarding = lazy(cargarOnboarding)
 // Páginas sueltas (accesibles sin sesión)
 const SeccionDescargas = lazy(() => import('./components/SeccionDescargas.tsx'))
@@ -223,7 +223,7 @@ export default function App() {
         break
       }
       if (estado.fase === 'app') {
-        pantalla = <Dashboard usuario={estado.usuario} vista={rutaApp === '/historial' ? 'historial' : 'hoy'} onUsuario={(usuario) => setEstado({ fase: 'app', usuario })} onSalir={salir} />
+        pantalla = <Dashboard usuario={estado.usuario} vista={rutaApp === '/historial' ? 'historial' : 'hoy'} onUsuario={(usuario: any) => setEstado({ fase: 'app', usuario })} onSalir={salir} />
         break
       }
       pantalla = <Onboarding usuario={estado.usuario} onCompletado={(usuario) => setEstado({ fase: 'app', usuario })} />

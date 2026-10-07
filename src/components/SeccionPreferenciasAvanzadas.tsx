@@ -3,7 +3,7 @@
 export function SeccionPreferenciasAvanzadas() {
   const [ayunoActivo, setAyunoActivo] = useState(false)
   const [tipoAyuno, setTipoAyuno] = useState('16/8')
-  const [modoMacros, setModoMacros] = useState<'porcentaje' | 'gramos_kg'>('gramos_kg')
+  const [modoMacros] = useState<'porcentaje' | 'gramos_kg'>('gramos_kg'); void modoMacros
   const [protPorKg, setProtPorKg] = useState(1.8)
 
   return (

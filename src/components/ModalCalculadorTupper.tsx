@@ -11,8 +11,8 @@ export function ModalCalculadorTupper({ abierto, alCerrar, alGuardarRacion }: Pr
   const [raciones, setRaciones] = useState(4)
   const [caloriasTotales, setCaloriasTotales] = useState(2000)
   const [proteinaTotal, setProteinaTotal] = useState(160)
-  const [carbosTotales, setCarbosTotales] = useState(200)
-  const [grasasTotales, setGrasasTotales] = useState(45)
+  const [carbosTotales] = useState(200)
+  const [grasasTotales] = useState(45)
 
   if (!abierto) return null
 
