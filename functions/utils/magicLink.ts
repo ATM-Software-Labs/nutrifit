@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Magic links de un solo uso:
  *   token = base64url({e: email, j: jti, x: exp}) . HMAC-SHA256
  * En D1 solo se guarda SHA-256(jti). El consumo es atómico (UPDATE … RETURNING),
@@ -8,7 +8,7 @@ import type { Env } from './env.ts'
 import { base64urlEncode, bytesAleatorios, firmar, sha256Hex, verificarFirma } from './crypto.ts'
 import { authSecret } from './session.ts'
 
-export const DURACION_MAGIC = 15 * 60
+export const DURACION_MAGIC = 4 * 3600 // 4 horas de validez
 
 interface PayloadMagic {
   e: string
@@ -46,3 +46,4 @@ export async function consumirMagicToken(env: Env, token: string): Promise<Resul
   if (!fila) return { ok: false, motivo: 'usado' }
   return { ok: true, email: p.e }
 }
+
