@@ -1,4 +1,4 @@
-/** Ajustes: perfil y objetivos (recalculados al momento), tema, cuenta y enlaces. */
+﻿/** Ajustes: perfil y objetivos (recalculados al momento), tema, cuenta y enlaces. */
 import { useMemo, useState } from 'react'
 import { ChevronRight, Download, ExternalLink, LogOut, Monitor, Moon, Shield, Sun } from 'lucide-react'
 import { URL_REPO } from '../lib/config.ts'
@@ -18,6 +18,9 @@ import { leerHashSincronizado } from '../lib/hashSync.ts'
 import { calcularMacros, type NivelActividad, type Objetivo, type Sexo } from '../lib/macros.ts'
 import { entero } from '../lib/formato.ts'
 import type { Usuario } from '../lib/tipos.ts'
+import { SeccionDispositivos } from './SeccionDispositivos.tsx'
+import { SeccionIntegraciones } from './SeccionIntegraciones.tsx'
+import { SeccionPreferenciasAvanzadas } from './SeccionPreferenciasAvanzadas.tsx'
 
 const SELECT =
   'h-12 w-full appearance-none rounded-2xl border border-neutral-200 bg-card px-4 text-[15px] focus:border-mint focus:outline-none focus:ring-4 focus:ring-mint/15 dark:border-neutral-800 dark:bg-card-dark'
@@ -160,6 +163,18 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
               { valor: 'oscuro', etiqueta: <span className="flex items-center gap-1.5"><Moon size={14} /> Oscuro</span> },
             ]}
           />
+        </Seccion>
+
+                <Seccion titulo="Dispositivos y Seguridad">
+          <SeccionDispositivos />
+        </Seccion>
+
+        <Seccion titulo="Conexiones y Wearables">
+          <SeccionIntegraciones />
+        </Seccion>
+
+        <Seccion titulo="Estrategia y Ayuno">
+          <SeccionPreferenciasAvanzadas />
         </Seccion>
 
         <Seccion titulo="Más">
