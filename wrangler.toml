@@ -5,3 +5,21 @@ pages_build_output_dir = "dist"
 
 [vars]
 ENVIRONMENT = "production"
+APP_URL = "https://nutri.trujillomingorance.com"
+ALLOWED_ORIGINS = "https://nutri.trujillomingorance.com,https://nutrifit-ac9.pages.dev"
+TURNSTILE_SITE_KEY = "0x4AAAAAAFPhRCuPz21TsJR5"
+GEMINI_MODEL = "gemini-2.5-flash"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "nutrifit-db"
+database_id = "c7f77ed4-a5d0-4c3a-a686-ecc1fb77d1f1"
+migrations_dir = "migrations"
+
+[[d1_databases]]
+binding = "ALIMENTOS"
+database_name = "nutrifit-alimentos"
+database_id = "4ca3a77e-63b4-4090-bfa2-05e4032860c4"
+
+[ai]
+binding = "AI"
