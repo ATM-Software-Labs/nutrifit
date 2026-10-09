@@ -46,3 +46,7 @@ previews/
 
 # Configuracion privada con IDs de Cloudflare
 wrangler.local.toml
+
+auditoria-reporte.json
+test-report.json
+*.bak
