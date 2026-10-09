@@ -4,6 +4,7 @@ import App from './App.tsx'
 import { ErrorBoundary } from './components/ErrorBoundary.tsx'
 import { ToastProvider } from './components/ui/Toast.tsx'
 import { iniciarTema } from './lib/tema.ts'
+import { iniciarIdioma } from './lib/i18n.ts'
 import { iniciarSyncAgua } from './lib/syncAgua.ts'
 import { iniciarSyncPeso } from './lib/syncPeso.ts'
 import { registrarServiceWorker } from './lib/sw.ts'
@@ -15,6 +16,7 @@ window.__nfIniciado = true // para el vigilante de public/boot.js
 vigilarChunks()
 comprobarEstilos()
 iniciarTema()
+iniciarIdioma()
 iniciarSyncAgua()
 iniciarSyncPeso()
 capturarPromptInstalar()

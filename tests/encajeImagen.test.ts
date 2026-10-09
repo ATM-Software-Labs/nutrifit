@@ -14,12 +14,12 @@ test('encaja sin recortar ni ampliar', () => {
   assert.deepEqual(encajeCuadrado(800, 600), { lado: 1024, w: 800, h: 600, x: 112, y: 212 })
 })
 
-test('la foto de análisis cabe en 768 px por el lado mayor, a calidad 0.70', () => {
-  assert.equal(LADO_MAYOR, 768)
-  assert.equal(CALIDAD_FOTO, 0.7)
+test('la foto de análisis cabe en 800 px por el lado mayor, a calidad 0.75', () => {
+  assert.equal(LADO_MAYOR, 800)
+  assert.equal(CALIDAD_FOTO, 0.75)
   assert.equal(MAX_FOTO_BYTES, 100 * 1024)
-  assert.deepEqual(encajeLadoMayor(4000, 3000), { w: 768, h: 576 })
-  assert.deepEqual(encajeLadoMayor(3000, 4000), { w: 576, h: 768 })
-  assert.deepEqual(encajeLadoMayor(768, 768), { w: 768, h: 768 })
+  assert.deepEqual(encajeLadoMayor(4000, 3000), { w: 800, h: 600 })
+  assert.deepEqual(encajeLadoMayor(3000, 4000), { w: 600, h: 800 })
+  assert.deepEqual(encajeLadoMayor(800, 800), { w: 800, h: 800 })
   assert.deepEqual(encajeLadoMayor(400, 200), { w: 400, h: 200 })
 })

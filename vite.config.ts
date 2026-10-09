@@ -77,6 +77,13 @@ export default defineConfig({
         entryFileNames: 'assets/[name].[hash:12].js',
         chunkFileNames: 'assets/[name].[hash:12].js',
         assetFileNames: 'assets/[name].[hash:12][extname]',
+        codeSplitting: {
+          groups: [
+            { name: 'profile', test: /[\\/]PaginaPerfil\.tsx$/, minSize: 0 },
+            { name: 'escaner', test: /[\\/]ScannerComida\.tsx$/, minSize: 0 },
+            { name: 'historial', test: /[\\/]Historial\.tsx$/, minSize: 0 },
+          ],
+        },
       },
     },
   },

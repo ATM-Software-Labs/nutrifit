@@ -4,11 +4,13 @@ import { entero } from '../lib/formato.ts'
 const R = 96
 const C = 2 * Math.PI * R
 
-/** Anillo SVG de calorías restantes (meta − consumidas), animado. */
-export function AnilloCalorias({ consumidas, meta }: { consumidas: number; meta: number }) {
-  const restantes = meta - consumidas
+/** Anillo SVG de calorías restantes (meta − consumidas + quemadas), animado. */
+export function AnilloCalorias({ consumidas, meta, quemadas = 0 }: { consumidas: number; meta: number; quemadas?: number }) {
+  const extra = Math.max(0, quemadas)
+  const restantes = meta - consumidas + extra
   const pasado = restantes < 0
-  const progreso = meta > 0 ? Math.min(1, consumidas / meta) : 0
+  const presupuesto = meta + extra
+  const progreso = presupuesto > 0 ? Math.min(1, consumidas / presupuesto) : 0
   const animado = useNumeroAnimado(Math.abs(restantes))
   return (
     <div className="relative mx-auto aspect-square w-full max-w-[232px]">
@@ -32,6 +34,7 @@ export function AnilloCalorias({ consumidas, meta }: { consumidas: number; meta:
         <span className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
           <span className="cifra">{entero(consumidas)}</span> / <span className="cifra">{entero(meta)}</span> kcal
         </span>
+        {extra > 0 && <span className="mt-1 text-xs text-mint-700 dark:text-mint-400">+{entero(extra)} kcal de actividad</span>}
       </div>
     </div>
   )

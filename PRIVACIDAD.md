@@ -1,58 +1,58 @@
 # Política de privacidad de NutriFit
 
-> **BORRADOR pendiente de revisión por Alberto** — no es asesoramiento legal. Revisar antes del lanzamiento, en especial el uso de datos del nivel gratuito de Gemini y la base legal para datos de salud (art. 9 RGPD).
+Última actualización: 9 de octubre de 2026.
 
-Última actualización: 6 de octubre de 2026.
+### Quién es el responsable
 
-## Quién es el responsable
+NutriFit es un proyecto de código abierto titularidad de Alberto Trujillo Mingorance (Barcelona, España). Contacto de privacidad y soporte: [soporte@trujillomingorance.com](mailto:soporte@trujillomingorance.com).
 
-NutriFit es un proyecto personal y de código abierto de Alberto Trujillo Mingorance (Barcelona, España). Contacto: [soporte@trujillomingorance.com](mailto:soporte@trujillomingorance.com).
+### Base legal del tratamiento
 
-## Qué datos guardamos
+El tratamiento de tus datos de registro y uso se realiza sobre la base de la ejecución del servicio solicitado. Dado que los registros de peso y nutrición pueden considerarse categorías especiales de datos relativos a la salud (art. 9 RGPD), su tratamiento se fundamenta exclusivamente en tu consentimiento explícito al utilizar la aplicación, con el único fin de mostrarte tus propias métricas y seguimiento personal.
 
-- **Cuenta:** tu email (para enviarte el enlace y el código de acceso; no hay contraseñas). Del código de 6 cifras solo guardamos una huella criptográfica (HMAC) durante 15 minutos.
-- **Perfil:** nombre, sexo, edad, peso, altura, nivel de actividad y objetivo, para calcular tus calorías y macros.
-- **Diario:** comidas que registras (nombre, ingredientes, calorías y macros), agua y peso.
-- **Técnicos:** dirección IP de forma transitoria y con hash para limitar abusos (rate limiting), y registros de errores sin datos personales.
+### Qué datos tratamos
 
-El peso y los hábitos de alimentación pueden considerarse **datos relativos a la salud**. Solo los usamos para mostrarte tu propio seguimiento.
+- **Cuenta:** tu email (para enviarte el enlace o código de acceso sin contraseñas). Del código de acceso de 6 cifras solo se almacena una huella criptográfica (HMAC) durante un máximo de 15 minutos.
+- **Perfil:** nombre o alias público, sexo, edad, peso, altura, nivel de actividad física y objetivo calórico/macros.
+- **Diario y actividad:** comidas registradas (ingredientes, calorías y macronutrientes), historial de peso, ingesta de agua y sesiones de entrenamiento manuales.
+- **Técnicos:** dirección IP tratada de forma transitoria y sometida a hash para mitigación de abusos y control de peticiones (rate limiting), junto a registros técnicos de errores sin datos personales vinculados.
 
-## Fotos, descripciones e inteligencia artificial
+### Fotos, descripciones e inteligencia artificial
 
-- Cuando analizas una foto, tu dispositivo la convierte a JPEG de 1024×1024 y **descarta el EXIF** (incluida la geolocalización) antes de enviarla. Esa imagen va a la **API de Google Gemini** para estimar ingredientes y macros. Si ese paso falla, se prueba en este orden: **Groq** (modelo de visión), el gateway **Trujillo AI** (`ai.trujillomingorance.com`) y, al final, **Cloudflare Workers AI**. Cada uno solo recibe la foto si el anterior no ha respondido.
-- Si describes una comida con texto, ese texto se envía del mismo modo (Gemini o, si no está disponible, Cloudflare Workers AI) solo para estimar los macros. **No escribas datos personales** en la descripción.
-- **NutriFit no guarda la foto ni el texto**: solo el resultado que confirmas.
-- **Importante (nivel gratuito de Gemini):** mientras NutriFit use el nivel gratuito de la API, Google puede usar el contenido enviado para mejorar sus productos, y personas revisoras pueden verlo, según los [términos adicionales de la API de Gemini](https://ai.google.dev/gemini-api/terms). No subas fotos con personas o información privada. Si pasamos al nivel de pago, esto dejará de aplicarse y lo indicaremos aquí.
-- Cloudflare Workers AI no usa el contenido para entrenar modelos.
+- **Procesamiento de imágenes:** al analizar una imagen, tu dispositivo la redimensiona y descarta los metadatos EXIF (incluyendo geolocalización) antes de enviarla. La imagen se remite a la API de Google Gemini para estimar composición y macronutrientes. Si dicho servicio excede el tiempo de respuesta o no está disponible, la petición se deriva de forma secuencial y transparente a Groq (modelo visual), al gateway seguro Trujillo AI (`ai.trujillomingorance.com`) y, como último recurso, a Cloudflare Workers AI. Cada proveedor únicamente recibe la imagen si el anterior no ha respondido.
+- **Descripciones de texto:** si describes una comida mediante texto libre, la cadena se procesa bajo el mismo flujo de análisis nutricional. Se recomienda no incluir datos personales en las descripciones.
+- **Retención:** NutriFit no almacena las imágenes ni los textos descriptivos en sus servidores; únicamente se persiste en tu diario el resultado final que confirmas.
+- **Aviso sobre el nivel gratuito de Gemini:** en el uso del tier gratuito de la API de Google Gemini, Google puede procesar los datos de conformidad con sus términos de servicio para desarrolladores con fines de depuración y mejora de modelos. Por ello, se prohíbe explícitamente subir fotografías que contengan rostros de personas o documentos personales. En caso de migración a niveles comerciales dedicados, se actualizará este apartado.
+- **Proveedores alternativos:** Cloudflare Workers AI no emplea los datos suministrados para entrenar modelos.
 
-## Con quién se comparten (encargados del tratamiento)
+### Destinatarios y encargados del tratamiento
 
-- **Cloudflare** (alojamiento, base de datos D1, protección anti-bots Turnstile y Workers AI).
-- **Google** (análisis de fotos con Gemini, ver arriba).
-- **Groq** (análisis de fotos, solo si Gemini no responde).
-- **Trujillo AI** (`ai.trujillomingorance.com`, análisis de fotos, solo si Gemini y Groq no responden).
-- **Brevo** (envío del email con el enlace y el código de acceso).
-- **Open Food Facts** (base de datos abierta de productos): cuando buscas un producto envasado, nuestro servidor consulta Open Food Facts **solo con el término de búsqueda o el código de barras**, sin tu email, tu IP ni ningún dato de tu cuenta, y guarda la respuesta en caché unos días. La base de alimentos genéricos está incluida en la app y no hace ninguna consulta externa.
+- **Cloudflare, Inc.:** infraestructura de alojamiento, base de datos perimetral D1, mitigación de bots con Turnstile y Workers AI.
+- **Google LLC:** inferencia y análisis nutricional mediante Gemini API.
+- **Groq Inc.:** proveedor de inferencia rápida de visión como respaldo secundario.
+- **Trujillo AI (`ai.trujillomingorance.com`):** gateway de contingencia para análisis de visión.
+- **Brevo:** servicio de infraestructura para el envío transaccional de correos de acceso.
+- **Open Food Facts:** catálogo alimentario abierto consultado mediante código de barras o término genérico de producto, sin transmitir tu email, tu IP ni identificadores de cuenta.
 
-No vendemos datos, no hay publicidad y no usamos herramientas de analítica ni de seguimiento.
+No se comercializan datos personales, no se inserta publicidad ni se utilizan plataformas de rastreo o analítica publicitaria de terceros.
 
-## Entrar en un ordenador con el QR
+### Acceso web mediante código QR
 
-Cuando el ordenador muestra un QR para entrar con el móvil, guardamos durante **2 minutos** una solicitud con: una huella del identificador del QR y del secreto que se queda en ese navegador, un código corto de 4 caracteres, el navegador y sistema operativo aproximados del ordenador (p. ej. «Chrome · Windows») y su **ubicación aproximada** (ciudad y país, deducidos por Cloudflare a partir de la IP; no guardamos la IP). Lo mostramos en tu móvil para que compruebes que eres tú antes de pulsar «Aprobar». La solicitud solo sirve una vez y después se elimina en las limpiezas automáticas de la base de datos.
+Cuando inicias sesión en un ordenador escaneando un código QR desde el móvil, se genera una solicitud temporal con una validez máxima de 2 minutos. Dicha solicitud contiene un identificador único anonimizado, un código de verificación de 4 caracteres, el navegador aproximado y la ubicación geográfica estimada (ciudad y país, provistas por Cloudflare a nivel de red sin persistir tu dirección IP). Esta información se visualiza exclusivamente en tu móvil para autorizar el acceso antes de pulsar «Aprobar» y se purga de forma inmediata tras su uso o caducidad.
 
-## Cookies y almacenamiento local
+### Cookies y almacenamiento local
 
-- Una única cookie técnica, `__Host-nf_session`, para mantener tu sesión (30 días). Es HttpOnly: el JavaScript de la página no puede leerla. El identificador de esa sesión se guarda solo como huella y se puede invalidar al cerrar sesión. En la app Android se usa un token guardado en el almacenamiento privado de la app.
-- En tu navegador se guardan preferencias (tema, peso objetivo, aviso de instalación) y una copia en caché de la app para que funcione sin conexión.
+- **Cookie técnica obligatoria:** cookie `__Host-nf_session`, configurada con directivas HttpOnly, Secure y SameSite=Lax con expiración a 30 días, destinada exclusivamente al mantenimiento de la sesión autenticada. Su identificador se guarda cifrado y queda invalidado al cerrar sesión. En la aplicación móvil se emplea un token de sesión en almacenamiento seguro local.
+- **Almacenamiento web (Local-first):** en tu navegador se guardan tus preferencias de interfaz (modo oscuro, idioma), metas y la caché de la aplicación para permitir su operativa fuera de línea (PWA).
 
-## Cuánto tiempo
+### Conservación de la información
 
-Mientras tengas cuenta. Los enlaces y códigos de acceso caducan a los 15 minutos, las solicitudes de acceso por QR a los 2 minutos, y unos y otros se eliminan después en las limpiezas automáticas; los registros anti-abuso se borran en 48 horas.
+Tus datos se conservan mientras mantengas activa tu cuenta. Los enlaces y códigos de inicio de sesión caducan a los 15 minutos, las autorizaciones QR a los 2 minutos (ambos eliminados en purgas automáticas programadas de la base de datos) y los registros técnicos anti-abuso se eliminan a las 48 horas.
 
-## Tus derechos
+### Tus derechos
 
-Puedes descargar tus comidas, peso y agua en CSV desde **Historial → Exportar**, y pedir acceso, rectificación, portabilidad o **eliminación de tu cuenta y todos tus datos** escribiendo a [soporte@trujillomingorance.com](mailto:soporte@trujillomingorance.com). También puedes reclamar ante la Agencia Española de Protección de Datos (aepd.es).
+De acuerdo con el RGPD y la LOPDGDD, tienes derecho de acceso, rectificación, supresión (derecho al olvido), limitación del tratamiento, portabilidad y oposición. Puedes descargar un volcado completo de tus registros desde la sección de configuración de la app o solicitar el borrado íntegro de tu cuenta dirigiéndote a [soporte@trujillomingorance.com](mailto:soporte@trujillomingorance.com). Igualmente, tienes derecho a presentar una reclamación ante la Agencia Española de Protección de Datos ([aepd.es](https://www.aepd.es)) si consideras que tus derechos han sido vulnerados.
 
-## Cambios
+### Modificaciones
 
-Si cambia algo importante (por ejemplo, el proveedor de IA), lo avisaremos en la app y actualizaremos esta página.
+Cualquier actualización relevante en esta política (incluyendo cambios de proveedores de IA o funcionalidades de tratamiento) será notificada mediante la aplicación antes de su entrada en vigor.

@@ -47,15 +47,24 @@ export const RUTAS_TURNSTILE = new Set([
   '/api/comidas/analizar',
   '/api/comidas/analizar-texto',
   '/api/alimentos/etiqueta',
+  '/api/alimentos/escanear',
 ])
 /** Rutas con Turnstile que además requieren sesión: se comprueba ANTES de gastar el token. */
-const RUTAS_SESION_PREVIA = new Set(['/api/usuarios/perfil', '/api/comidas/analizar', '/api/comidas/analizar-texto', '/api/alimentos/etiqueta'])
+const RUTAS_SESION_PREVIA = new Set(['/api/usuarios/perfil', '/api/comidas/analizar', '/api/comidas/analizar-texto', '/api/alimentos/etiqueta', '/api/alimentos/escanear'])
 /** Foto y texto de una comida: 20 / hora por usuario (el tope diario sigue en el handler). */
 const RUTAS_ANALISIS_COMIDA = new Set(['/api/comidas/analizar', '/api/comidas/analizar-texto'])
 /** La etiqueta no es el análisis de comidas: se queda el tope corto por IP. */
 const RUTA_ETIQUETA = '/api/alimentos/etiqueta'
 /** Login (enlace, código, magic link y canje de la app). QR de emparejamiento no entra: hace polling. */
-const RUTAS_LOGIN = new Set(['/api/auth/solicitar', '/api/auth/codigo', '/api/auth/verificar', '/api/auth/token'])
+const RUTAS_LOGIN = new Set([
+  '/api/auth/solicitar',
+  '/api/auth/codigo',
+  '/api/auth/verificar',
+  '/api/auth/token',
+  '/api/auth/google',
+  '/api/auth/callback/google',
+  '/api/auth/google/callback',
+])
 
 const MENSAJE_LOGIN = 'Demasiados intentos de acceso. Espera unos minutos antes de volver a intentarlo.'
 const MENSAJE_BLOQUEO = 'Demasiados intentos seguidos. El acceso queda bloqueado un rato.'
@@ -78,12 +87,35 @@ export function cabecerasCors(origin: string): Record<string, string> {
 
 const MAX_JSON_ANALIZAR = 2_300_000 // ~1.5 MB de imagen en base64 + margen
 
+function listaOrigenes(env: Env): Set<string> {
+  const lista = new Set<string>()
+  for (const o of (env.ALLOWED_ORIGINS ?? '').split(',')) {
+    const limpio = o.trim().replace(/\/$/, '')
+    if (limpio) lista.add(limpio)
+  }
+  if (env.APP_URL) {
+    try {
+      lista.add(new URL(env.APP_URL).origin)
+    } catch {
+      /* APP_URL mal formada: no abre CORS */
+    }
+  }
+  return lista
+}
+
 function origenesPermitidos(env: Env, url: URL): Set<string> {
-  const extra = (env.ALLOWED_ORIGINS ?? '')
-    .split(',')
-    .map((s) => s.trim().replace(/\/$/, ''))
-    .filter(Boolean)
-  return new Set([url.origin, ...extra])
+  return new Set([url.origin, ...listaOrigenes(env)])
+}
+
+/**
+ * CORS solo para el WebView y un origen cruzado listado en ALLOWED_ORIGINS o APP_URL.
+ * El propio sitio no recibe Access-Control-Allow-Origin: ya es same-origin.
+ * Nunca se refleja un origen arbitrario ni se usa *.
+ */
+export function origenCors(env: Env, origin: string | null, selfOrigin: string): string | null {
+  if (!origin || origin === selfOrigin) return null
+  if (ORIGENES_APP.has(origin)) return origin
+  return listaOrigenes(env).has(origin) ? origin : null
 }
 
 function comprobarOrigen(request: Request, env: Env, url: URL) {
@@ -112,7 +144,7 @@ async function extraerTokenTurnstile(request: Request, pathname: string): Promis
   const copia = request.clone()
   try {
     if (ct.startsWith('application/json')) {
-      const max = pathname === '/api/comidas/analizar' || pathname === '/api/alimentos/etiqueta' ? MAX_JSON_ANALIZAR : undefined
+      const max = pathname === '/api/comidas/analizar' || pathname === '/api/alimentos/etiqueta' || pathname === '/api/alimentos/escanear' ? MAX_JSON_ANALIZAR : undefined
       const body = (await leerJson(copia, max)) as Record<string, unknown> | null
       const t = body?.turnstileToken ?? body?.['cf-turnstile-response']
       return typeof t === 'string' ? t : null
@@ -193,10 +225,11 @@ export const onRequest: Handler = async (ctx) => {
 
   const origin = request.headers.get('Origin')
   const originApp = origin && ORIGENES_APP.has(origin) ? origin : null
+  const cors = origenCors(env, origin, url.origin)
 
-  // Preflight CORS: solo lo contestamos para la app; cualquier otro origen, 403.
+  // Preflight: WebView de la app o un origen de ALLOWED_ORIGINS / APP_URL. El resto, 403.
   if (request.method === 'OPTIONS') {
-    return conCabecerasSeguridad(new Response(null, { status: originApp ? 204 : 403 }), originApp)
+    return conCabecerasSeguridad(new Response(null, { status: cors ? 204 : 403 }), url.pathname, cors)
   }
 
   const datos = ctx.data as Datos
@@ -248,11 +281,11 @@ export const onRequest: Handler = async (ctx) => {
     const res = await ctx.next()
     const log = registrar(env, request, url.pathname, datos.ip, res.status, inicio, false)
     ctx.waitUntil(Promise.all([limpiezaOportunista(env), log ?? Promise.resolve()]))
-    return conCabecerasSeguridad(res, new URL(ctx.request.url).pathname, originApp, datos.cookiesRotacion)
+    return conCabecerasSeguridad(res, new URL(ctx.request.url).pathname, cors, datos.cookiesRotacion)
   } catch (e) {
     const res = manejarError(e)
     const log = registrar(env, request, url.pathname, datos.ip ?? '', res.status, inicio, esErrorSql(e))
     if (log) ctx.waitUntil(log)
-    return conCabecerasSeguridad(res, new URL(ctx.request.url).pathname, originApp, datos.cookiesRotacion)
+    return conCabecerasSeguridad(res, new URL(ctx.request.url).pathname, cors, datos.cookiesRotacion)
   }
 }

@@ -1,117 +1,305 @@
-﻿import { useState } from 'react'
-import { Droplet, Plus, Minus, Dumbbell, Flame, Check } from 'lucide-react'
-import { Card } from './Card.tsx'
+import { useEffect, useState } from 'react'
+import { Droplet, Dumbbell, Flame, Trash2 } from 'lucide-react'
+import { api } from '../lib/api.ts'
+import { caloriasSesion, metaAgua, type IntensidadSesion, type TipoSesion } from '../lib/actividad.ts'
+import { litros } from '../lib/formato.ts'
+import { alFallarSyncAgua, anotarAgua, leerAguaLocal, mlAguaAcotado } from '../lib/syncAgua.ts'
+import { useToast } from './ui/Toast.tsx'
 
-interface Props {
-  pesoKg?: number
+interface Sesion {
+  id: string
+  tipo: string
+  nombre: string | null
+  minutos: number | null
+  intensidad: string | null
+  calorias: number
 }
 
-export function PanelActividadHidratacion({ pesoKg = 85.5 }: Props) {
-  // Hidratación calculada (35 ml / kg base)
-  const metaAgua = Math.round(pesoKg * 35)
-  const [aguaActual, setAguaActual] = useState(1500)
+const CLAVE_SUMAR = 'nutrifit_sumar_quemadas'
 
-  // Entrenamientos
-  const [minutos, setMinutos] = useState(45)
-  const [tipo, setTipo] = useState<'fuerza' | 'cardio'>('fuerza')
-  const [guardado, setGuardado] = useState(false)
+export function PanelActividadHidratacion({
+  fecha,
+  inicial,
+  onCambio,
+  pesoKg,
+  onActividad,
+}: {
+  fecha: string
+  inicial: number
+  onCambio?: (ml: number) => void
+  pesoKg?: number | null
+  onActividad?: (kcal: number, sumarAlDia: boolean) => void
+}) {
+  const toast = useToast()
+  const [ml, setMl] = useState(() => leerAguaLocal(fecha) ?? inicial)
+  const [manual, setManual] = useState('')
+  const [pesoHistorico, setPesoHistorico] = useState<number | null>(null)
+  const [tipo, setTipo] = useState<TipoSesion>('fuerza')
+  const [intensidad, setIntensidad] = useState<IntensidadSesion>('media')
+  const [minutos, setMinutos] = useState(30)
+  const [sesiones, setSesiones] = useState<Sesion[]>([])
+  const [guardando, setGuardando] = useState(false)
+  const [sumar, setSumar] = useState(() => localStorage.getItem(CLAVE_SUMAR) === '1')
 
-  const factorMet = tipo === 'fuerza' ? 5 : 8
-  const caloriasQuemadas = Math.round((factorMet * 3.5 * pesoKg / 200) * minutos)
+  useEffect(() => alFallarSyncAgua((mensaje) => toast({ tipo: 'error', mensaje })), [toast])
+  useEffect(() => {
+    setMl(leerAguaLocal(fecha) ?? inicial)
+  }, [inicial, fecha])
 
-  const registrarSesion = () => {
-    setGuardado(true)
-    setTimeout(() => setGuardado(false), 2000)
+  useEffect(() => {
+    let vivo = true
+    api
+      .pesos(60)
+      .then((r) => {
+        if (!vivo) return
+        const ultimo = [...r.registros].sort((a, b) => (a.fecha < b.fecha ? 1 : -1))[0]
+        if (ultimo) setPesoHistorico(ultimo.peso)
+      })
+      .catch(() => {})
+    return () => {
+      vivo = false
+    }
+  }, [])
+
+  useEffect(() => {
+    let vivo = true
+    api
+      .entrenamientos(fecha)
+      .then((r) => {
+        if (vivo) setSesiones(r.entrenamientos)
+      })
+      .catch(() => {
+        if (vivo) setSesiones([])
+      })
+    return () => {
+      vivo = false
+    }
+  }, [fecha])
+
+  const quemadas = sesiones.reduce((a, s) => a + (s.calorias || 0), 0)
+  useEffect(() => {
+    onActividad?.(quemadas, sumar)
+  }, [quemadas, sumar, onActividad])
+
+  const peso = pesoHistorico ?? (typeof pesoKg === 'number' && pesoKg > 0 ? pesoKg : null)
+  const meta = metaAgua(peso, sesiones.map((s) => ({ tipo: s.tipo, minutos: s.minutos })))
+  const tope = meta.objetivo > 0 ? meta.objetivo : 1
+  const pct = Math.min(100, Math.round((ml / tope) * 100))
+  const kcalPrevistas = caloriasSesion(tipo, intensidad, minutos)
+
+  function sumarMl(delta: number) {
+    const nuevo = mlAguaAcotado(ml + delta)
+    if (nuevo === ml) return
+    setMl(nuevo)
+    anotarAgua(fecha, nuevo)
+    onCambio?.(nuevo)
+  }
+
+  function anadirManual() {
+    const n = Number(manual.replace(',', '.'))
+    if (!Number.isFinite(n) || n === 0) return
+    sumarMl(Math.round(n))
+    setManual('')
+  }
+
+  async function registrar() {
+    if (guardando || minutos < 1) return
+    setGuardando(true)
+    const nombre = tipo === 'fuerza' ? 'Fuerza' : 'Cardio'
+    try {
+      const res = await api.guardarEntrenamiento({
+        tipo,
+        nombre,
+        minutos,
+        duracion_min: minutos,
+        intensidad,
+        calorias: kcalPrevistas,
+        fecha,
+      })
+      setSesiones((prev) => [{ id: res.id, tipo, nombre, minutos, intensidad, calorias: kcalPrevistas }, ...prev])
+    } catch (e) {
+      toast({ tipo: 'error', mensaje: e instanceof Error ? e.message : 'No se pudo guardar la sesión.' })
+    } finally {
+      setGuardando(false)
+    }
+  }
+
+  async function quitar(id: string) {
+    const previa = sesiones
+    setSesiones((prev) => prev.filter((s) => s.id !== id))
+    try {
+      await api.borrarEntrenamiento(id)
+    } catch (e) {
+      setSesiones(previa)
+      toast({ tipo: 'error', mensaje: e instanceof Error ? e.message : 'No se pudo eliminar la sesión.' })
+    }
+  }
+
+  function cambiarSumar(valor: boolean) {
+    setSumar(valor)
+    localStorage.setItem(CLAVE_SUMAR, valor ? '1' : '0')
   }
 
   return (
     <div className="space-y-4">
-      {/* Tarjeta Hidratación Dinámica */}
-      <Card className="p-4 bg-zinc-900/70 border-zinc-800">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <Droplet className="w-5 h-5 text-sky-400" />
-            <span className="font-semibold text-white">Agua recomendada</span>
-          </div>
-          <span className="text-sm font-medium text-sky-400">
-            {(aguaActual / 1000).toFixed(2)} / {(metaAgua / 1000).toFixed(2)} L
-          </span>
+      <section id="agua" className="tarjeta scroll-mt-6 p-5" aria-labelledby="titulo-agua">
+        <div className="flex items-center justify-between gap-3">
+          <h2 id="titulo-agua" className="flex items-center gap-2 font-semibold">
+            <Droplet size={16} strokeWidth={2} className="text-water" /> Agua recomendada
+          </h2>
+          <p className="cifra text-sm text-neutral-500 dark:text-neutral-400">
+            <span className="font-medium text-graphite dark:text-neutral-100">{litros(ml)}</span>
+            {meta.objetivo > 0 ? ` / ${litros(meta.objetivo)}` : ''}
+          </p>
         </div>
-        <div className="w-full bg-zinc-800 h-2 rounded-full overflow-hidden mb-3">
-          <div 
-            className="bg-sky-400 h-full transition-all duration-300"
-            style={{ width: `${Math.min(100, (aguaActual / metaAgua) * 100)}%` }}
-          />
+        <div
+          className="mt-4 h-2 overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-800"
+          role="progressbar"
+          aria-label="Agua bebida"
+          aria-valuemin={0}
+          aria-valuemax={meta.objetivo || ml}
+          aria-valuenow={ml}
+        >
+          <div className="h-full rounded-full bg-water transition-[width] duration-500 ease-suave" style={{ width: `${pct}%` }} />
         </div>
-        <div className="flex gap-2">
-          <button 
+        <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
+          Base: {litros(meta.base)} + Ejercicio: +{litros(meta.ejercicio)} = Objetivo: {litros(meta.objetivo)}
+        </p>
+        {!peso && <p className="mt-1 text-xs text-neutral-500">Indica tu peso para calcular la base.</p>}
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          {[100, 250, 330, 500].map((d) => (
+            <button
+              key={d}
+              type="button"
+              onClick={() => sumarMl(d)}
+              className="h-9 rounded-xl border border-neutral-200 text-xs font-medium transition hover:border-water/50 hover:bg-water/5 active:scale-[0.98] dark:border-neutral-800"
+            >
+              +{d} ml
+            </button>
+          ))}
+          <button
             type="button"
-            onClick={() => setAguaActual(prev => Math.max(0, prev - 250))}
-            className="flex-1 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded text-xs flex items-center justify-center gap-1"
+            onClick={() => sumarMl(-250)}
+            disabled={ml <= 0}
+            className="h-9 rounded-xl border border-neutral-200 text-xs font-medium text-neutral-500 transition hover:bg-neutral-50 disabled:opacity-40 dark:border-neutral-800 dark:hover:bg-neutral-900"
           >
-            <Minus className="w-3.5 h-3.5" /> 250 ml
+            −250 ml
           </button>
-          <button 
-            type="button"
-            onClick={() => setAguaActual(prev => prev + 250)}
-            className="flex-1 py-1.5 bg-sky-500/20 hover:bg-sky-500/30 text-sky-400 border border-sky-500/30 rounded text-xs flex items-center justify-center gap-1 font-medium"
+          <form
+            className="col-span-2 flex h-9 overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-800"
+            onSubmit={(e) => {
+              e.preventDefault()
+              anadirManual()
+            }}
           >
-            <Plus className="w-3.5 h-3.5" /> 250 ml
-          </button>
+            <label className="sr-only" htmlFor="agua-manual">
+              Mililitros a sumar
+            </label>
+            <input
+              id="agua-manual"
+              inputMode="numeric"
+              value={manual}
+              onChange={(e) => setManual(e.target.value)}
+              placeholder="ml"
+              className="cifra w-full bg-transparent px-3 text-sm outline-none"
+            />
+            <button type="submit" className="px-3 text-xs font-medium text-mint-700 dark:text-mint-400">
+              Sumar
+            </button>
+          </form>
         </div>
-      </Card>
+      </section>
 
-      {/* Tarjeta Entrenamientos */}
-      <Card className="p-4 bg-zinc-900/70 border-zinc-800">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <Dumbbell className="w-5 h-5 text-emerald-400" />
-            <span className="font-semibold text-white">Actividad física</span>
-          </div>
-          <span className="text-xs px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 flex items-center gap-1">
-            <Flame className="w-3.5 h-3.5" /> ~{caloriasQuemadas} kcal
+      <section className="tarjeta p-5" aria-labelledby="titulo-actividad">
+        <div className="flex items-center justify-between gap-3">
+          <h2 id="titulo-actividad" className="flex items-center gap-2 font-semibold">
+            <Dumbbell size={16} strokeWidth={2} className="text-mint-600 dark:text-mint-400" /> Actividad física
+          </h2>
+          <span className="inline-flex items-center gap-1 rounded-full bg-mint-50 px-2 py-0.5 text-xs font-medium text-mint-800 dark:bg-mint-950 dark:text-mint-300">
+            <Flame size={12} /> ~{kcalPrevistas} kcal
           </span>
         </div>
-        <div className="flex gap-2 mb-3">
-          <button
-            type="button"
-            onClick={() => setTipo('fuerza')}
-            className={`flex-1 py-1.5 rounded text-xs font-medium transition ${
-              tipo === 'fuerza' ? 'bg-emerald-600 text-white' : 'bg-zinc-800 text-zinc-400'
-            }`}
-          >
-            Fuerza / Gym
-          </button>
-          <button
-            type="button"
-            onClick={() => setTipo('cardio')}
-            className={`flex-1 py-1.5 rounded text-xs font-medium transition ${
-              tipo === 'cardio' ? 'bg-emerald-600 text-white' : 'bg-zinc-800 text-zinc-400'
-            }`}
-          >
-            Cardio
-          </button>
+        <div className="mt-3 grid grid-cols-2 gap-2" role="group" aria-label="Tipo de sesión">
+          {(['fuerza', 'cardio'] as const).map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setTipo(t)}
+              aria-pressed={tipo === t}
+              className={`h-9 rounded-xl text-sm font-medium transition ${tipo === t ? 'bg-mint text-white' : 'border border-neutral-200 text-neutral-600 dark:border-neutral-800 dark:text-neutral-300'}`}
+            >
+              {t === 'fuerza' ? 'Fuerza' : 'Cardio'}
+            </button>
+          ))}
         </div>
-        <div className="flex items-center justify-between text-xs text-zinc-400 mb-3">
-          <span>Duración: {minutos} min</span>
+        <div className="mt-3 flex items-center gap-3">
+          <label className="min-w-0 flex-1 text-xs text-neutral-500 dark:text-neutral-400" htmlFor="duracion-sesion">
+            Duración: {minutos} min
+            <input
+              id="duracion-sesion"
+              type="range"
+              min={5}
+              max={180}
+              step={5}
+              value={Math.min(180, Math.max(5, minutos))}
+              onChange={(e) => setMinutos(Number(e.target.value))}
+              className="mt-1 w-full accent-mint"
+            />
+          </label>
+          <label className="sr-only" htmlFor="minutos-sesion">
+            Minutos
+          </label>
           <input
-            type="range"
-            min="15"
-            max="120"
-            step="5"
+            id="minutos-sesion"
+            type="number"
+            min={1}
+            max={600}
             value={minutos}
-            onChange={(e) => setMinutos(Number(e.target.value))}
-            className="w-32 accent-emerald-500"
+            onChange={(e) => setMinutos(Math.max(1, Math.min(600, Math.round(Number(e.target.value) || 1))))}
+            className="cifra h-10 w-16 rounded-xl border border-neutral-200 bg-card text-center text-sm dark:border-neutral-800 dark:bg-card-dark"
           />
+        </div>
+        <div className="mt-3 grid grid-cols-3 gap-2" role="group" aria-label="Intensidad">
+          {(['baja', 'media', 'alta'] as const).map((nivel) => (
+            <button
+              key={nivel}
+              type="button"
+              onClick={() => setIntensidad(nivel)}
+              aria-pressed={intensidad === nivel}
+              className={`h-9 rounded-xl text-xs font-medium transition ${intensidad === nivel ? 'bg-mint text-white' : 'border border-neutral-200 text-neutral-600 dark:border-neutral-800 dark:text-neutral-300'}`}
+            >
+              {nivel === 'baja' ? 'Baja' : nivel === 'media' ? 'Media' : 'Alta'}
+            </button>
+          ))}
         </div>
         <button
           type="button"
-          onClick={registrarSesion}
-          className="w-full py-2 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 rounded text-xs font-medium flex items-center justify-center gap-1.5 transition"
+          onClick={() => void registrar()}
+          disabled={guardando}
+          className="mt-3 h-10 w-full rounded-xl border border-mint/40 bg-mint/10 text-sm font-medium text-mint-800 transition hover:bg-mint/15 disabled:opacity-60 dark:text-mint-200"
         >
-          {guardado ? <><Check className="w-3.5 h-3.5" /> Registrado</> : 'Añadir sesión al balance'}
+          {guardando ? 'Guardando…' : 'Añadir sesión al balance'}
         </button>
-      </Card>
+        <label className="mt-3 flex items-center justify-between gap-3 text-sm">
+          <span>Sumar calorías quemadas a las restantes del día</span>
+          <input type="checkbox" checked={sumar} onChange={(e) => cambiarSumar(e.target.checked)} className="h-4 w-4 accent-mint" />
+        </label>
+        {sesiones.length > 0 && (
+          <ul className="mt-3 divide-y divide-neutral-100 border-t border-neutral-100 dark:divide-neutral-800 dark:border-neutral-800">
+            {sesiones.map((s) => (
+              <li key={s.id} className="flex items-center gap-2 py-2 text-sm">
+                <span className="min-w-0 flex-1 truncate">
+                  {s.nombre || s.tipo} · {s.minutos ?? 0} min
+                  {s.intensidad ? ` · ${s.intensidad}` : ''} · {s.calorias} kcal
+                </span>
+                <button type="button" onClick={() => void quitar(s.id)} aria-label={`Eliminar ${s.nombre || 'sesión'}`} className="rounded-full p-1.5 text-neutral-400 hover:bg-neutral-100 hover:text-protein dark:hover:bg-neutral-800">
+                  <Trash2 size={15} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   )
 }

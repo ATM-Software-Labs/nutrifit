@@ -9,8 +9,8 @@
     <!-- Recurso con hash inexistente (p. ej. de un despliegue anterior). Devolver un 404
          real —en vez del index.html del fallback SPA con 200— permite que el navegador,
          el Service Worker y public/boot.js detecten el fallo y recarguen la versión actual.
-         Solo afecta a /assets/*: las rutas de la SPA (/descargar, /privacidad…) siguen
-         recibiendo index.html porque no hay 404.html en la raíz. -->
+         Solo afecta a /assets/*: las rutas de la SPA (/historial, /profile,
+         /privacidad, /vincular, /descargar) reciben index.html por public/_redirects. -->
     <p>Recurso no encontrado.</p>
   </body>
 </html>

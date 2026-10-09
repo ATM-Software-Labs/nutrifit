@@ -10,6 +10,7 @@
  */
 import { z } from 'zod'
 import { NIVELES_ACTIVIDAD, OBJETIVOS, SEXOS } from '../../src/lib/macros.ts'
+import { sanitizarTextoLibre } from './sanitizar.ts'
 
 // ------------------------------------------------------------------ primitivas
 const SIN_HTML = /^[^<>\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]*$/
@@ -28,6 +29,21 @@ export const texto = (max: number, min = 1) =>
         .min(min, { error: min === 1 ? 'No puede estar vacío.' : `Mínimo ${min} caracteres.` })
         .max(max, { error: `Máximo ${max} caracteres.` })
         .regex(SIN_HTML, { error: 'Contiene caracteres no permitidos.' }),
+    )
+
+/**
+ * Bio, nombres y comentarios. Quita etiquetas y `<>` antes de guardar.
+ * La respuesta de la API vuelve a pasar por `escaparHtml`.
+ */
+export const textoLibre = (max: number, min = 0) =>
+  z
+    .string({ error: 'Debe ser un texto.' })
+    .transform((s) => sanitizarTextoLibre(s))
+    .pipe(
+      z
+        .string()
+        .min(min, { error: min === 0 ? 'Texto no válido.' : min === 1 ? 'No puede estar vacío.' : `Mínimo ${min} caracteres.` })
+        .max(max, { error: `Máximo ${max} caracteres.` }),
     )
 
 /** Número finito en [min, max]; acepta strings numéricos ("72.5"). */
@@ -148,8 +164,12 @@ export const comidaGuardarSchema = z
     grasas: numero(0, MAX.grasas, 'Las grasas'),
     ingredientes: z.array(ingredienteSchema).max(30, { error: 'Máximo 30 ingredientes.' }).optional(),
     imagen_url: z
-      .url({ protocol: /^https$/, error: 'La URL de imagen debe ser https.' })
-      .max(500)
+      .union([
+        z.string().regex(/^\/api\/archivos\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, {
+          error: 'La foto del plato no es válida.',
+        }),
+        z.url({ protocol: /^https$/, error: 'La URL de imagen debe ser https.' }).max(500),
+      ])
       .nullish(),
     fecha,
   })
@@ -183,6 +203,10 @@ const rango = (maxDias: number) =>
 
 export const historialQuery = rango(93)
 export const exportarQuery = z.intersection(rango(366), z.object({ tipo: z.enum(['comidas', 'peso', 'agua'], { error: 'Tipo de exportación inválido.' }) }))
+/** El cliente tiene que repetir esta palabra. Un POST vacío no borra la cuenta. */
+export const eliminarCuentaSchema = z.strictObject({
+  confirmar: z.literal('ELIMINAR', { error: 'Escribe ELIMINAR para confirmar el borrado.' }),
+})
 
 // ------------------------------------------------------------ análisis IA
 export const MIME_IMAGEN = ['image/jpeg', 'image/png', 'image/webp'] as const
@@ -196,6 +220,88 @@ export const analizarJsonSchema = z.object({
 export const analizarTextoSchema = z.object({
   descripcion: texto(300, 3),
   turnstileToken,
+})
+
+/** JSON de avatar, banner o foto. Rechaza usuario_id u otras claves coladas. */
+export const subirImagenSchema = z.strictObject({
+  imagen: z.string().min(16).max(2_600_000),
+  mime: z.enum(MIME_IMAGEN).optional(),
+})
+
+// --------------------------------------------------------------- perfil social
+export const RE_USERNAME = /^[a-zA-Z0-9_]{3,20}$/
+export const usernameSchema = z
+  .string({ error: 'El nombre de usuario es obligatorio.' })
+  .trim()
+  .regex(RE_USERNAME, { error: 'El usuario debe tener de 3 a 20 caracteres: letras, números o _.' })
+
+const enteroOBool = z.union([z.literal(0), z.literal(1), z.boolean()]).transform((v) => (v === true || v === 1 ? 1 : 0))
+
+export const socialSchema = z
+  .strictObject({
+    username: z.union([z.null(), usernameSchema]).optional(),
+    bio: z.union([z.null(), textoLibre(160, 0)]).optional(),
+    es_publico: enteroOBool.optional(),
+    meta_agua_base_ml: entero(250, 10000, 'La meta de agua').optional(),
+  })
+  .refine((c) => Object.keys(c).length > 0, { error: 'No hay nada que guardar.' })
+
+export const usernameQuery = z.strictObject({ username: usernameSchema })
+
+// ------------------------------------------------------------ entrenamientos
+/** 'deportes' y 'movilidad' se mantienen: el registro de ejercicios ya los envía. */
+export const TIPOS_ENTRENO = ['fuerza', 'cardio', 'deportes', 'movilidad'] as const
+export const INTENSIDADES = ['baja', 'media', 'alta'] as const
+
+export const entrenamientoSchema = z
+  .strictObject({
+    tipo: z.enum(TIPOS_ENTRENO, { error: 'Tipo de entrenamiento inválido.' }),
+    nombre: textoLibre(80, 1),
+    minutos: entero(1, 600, 'La duración').optional(),
+    duracion_min: entero(1, 600, 'La duración').optional(),
+    intensidad: z.union([z.null(), z.enum(INTENSIDADES)]).optional(),
+    calorias: entero(0, 5000, 'Las calorías'),
+    origen: z.enum(['manual', 'salud', 'app']).optional(),
+    fecha: fecha.optional(),
+    comentario: textoLibre(200, 0).optional(),
+  })
+  .refine((e) => e.minutos != null || e.duracion_min != null, { error: 'Indica la duración.', path: ['duracion_min'] })
+  .refine((e) => e.minutos == null || e.duracion_min == null || e.minutos === e.duracion_min, {
+    error: 'La duración no cuadra.',
+    path: ['duracion_min'],
+  })
+
+export const entrenamientosQuery = z.object({
+  fecha: fecha.optional(),
+  recientes: z.preprocess((v) => (v === undefined || v === '' ? undefined : Number(v)), z.number().int().min(1).max(30).optional()),
+})
+
+// ------------------------------------------------------- comidas frecuentes
+const itemFrecuenteSchema = z.strictObject({
+  nombre: textoLibre(80, 1),
+  gramos: numero(0, MAX.gramos, 'Los gramos').optional(),
+  calorias: numero(0, MAX.calorias, 'Las calorías').optional(),
+  proteinas: numero(0, MAX.proteinas, 'Las proteínas').optional(),
+  carbohidratos: numero(0, MAX.carbohidratos, 'Los carbohidratos').optional(),
+  grasas: numero(0, MAX.grasas, 'Las grasas').optional(),
+  comentario: textoLibre(200, 0).optional(),
+})
+
+export const comidaFrecuenteSchema = z.strictObject({
+  tipo_comida: z.enum(TIPOS_COMIDA, { error: 'Tipo de comida inválido.' }),
+  nombre: textoLibre(80, 1),
+  items: z.array(itemFrecuenteSchema).max(30, { error: 'Máximo 30 ingredientes.' }).optional(),
+  comentario: textoLibre(280, 0).optional(),
+})
+
+// ----------------------------------------------------------------- amistades
+export const amistadSolicitudSchema = z.strictObject({ username: usernameSchema })
+export const amistadEstadoSchema = z.strictObject({
+  estado: z.enum(['aceptada', 'rechazada'], { error: 'Estado inválido.' }),
+})
+
+export const dispositivoSchema = z.strictObject({
+  sesionId: z.string().trim().regex(/^[A-Za-z0-9_-]{8,80}$/, { error: 'Sesión inválida.' }),
 })
 
 // ------------------------------------------------------- Open Food Facts

@@ -2,13 +2,14 @@
  * Enrutado mínimo con History API (sin dependencias). Rutas de la app:
  *   /            Hoy (panel diario)
  *   /historial   Historial semanal/mensual
+ *   /profile     Perfil, racha y amigos
  *   /vincular#id Aprobar desde el móvil el acceso de un ordenador (QR)
  * /descargar y /privacidad son páginas sueltas que se cargan aparte.
  */
 import { useEffect, useState } from 'react'
 
-export type RutaApp = '/' | '/historial' | '/vincular'
-const RUTAS: RutaApp[] = ['/', '/historial', '/vincular']
+export type RutaApp = '/' | '/historial' | '/profile' | '/vincular'
+const RUTAS: RutaApp[] = ['/', '/historial', '/profile', '/vincular']
 
 export const rutaActual = () => location.pathname.replace(/\/+$/, '') || '/'
 

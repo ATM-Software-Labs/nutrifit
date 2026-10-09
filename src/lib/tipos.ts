@@ -24,6 +24,12 @@ export interface Usuario {
   meta_proteinas: number | null
   meta_carbs: number | null
   meta_grasas: number | null
+  username?: string | null
+  bio?: string | null
+  avatar_url?: string | null
+  banner_url?: string | null
+  es_publico?: number
+  meta_agua_base_ml?: number
   creado_en: string
 }
 
@@ -79,6 +85,15 @@ export interface Resumen {
   num_comidas: number
 }
 
+export interface AlternativaPlato {
+  nombre: string
+  gramos: number
+  calorias: number
+  proteinas: number
+  carbohidratos: number
+  grasas: number
+}
+
 export interface ResultadoAnalisis {
   /** Texto original del usuario. Vacío en un análisis por foto. */
   input_query?: string
@@ -90,6 +105,8 @@ export interface ResultadoAnalisis {
   proteinas: number
   carbohidratos: number
   grasas: number
+  /** Lecturas alternativas de la foto, como máximo dos. */
+  alternativas?: AlternativaPlato[]
 }
 
 export interface NuevaComida {
@@ -100,6 +117,7 @@ export interface NuevaComida {
   carbohidratos: number
   grasas: number
   ingredientes?: Ingrediente[]
+  imagen_url?: string | null
   fecha: string
 }
 

@@ -1,7 +1,9 @@
 /**
  * IA de NutriFit (foto del plato, foto de la etiqueta y texto).
- *   Foto del plato (analizarImagen). Circuit breaker por gateway y 5 s estrictos;
- *   un fallo pasa al siguiente:
+ *   Foto del plato (analizarImagen). El modelo principal arranca al momento.
+ *   Si a los 2 s no hay respuesta, el respaldo de Workers AI sale en paralelo
+ *   y gana el primero que devuelva un plato válido. Cada gateway sigue cortado
+ *   a 5 s. Un fallo pasa al siguiente:
  *          1) Gemini Flash          (GEMINI_API_KEY)
  *          2) Groq Vision           (llama-3.2-11b-vision-preview y, si cabe
  *                                    en el plazo, llama-3.2-90b-vision-preview)
@@ -23,6 +25,8 @@ export const GEMINI_MODELO_POR_DEFECTO = 'gemini-3.8-flash'
 const TIMEOUT_GEMINI_MS = 25_000
 /** Cada gateway de la foto del plato. Texto y etiqueta siguen con TIMEOUT_GEMINI_MS. */
 export const TIMEOUT_GATEWAY_FOTO_MS = 5_000
+/** A los 2 s sin respuesta del principal se lanza el respaldo, sin cancelar al primero. */
+export const CARRERA_VISION_MS = 2_000
 
 /** Modelos de visión de Workers AI, en orden. El último exige aceptar la licencia de Meta. */
 export const MODELOS_VISION_WORKERS_AI = [
@@ -66,8 +70,10 @@ export const REGLA_NOMBRE_OFICIAL =
 
 /** Foto del plato. Un plato combinado se desglosa; una foto ilegible no se inventa. */
 export const PROMPT_SISTEMA = `Identify every food in the photo, estimate grams, and calculate carbs/protein/fat/calories. Output ONLY valid JSON, with no Markdown and no code fences.
+Eres un nutricionista experto. Analiza forma, textura y horneado. No clasifiques masas de panadería, hojaldre o bollería curva (como un cruasán casero, brioche o masa hojaldrada) como salchichas ni embutidos. Prioriza repostería artesanal.
 ${REGLA_NOMBRE_OFICIAL}
 Si el plato es compuesto o casero (un tupper, un bol o una ensalada), desglósalo obligatoriamente en sus ingredientes principales, uno por objeto. No lo resumas en un solo alimento. Ejemplo: "Arroz blanco hervido", "Pechuga de pollo a la plancha", "Aceite de oliva virgen extra". El aceite o la salsa, si se ven o son parte del plato, van aparte.
+Incluye hasta 2 alternativas probables en "alternatives", cada una con display_name, grams, calories, protein, carbs y fat, para elegirlas con un toque. Si no hay duda razonable, devuelve "alternatives":[].
 Para cada ingrediente: input_query (lo que se ve, sin corregir), display_name (nombre oficial, capitalizado, con el estado de preparación), grams (gramos visuales probables), min_grams y max_grams (rango de confianza, min_grams ≤ grams ≤ max_grams) y calories, protein, carbs, fat de ESE ingrediente.
 {"is_food":true,"items":[{"input_query":"string","display_name":"string","grams":number,"min_grams":number,"max_grams":number,"calories":number,"protein":number,"carbs":number,"fat":number}],"total":{"calories":number,"protein":number,"carbs":number,"fat":number}}
 Si la foto está desenfocada, no es comida o no se distingue con claridad, no inventes datos. Devuelve exactamente {"is_food":false,"error_message":"No se distingue el alimento con claridad. Intenta enfocar más cerca o con mejor luz."}`
@@ -157,6 +163,21 @@ export const ESQUEMA_FOTO = {
       properties: { calories: NUM, protein: NUM, carbs: NUM, fat: NUM },
       required: ['calories', 'protein', 'carbs', 'fat'],
     },
+    alternatives: {
+      type: 'ARRAY',
+      items: {
+        type: 'OBJECT',
+        properties: {
+          display_name: { type: 'STRING' },
+          grams: NUM,
+          calories: NUM,
+          protein: NUM,
+          carbs: NUM,
+          fat: NUM,
+        },
+        required: ['display_name', 'grams', 'calories', 'protein', 'carbs', 'fat'],
+      },
+    },
   },
   required: ['is_food', 'items', 'total'],
 }
@@ -183,9 +204,9 @@ interface TareaVision<T> {
   maxTokens?: number
 }
 
-async function visionGemini<T>(env: Env, img: Imagen, t: TareaVision<T>, timeoutMs = TIMEOUT_GEMINI_MS): Promise<T> {
+async function visionGemini<T>(env: Env, img: Imagen, t: TareaVision<T>, timeoutMs = TIMEOUT_GEMINI_MS, modeloForzado?: string): Promise<T> {
   if (!env.GEMINI_API_KEY) throw new ErrorIA('GEMINI_API_KEY no configurada')
-  const modelo = (env.GEMINI_MODEL || GEMINI_MODELO_POR_DEFECTO).replace(/[^a-z0-9.\-]/gi, '')
+  const modelo = (modeloForzado || env.GEMINI_MODEL || GEMINI_MODELO_POR_DEFECTO).replace(/[^a-z0-9.\-]/gi, '')
   const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY },
@@ -302,9 +323,9 @@ async function visionOpenAI<T>(
  * Groq, un solo plazo de 5 s para los dos modelos. El 90B se prueba solo si el
  * 11B responde un error antes de que venza el plazo (un timeout no deja tiempo).
  */
-async function visionGroq<T>(env: Env, img: Imagen, t: TareaVision<T>): Promise<{ modelo: string; resultado: T }> {
+async function visionGroq<T>(env: Env, img: Imagen, t: TareaVision<T>, timeoutMs = TIMEOUT_GATEWAY_FOTO_MS): Promise<{ modelo: string; resultado: T }> {
   if (!env.GROQ_API_KEY) throw new ErrorIA('GROQ_API_KEY no configurada')
-  const signal = AbortSignal.timeout(TIMEOUT_GATEWAY_FOTO_MS)
+  const signal = AbortSignal.timeout(timeoutMs)
   let ultimo: unknown
   for (const modelo of MODELOS_GROQ_VISION) {
     if (signal.aborted) break
@@ -321,12 +342,18 @@ async function visionGroq<T>(env: Env, img: Imagen, t: TareaVision<T>): Promise<
   throw ultimo instanceof Error ? ultimo : new ErrorIA('Groq falló')
 }
 
-async function visionTrujillo<T>(env: Env, img: Imagen, t: TareaVision<T>, modelo: string): Promise<T> {
+function urlTrujillo(env: Env): string {
+  const u = env.TRUJILLO_AI_URL?.trim()
+  if (u && /^https:\/\/[A-Za-z0-9._~:/?#\[\]@!$&'()*+,;=%-]+$/.test(u)) return u
+  return URL_TRUJILLO_VISION
+}
+
+async function visionTrujillo<T>(env: Env, img: Imagen, t: TareaVision<T>, modelo: string, timeoutMs = TIMEOUT_GATEWAY_FOTO_MS): Promise<T> {
   return visionOpenAI(img, t, {
-    url: URL_TRUJILLO_VISION,
+    url: urlTrujillo(env),
     modelo,
     apiKey: env.TRUJILLO_API_KEY,
-    signal: AbortSignal.timeout(TIMEOUT_GATEWAY_FOTO_MS),
+    signal: AbortSignal.timeout(timeoutMs),
     etiqueta: 'Trujillo',
   })
 }
@@ -348,9 +375,90 @@ function conTimeout<T>(trabajo: Promise<T>, ms: number, etiqueta: string): Promi
   })
 }
 
+const esCierre = (e: unknown) => e instanceof FotoIlegible || esDefinitivo(e)
+
+/**
+ * Lanza el modelo principal. Si pasan `ms` sin respuesta, arranca el secundario
+ * en paralelo. El primero que resuelve gana. Un rechazo definitivo del principal
+ * no llama al secundario.
+ */
+export function carreraVision<T>(primario: () => Promise<T>, secundario: () => Promise<T>, ms = CARRERA_VISION_MS): Promise<T> {
+  return new Promise((resolve, reject) => {
+    let asentado = false
+    let pendientes = 1
+    let secundarioLanzado = false
+    let ultimoError: unknown
+    let timer: ReturnType<typeof setTimeout> | undefined
+
+    const ganar = (v: T) => {
+      if (asentado) return
+      asentado = true
+      if (timer) clearTimeout(timer)
+      resolve(v)
+    }
+    const cerrar = (e: unknown) => {
+      if (asentado) return
+      asentado = true
+      if (timer) clearTimeout(timer)
+      reject(e)
+    }
+    const fallar = (e: unknown) => {
+      if (asentado) return
+      ultimoError = e
+      if (esCierre(e)) {
+        cerrar(e)
+        return
+      }
+      pendientes -= 1
+      if (pendientes <= 0) cerrar(ultimoError)
+    }
+    const lanzarSecundario = () => {
+      if (secundarioLanzado || asentado) return
+      secundarioLanzado = true
+      if (timer) clearTimeout(timer)
+      timer = undefined
+      pendientes += 1
+      secundario().then(ganar, fallar)
+    }
+
+    timer = setTimeout(lanzarSecundario, ms)
+    primario().then(ganar, (e) => {
+      if (!esCierre(e)) lanzarSecundario()
+      fallar(e)
+    })
+  })
+}
+
 function modeloTrujillo(env: Env): string {
   const limpio = (env.TRUJILLO_MODEL || MODELO_TRUJILLO_VISION).replace(/[^\w.\-:/]/g, '')
   return limpio || MODELO_TRUJILLO_VISION
+}
+
+/** El escáner nuevo usa Gemini 2.5 Flash salvo que GEMINI_MODEL diga otra cosa. */
+export const MODELO_ESCANER_GEMINI = 'gemini-2.5-flash'
+export const TIMEOUT_ESCANER_MS = 2_000
+export type PasoEscaneo = 'gemini' | 'workers-ai' | 'groq' | 'trujillo'
+
+function tareaPlato(): TareaVision<ResultadoAnalisis> {
+  return {
+    sistema: PROMPT_SISTEMA,
+    usuario: PROMPT_USUARIO,
+    parsear: parsearRespuestaModelo,
+    esquemaGemini: ESQUEMA_FOTO,
+    maxTokens: MAX_TOKENS_FOTO,
+  }
+}
+
+/** Un solo paso, cortado con AbortSignal (Workers AI solo abandona la espera). */
+export async function pasoEscaneo(env: Env, img: Imagen, paso: PasoEscaneo, timeoutMs: number): Promise<ResultadoAnalisis> {
+  const t = tareaPlato()
+  if (paso === 'gemini') {
+    const modelo = (env.GEMINI_MODEL || MODELO_ESCANER_GEMINI).replace(/[^a-z0-9.\-]/gi, '')
+    return visionGemini(env, img, t, timeoutMs, modelo)
+  }
+  if (paso === 'workers-ai') return conTimeout(visionWorkersAI(env, MODELO_VISION_RESPALDO, img, t), timeoutMs, 'Workers AI')
+  if (paso === 'groq') return (await visionGroq(env, img, t, timeoutMs)).resultado
+  return visionTrujillo(env, img, t, modeloTrujillo(env), timeoutMs)
 }
 
 /**
@@ -389,11 +497,13 @@ export async function analizarImagen(env: Env, img: Imagen): Promise<{ proveedor
       }),
     },
   ]
-  for (let i = 0; i < pasos.length; i++) {
-    const paso = pasos[i]!
+  const ejecutados = new Set<Proveedor>()
+
+  const intentar = async (paso: (typeof pasos)[number]) => {
+    ejecutados.add(paso.proveedor)
     if (!circuitosVision.permite(paso.proveedor)) {
       console.warn(`[ia] circuito abierto (${paso.etiqueta}); se omite`)
-      continue
+      throw new ErrorIA(`${paso.etiqueta}: circuito abierto`)
     }
     try {
       const { modelo, resultado } = await paso.run()
@@ -402,15 +512,31 @@ export async function analizarImagen(env: Env, img: Imagen): Promise<{ proveedor
     } catch (e) {
       if (e instanceof FotoIlegible || esDefinitivo(e)) {
         circuitosVision.exito(paso.proveedor)
-        throw errorDefinitivo(e)
+        throw e
       }
-      // JSON inválido: el gateway respondió. Clave ausente: no llegó a llamarse.
       if (e instanceof ErrorParseo) circuitosVision.exito(paso.proveedor)
       else if (cuentaFalloGateway(e)) circuitosVision.fallo(paso.proveedor)
       else circuitosVision.liberarSonda(paso.proveedor)
       const motivo = e instanceof ErrorParseo ? `parseo: ${e.message}` : e instanceof Error ? e.message : String(e)
-      const siguiente = pasos[i + 1]?.etiqueta
-      console.warn(`[ia] ${paso.etiqueta} falló (${motivo.slice(0, 200)})${siguiente ? ` → ${siguiente}` : ''}`)
+      console.warn(`[ia] ${paso.etiqueta} falló (${motivo.slice(0, 200)})`)
+      throw e
+    }
+  }
+
+  const principal = pasos[0]!
+  const respaldo = pasos.find((p) => p.proveedor === 'workers-ai')!
+  try {
+    return await carreraVision(() => intentar(principal), () => intentar(respaldo))
+  } catch (e) {
+    if (e instanceof FotoIlegible || esDefinitivo(e)) throw errorDefinitivo(e)
+  }
+
+  for (const paso of pasos) {
+    if (ejecutados.has(paso.proveedor)) continue
+    try {
+      return await intentar(paso)
+    } catch (e) {
+      if (e instanceof FotoIlegible || esDefinitivo(e)) throw errorDefinitivo(e)
     }
   }
   throw new ErrorIA('No se pudo analizar la imagen con ningún proveedor')

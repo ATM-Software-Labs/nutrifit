@@ -1,11 +1,12 @@
 ﻿import { useState, useEffect } from 'react'
+import { api } from '../lib/api'
 
 interface Dispositivo {
   id: string
-  dispositivo?: string
-  navegador?: string
-  ip?: string
-  ultimo_acceso: number
+  dispositivo?: string | null
+  navegador?: string | null
+  ip?: string | null
+  ultimo_acceso?: number | null
   es_actual?: boolean
 }
 
@@ -15,13 +16,10 @@ export function SeccionDispositivos() {
 
   const cargar = async () => {
     try {
-      const res = await fetch('/api/dispositivos', { credentials: 'include' })
-      if (res.ok) {
-        const data = await res.json()
-        setDispositivos(data.dispositivos || [])
-      }
-    } catch (e) {
-      console.error(e)
+      const data = await api.dispositivos()
+      setDispositivos(data.dispositivos || [])
+    } catch {
+      setDispositivos([])
     } finally {
       setCargando(false)
     }
@@ -31,16 +29,10 @@ export function SeccionDispositivos() {
 
   const revocar = async (id: string) => {
     try {
-      const res = await fetch('/api/dispositivos', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sesionId: id })
-      })
-      if (res.ok) {
-        setDispositivos((prev) => prev.filter((d) => d.id !== id))
-      }
-    } catch (e) {
-      console.error(e)
+      await api.cerrarDispositivo(id)
+      setDispositivos((prev) => prev.filter((d) => d.id !== id))
+    } catch {
+      /* 404 si la sesión no es de esta cuenta */
     }
   }
 

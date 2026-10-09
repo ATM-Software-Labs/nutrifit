@@ -10,6 +10,7 @@ import { URL_REPO } from '../lib/config.ts'
 import { guardarTokenApp } from '../lib/tokenApp.ts'
 import { ESCRITORIO, useMedia } from '../hooks/useMedia.ts'
 import { BloqueDescarga } from './BloqueDescarga.tsx'
+import { useIdioma } from '../hooks/useIdioma.ts'
 import type { Usuario } from '../lib/tipos.ts'
 
 // El QR solo se descarga en escritorio (chunk aparte con el codificador).
@@ -49,6 +50,7 @@ export default function Login({ onEntrar, vinculando = false }: { onEntrar: (u: 
   const [aviso] = useState(leerAvisoUrl)
   const [espera, setEspera] = useState(0)
   const { contenedorRef, obtenerToken } = useTurnstile('login')
+  const { t } = useIdioma()
 
   useEffect(() => {
     if (espera <= 0) return
@@ -159,6 +161,12 @@ export default function Login({ onEntrar, vinculando = false }: { onEntrar: (u: 
                 {!cargando && <ArrowRight size={18} strokeWidth={2} />}
               </Button>
             </form>
+            <a
+              href="/api/auth/google"
+              className="mt-3 flex h-12 w-full items-center justify-center rounded-2xl border border-neutral-200 text-[15px] font-medium transition hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-neutral-900"
+            >
+              {t('login.google')}
+            </a>
             {!vinculando && <BloqueDescarga className="mt-8" />}
           </div>
         ) : (

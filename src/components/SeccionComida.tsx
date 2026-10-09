@@ -1,13 +1,38 @@
 import { useId, useState } from 'react'
-import { ChevronDown, Plus, Trash2 } from 'lucide-react'
+import { ChevronDown, Copy, Plus, Trash2 } from 'lucide-react'
 import { cx } from './ui/cx.ts'
 import { entero } from '../lib/formato.ts'
+import { emojiMacro } from '../lib/miniaturaComida.ts'
 import { NOMBRE_TIPO, type Comida, type TipoComida } from '../lib/tipos.ts'
 
-function FilaComida({ c, onBorrar }: { c: Comida; onBorrar: (c: Comida) => void }) {
+function Miniatura({ c }: { c: Comida }) {
+  const [rota, setRota] = useState(false)
+  if (c.imagen_url && !rota) {
+    return <img src={c.imagen_url} alt="" width={36} height={36} className="h-9 w-9 shrink-0 rounded-lg object-cover" onError={() => setRota(true)} />
+  }
+  return (
+    <span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-neutral-100 text-lg dark:bg-neutral-800">
+      {emojiMacro(c)}
+    </span>
+  )
+}
+
+function FilaComida({
+  c,
+  onBorrar,
+  onRepetir,
+  onFrecuente,
+}: {
+  c: Comida
+  onBorrar: (c: Comida) => void
+  onRepetir: (c: Comida) => void
+  onFrecuente: (c: Comida) => void
+}) {
   const [confirmar, setConfirmar] = useState(false)
+  const [menu, setMenu] = useState(false)
   return (
     <li className={cx('flex items-center gap-3 py-3', c.pendiente && 'opacity-60')}>
+      <Miniatura c={c} />
       <div className="min-w-0 flex-1">
         <p className="truncate text-[15px] font-medium">{c.descripcion}</p>
         <p className="cifra mt-0.5 flex gap-2.5 text-xs text-neutral-500 dark:text-neutral-400">
@@ -30,6 +55,45 @@ function FilaComida({ c, onBorrar }: { c: Comida; onBorrar: (c: Comida) => void 
           <span className="cifra text-sm font-medium">
             {entero(c.calorias)} <span className="font-normal text-neutral-500 dark:text-neutral-400">kcal</span>
           </span>
+          <div className="relative">
+            <button
+              type="button"
+              disabled={c.pendiente}
+              aria-haspopup="menu"
+              aria-expanded={menu}
+              aria-label={`Duplicar ${c.descripcion}`}
+              onClick={() => setMenu((v) => !v)}
+              className="rounded-full p-1.5 text-neutral-300 transition hover:bg-neutral-100 hover:text-graphite dark:text-neutral-600 dark:hover:bg-neutral-800 dark:hover:text-white"
+            >
+              <Copy size={16} strokeWidth={1.75} />
+            </button>
+            {menu && (
+              <div role="menu" className="absolute right-0 top-9 z-20 w-56 rounded-xl border border-neutral-200 bg-card p-1 shadow-lift dark:border-neutral-800 dark:bg-card-dark">
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                  onClick={() => {
+                    setMenu(false)
+                    onRepetir(c)
+                  }}
+                >
+                  Repetir hoy
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                  onClick={() => {
+                    setMenu(false)
+                    onFrecuente(c)
+                  }}
+                >
+                  Guardar como comida frecuente
+                </button>
+              </div>
+            )}
+          </div>
           <button
             type="button"
             disabled={c.pendiente}
@@ -51,11 +115,15 @@ export function SeccionComida({
   comidas,
   onAnadir,
   onBorrar,
+  onRepetir,
+  onFrecuente,
 }: {
   tipo: TipoComida
   comidas: Comida[]
   onAnadir: (t: TipoComida) => void
   onBorrar: (c: Comida) => void
+  onRepetir: (c: Comida) => void
+  onFrecuente: (c: Comida) => void
 }) {
   const [abierta, setAbierta] = useState(true)
   const id = useId()
@@ -88,7 +156,7 @@ export function SeccionComida({
           {comidas.length ? (
             <ul className="divide-y divide-neutral-100 border-t border-neutral-100 dark:divide-neutral-800 dark:border-neutral-800">
               {comidas.map((c) => (
-                <FilaComida key={c.id} c={c} onBorrar={onBorrar} />
+                <FilaComida key={c.id} c={c} onBorrar={onBorrar} onRepetir={onRepetir} onFrecuente={onFrecuente} />
               ))}
             </ul>
           ) : (

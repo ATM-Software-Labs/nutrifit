@@ -1,4 +1,8 @@
 ﻿import type { PagesFunction } from '@cloudflare/workers-types'
+import { exigirDesdeContexto } from '../../utils/identidad.ts'
+import { error, HttpError } from '../../utils/response.ts'
+import { sanitizarTextoLibre } from '../../utils/sanitizar.ts'
+import { validarImagenSubida } from '../../utils/archivos.ts'
 
 interface Env {
   AI_API_KEY?: string
@@ -8,13 +12,23 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const { request, env } = context
 
   try {
-    const { texto, imagenBase64 } = await request.json() as {
-      texto?: string
-      imagenBase64?: string
-    }
+    await exigirDesdeContexto(env, context.data)
+    const cuerpo = (await request.json()) as { texto?: unknown; imagenBase64?: unknown }
+    const texto = typeof cuerpo.texto === 'string' ? sanitizarTextoLibre(cuerpo.texto).slice(0, 300) : ''
+    const imagenBase64 = typeof cuerpo.imagenBase64 === 'string' ? cuerpo.imagenBase64 : ''
 
     if (!texto && !imagenBase64) {
       return Response.json({ error: 'Falta texto o imagen' }, { status: 400 })
+    }
+    if (imagenBase64) {
+      if (imagenBase64.length > 2_600_000) return error(413, 'La imagen supera el máximo de 2 MB.')
+      const declarado = /^data:(image\/[a-z0-9.+-]+);base64,/i.exec(imagenBase64)?.[1] ?? null
+      const limpio = imagenBase64.replace(/^data:image\/[a-z0-9.+-]+;base64,/i, '').replace(/\s+/g, '')
+      if (!/^[A-Za-z0-9+/]*={0,2}$/.test(limpio)) return error(400, 'La imagen no es base64 válido.')
+      const bin = atob(limpio)
+      const bytes = new Uint8Array(bin.length)
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+      validarImagenSubida(bytes, declarado, true)
     }
 
     const systemPrompt = `Eres un nutricionista instantaneo. Devuelve UNICAMENTE un JSON sin explicacion ni markdown:
@@ -73,11 +87,14 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       throw new Error('Fallo en proveedor de inferencia')
     }
 
-    const data = await aiRes.json()
-    const parsed = JSON.parse(data.choices[0].message.content)
+    const data = (await aiRes.json()) as { choices?: { message?: { content?: string } }[] }
+    const content = data.choices?.[0]?.message?.content
+    if (!content) throw new Error('Fallo en proveedor de inferencia')
+    const parsed = JSON.parse(content)
 
     return Response.json(parsed)
-  } catch (err: any) {
-    return Response.json({ error: err.message }, { status: 500 })
+  } catch (e) {
+    if (e instanceof HttpError) return error(e.status, e.message, e.extra)
+    return error(500, 'No se ha podido estimar el plato.')
   }
 }

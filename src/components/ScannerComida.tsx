@@ -1,5 +1,5 @@
 /**
- * Análisis de una foto: lado mayor 768 px, WebP 0.70 (JPEG si no hay WebP),
+ * Análisis de una foto: lado mayor 800 px, WebP 0.75 (JPEG si no hay WebP),
  * como mucho 100 KB y sin EXIF → /api/comidas/analizar con Turnstile.
  * Errores: 429 (límite diario) y 503 (IA no disponible) → manual.
  */
@@ -10,6 +10,8 @@ import { Button } from './ui/Button.tsx'
 import { useTurnstile } from '../hooks/useTurnstile.ts'
 import { api, ApiError } from '../lib/api.ts'
 import { blobDesdeDataUrl, compressFoodImage, ErrorImagen } from '../lib/imagen.ts'
+import { resultadoDesdePlato } from '../lib/platoEscaneo.ts'
+import { useIdioma } from '../hooks/useIdioma.ts'
 import type { ResultadoAnalisis } from '../lib/tipos.ts'
 
 type Estado = { fase: 'procesando' } | { fase: 'error'; mensaje: string; manual: boolean; reintentar: boolean }
@@ -25,6 +27,7 @@ export default function ScannerComida({
   onResultado: (r: ResultadoAnalisis, imagenUrl: string) => void
   onManual: (imagenUrl: string | null) => void
 }) {
+  const { t } = useIdioma()
   const [estado, setEstado] = useState<Estado>({ fase: 'procesando' })
   const [miniatura, setMiniatura] = useState<string | null>(null)
   const [intento, setIntento] = useState(0)
@@ -40,10 +43,10 @@ export default function ScannerComida({
         if (cancelado) return
         setMiniatura(dataUrl)
         const token = await obtenerToken()
-        const r = await api.analizar(blobDesdeDataUrl(dataUrl), token)
+        const plato = await api.escanear(blobDesdeDataUrl(dataUrl), token)
         if (cancelado) return
         entregado.current = true
-        onResultado(r.resultado, dataUrl)
+        onResultado(resultadoDesdePlato(plato), dataUrl)
       } catch (e) {
         if (cancelado) return
         if (e instanceof ErrorImagen) setEstado({ fase: 'error', mensaje: e.message, manual: true, reintentar: false })
@@ -61,7 +64,7 @@ export default function ScannerComida({
   }, [archivo, intento])
 
   return (
-    <Sheet abierto onClose={onClose} titulo={estado.fase === 'procesando' ? 'Analizando foto...' : 'No hemos podido analizarlo'} ancho="sm">
+    <Sheet abierto onClose={onClose} titulo={estado.fase === 'procesando' ? t('scan.analizando') : 'No hemos podido analizarlo'} ancho="sm">
       <div className="relative mx-auto aspect-square w-full max-w-[280px] overflow-hidden rounded-3xl bg-neutral-100 dark:bg-neutral-900">
         {miniatura ? (
           <img src={miniatura} alt="Foto del plato" className="h-full w-full object-cover" />

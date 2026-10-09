@@ -1,4 +1,5 @@
 ﻿import { useState } from 'react'
+import { api } from '../lib/api'
 
 interface Plato {
   nombre: string
@@ -28,17 +29,10 @@ export function ModalAnalizadorMenu({ abierto, caloriasRestantes = 994, alCerrar
     if (!texto.trim()) return
     setCargando(true)
     try {
-      const res = await fetch('/api/alimentos/analizar-menu', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ textoMenu: texto })
-      })
-      const data = await res.json()
-      if (data.platos) {
-        setPlatos(data.platos)
-      }
-    } catch (e) {
-      console.error(e)
+      const data = await api.analizarMenu(texto)
+      if (data.platos) setPlatos(data.platos)
+    } catch {
+      setPlatos([])
     } finally {
       setCargando(false)
     }

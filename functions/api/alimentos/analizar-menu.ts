@@ -1,16 +1,21 @@
 ﻿import type { PagesFunction } from '@cloudflare/workers-types'
+import { exigirDesdeContexto } from '../../utils/identidad.ts'
+import { error, HttpError } from '../../utils/response.ts'
+import { sanitizarTextoLibre } from '../../utils/sanitizar.ts'
 
 interface Env {
   OPENAI_API_KEY?: string
 }
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
-  const { request, env } = context
+  const { request } = context
   try {
-    const { textoMenu, macrosRestantes } = await request.json() as {
-      textoMenu: string
+    await exigirDesdeContexto(context.env, context.data)
+    const cuerpo = (await request.json()) as {
+      textoMenu?: unknown
       macrosRestantes?: { calorias: number; proteinas: number; carbohidratos: number; grasas: number }
     }
+    const textoMenu = typeof cuerpo.textoMenu === 'string' ? sanitizarTextoLibre(cuerpo.textoMenu).slice(0, 2000) : ''
 
     if (!textoMenu) {
       return Response.json({ error: 'Debes proporcionar el texto o foto de la carta' }, { status: 400 })
@@ -20,6 +25,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     // Estructura de salida normalizada para la interfaz
     const prompt = `Analiza esta carta/menú: "${textoMenu}". 
     Identifica los platos y estima de forma realista: nombre, calorías, proteínas (g), carbohidratos (g) y grasas (g).`
+    void prompt
 
     // Mock estructurado de respuesta rápida (o reemplazable por fetch a OpenAI/Groq si tienes API key)
     const platosAnalizados = [
@@ -53,7 +59,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     ]
 
     return Response.json({ platos: platosAnalizados })
-  } catch (err: any) {
-    return Response.json({ error: err.message }, { status: 500 })
+  } catch (e) {
+    if (e instanceof HttpError) return error(e.status, e.message, e.extra)
+    return error(500, 'No se ha podido analizar el menú.')
   }
 }

@@ -102,6 +102,13 @@ export function aplazarEnTurso(ctx: Ctx, trabajo: () => Promise<void>, alFallar?
   return true
 }
 
+/** Quita el historial de peso de este usuario en Turso. Sin Turso, no hace nada. */
+export async function olvidarPesosRemotos(env: Env, usuarioId: string): Promise<void> {
+  if (!tursoConfigurado(env)) return
+  await asegurar(env)
+  await cliente(env).execute({ sql: 'DELETE FROM historico_peso WHERE usuario_id = ?', args: [usuarioId] })
+}
+
 export async function guardarEventos(env: Env, eventos: EventoLog[]): Promise<void> {
   if (!tursoConfigurado(env) || eventos.length === 0) return
   await asegurar(env)

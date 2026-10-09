@@ -1,0 +1,8 @@
+# Recarga directa de la SPA. Un archivo que ya existe (calculadoras, iconos,
+# index.html) se sirve tal cual. /api/*, /assets/* y /descargar/* los atienden
+# las Functions por public/_routes.json y no pasan por aquí.
+/historial    /index.html   200
+/profile      /index.html   200
+/privacidad   /index.html   200
+/vincular     /index.html   200
+/descargar    /index.html   200

@@ -113,9 +113,21 @@ test('CORS: preflight solo para el WebView de la app', async () => {
     assert.equal(res.headers.get('X-Frame-Options'), 'DENY')
     assert.equal(res.headers.get('Permissions-Policy'), 'camera=(self), microphone=(), geolocation=(), payment=()')
     assert.equal(res.headers.get('Strict-Transport-Security'), 'max-age=31536000; includeSubDomains; preload')
+    assert.equal(res.headers.get('Referrer-Policy'), 'strict-origin-when-cross-origin')
     assert.match(res.headers.get('Content-Security-Policy') ?? '', /default-src 'none'/)
     assert.match(res.headers.get('Content-Security-Policy') ?? '', /frame-ancestors 'none'/)
   }
+  const envExtra = entorno()
+  envExtra.ALLOWED_ORIGINS = 'https://preview.nutrifit.test'
+  const permitido = await onRequest(
+    ctx(new Request('https://nutri.trujillomingorance.com/api/comidas/guardar', { method: 'OPTIONS', headers: { Origin: 'https://preview.nutrifit.test' } }), envExtra).c,
+  )
+  assert.equal(permitido.status, 204)
+  assert.equal(permitido.headers.get('Access-Control-Allow-Origin'), 'https://preview.nutrifit.test')
+  assert.equal(permitido.headers.get('Access-Control-Allow-Credentials'), null)
+  const mismo = await onRequest(ctx(new Request('https://nutri.trujillomingorance.com/api/comidas/guardar', { method: 'OPTIONS', headers: { Origin: 'https://nutri.trujillomingorance.com' } })).c)
+  assert.equal(mismo.status, 403)
+  assert.equal(mismo.headers.get('Access-Control-Allow-Origin'), null)
   const malo = await onRequest(ctx(new Request('https://nutri.trujillomingorance.com/api/comidas/guardar', { method: 'OPTIONS', headers: { Origin: 'https://evil.example' } })).c)
   assert.equal(malo.status, 403)
   assert.equal(malo.headers.get('Access-Control-Allow-Origin'), null)

@@ -1,12 +1,13 @@
-﻿import { PanelActividadHidratacion } from './PanelActividadHidratacion.tsx'
+import { PanelActividadHidratacion } from './PanelActividadHidratacion.tsx'
 
 interface Props {
-  fecha?: string
-  inicial?: number
+  fecha: string
+  inicial: number
   onCambio?: (ml: number) => void
-  pesoKg?: number
+  pesoKg?: number | null
+  onActividad?: (kcal: number, sumarAlDia: boolean) => void
 }
 
-export function WidgetAgua({ pesoKg = 85.5 }: Props) {
-  return <PanelActividadHidratacion pesoKg={pesoKg} />
+export function WidgetAgua(props: Props) {
+  return <PanelActividadHidratacion {...props} />
 }

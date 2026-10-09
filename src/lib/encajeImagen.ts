@@ -3,9 +3,9 @@ export const LADO_JPEG = 1024
 /** Calidad del JPEG (0–1). El canvas no copia EXIF. */
 export const CALIDAD_JPEG = 0.85
 /** Lado mayor de la foto que se envía a /api/comidas/analizar. */
-export const LADO_MAYOR = 768
+export const LADO_MAYOR = 800
 /** Calidad WebP o JPEG de esa foto. */
-export const CALIDAD_FOTO = 0.7
+export const CALIDAD_FOTO = 0.75
 /** Tope del binario ya comprimido. */
 export const MAX_FOTO_BYTES = 100 * 1024
 

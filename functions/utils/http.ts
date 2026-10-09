@@ -1,7 +1,7 @@
 /** Lectura segura de peticiones: tamaño, tipo de contenido y validación Zod. */
 import type { z } from 'zod'
 import { HttpError } from './response.ts'
-import { formatearErrores } from './schemas.ts'
+import { formatearErrores, uuid } from './schemas.ts'
 
 export const MAX_JSON_BYTES = 32 * 1024
 
@@ -83,3 +83,8 @@ export async function leerBody<S extends z.ZodType>(request: Request, schema: S,
 
 /** Convierte URLSearchParams en objeto plano para validarlo con Zod. */
 export const queryObj = (url: string) => Object.fromEntries(new URL(url).searchParams)
+
+/** Id de ruta (`:id`). Un valor que no sea UUID no llega a SQL. */
+export function idRuta(id: string | string[] | undefined): string {
+  return validar(uuid, Array.isArray(id) ? id[0] : id)
+}

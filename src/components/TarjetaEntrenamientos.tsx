@@ -1,33 +1,34 @@
-﻿import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { ModalEntrenamiento } from './ModalEntrenamiento'
+import { api } from '../lib/api'
+import { desescaparHtml } from '../../functions/utils/sanitizar.ts'
 
 export function TarjetaEntrenamientos({ pesoUsuario = 85.5 }: { pesoUsuario?: number }) {
   const [modalAbierto, setModalAbierto] = useState(false)
-  const [entrenos, setEntrenos] = useState<any[]>([])
+  const [entrenos, setEntrenos] = useState<{ id: string; nombre: string | null; minutos: number | null; calorias: number; origen: string | null }[]>([])
 
   const cargar = async () => {
     try {
-      const res = await fetch('/api/entrenamientos')
-      if (res.ok) {
-        const data = await res.json()
-        setEntrenos(data.entrenamientos || [])
-      }
-    } catch (e) {
-      console.error(e)
+      const data = await api.entrenamientos()
+      setEntrenos(data.entrenamientos || [])
+    } catch {
+      setEntrenos([])
     }
   }
 
-  useEffect(() => { cargar() }, [])
+  useEffect(() => {
+    void cargar()
+  }, [])
 
   const caloriasTotales = entrenos.reduce((acc, curr) => acc + (curr.calorias || 0), 0)
 
-  const guardarEntreno = async (datos: any) => {
-    await fetch('/api/entrenamientos', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(datos)
-    })
-    cargar()
+  const guardarEntreno = async (datos: { nombre: string; minutos: number; calorias: number; tipo: string }) => {
+    try {
+      await api.guardarEntrenamiento(datos)
+      await cargar()
+    } catch {
+      /* la sesión o la validación han rechazado el alta; no se pinta un entreno fantasma */
+    }
   }
 
   return (
@@ -69,7 +70,7 @@ export function TarjetaEntrenamientos({ pesoUsuario = 85.5 }: { pesoUsuario?: nu
                 padding: '10px 12px', background: '#1A1D1F', borderRadius: '10px', border: '1px solid #23262F'
               }}>
                 <div>
-                  <div style={{ fontSize: '13px', fontWeight: 600, color: '#FCFCFD' }}>{e.nombre}</div>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: '#FCFCFD' }}>{e.nombre ? desescaparHtml(e.nombre) : 'Entrenamiento'}</div>
                   <div style={{ fontSize: '11px', color: '#777E90' }}>{e.minutos} min · {e.origen}</div>
                 </div>
                 <span style={{ fontSize: '13px', fontWeight: 600, color: '#10B981' }}>-{e.calorias} kcal</span>

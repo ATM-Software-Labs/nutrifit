@@ -12,7 +12,7 @@ import { Button } from './ui/Button.tsx'
 import { Input } from './ui/Input.tsx'
 import { Segmented } from './ui/Segmented.tsx'
 import { entero, r1 } from '../lib/formato.ts'
-import { NOMBRE_TIPO, TIPOS_COMIDA, type Ingrediente, type NuevaComida, type ResultadoAnalisis, type TipoComida, type Totales } from '../lib/tipos.ts'
+import { NOMBRE_TIPO, TIPOS_COMIDA, type AlternativaPlato, type Ingrediente, type NuevaComida, type ResultadoAnalisis, type TipoComida, type Totales } from '../lib/tipos.ts'
 
 interface Fila {
   id: number
@@ -151,7 +151,20 @@ export default function ModalRevisionPlato({
         grasas: r1(m.grasas),
       }
     })
-    onConfirmar({ tipo_comida: tipo, descripcion: desc.slice(0, 200), calorias: kcal, proteinas: P, carbohidratos: C, grasas: G, ingredientes, fecha })
+    onConfirmar({ tipo_comida: tipo, descripcion: desc.slice(0, 200), calorias: kcal, proteinas: P, carbohidratos: C, grasas: G, ingredientes, imagen_url: imagenUrl, fecha })
+  }
+
+  function aplicarAlternativa(a: AlternativaPlato) {
+    setNombre(a.nombre)
+    setFilas([
+      {
+        id: siguienteId++,
+        nombre: a.nombre,
+        gramos: a.gramos,
+        ref: { gramos: a.gramos, calorias: a.calorias, proteinas: a.proteinas, carbohidratos: a.carbohidratos, grasas: a.grasas },
+        manual: true,
+      },
+    ])
   }
 
   return (
@@ -168,6 +181,20 @@ export default function ModalRevisionPlato({
       }
     >
       <form id="form-revision" onSubmit={confirmar} noValidate className="space-y-6">
+        {!!resultado?.alternativas?.length && (
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Alternativas probables">
+            {resultado.alternativas.map((a) => (
+              <button
+                key={a.nombre}
+                type="button"
+                onClick={() => aplicarAlternativa(a)}
+                className="rounded-full border border-neutral-200 px-3 py-1.5 text-sm transition hover:border-mint hover:bg-mint/10 dark:border-neutral-700"
+              >
+                {a.nombre}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="flex items-start gap-4">
           {imagenUrl && <img src={imagenUrl} alt="" className="h-20 w-20 shrink-0 rounded-2xl object-cover" />}
           <Input

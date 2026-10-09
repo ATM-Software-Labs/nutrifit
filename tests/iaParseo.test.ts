@@ -94,7 +94,7 @@ test('quita etiquetas markdown y el razonamiento <think>', () => {
 })
 
 // ---------------------------------------------------------------- texto (Workers AI)
-import { contenidoWorkersAI, cuentaFalloGateway, ErrorIA, ESQUEMA_FOTO, MODELOS_GROQ_VISION, PROMPT_SISTEMA, PROMPT_SISTEMA_TEXTO, REGLA_NOMBRE_OFICIAL, RESPONSE_SCHEMA, TIMEOUT_GATEWAY_FOTO_MS } from '../functions/utils/ia.ts'
+import { CARRERA_VISION_MS, carreraVision, contenidoWorkersAI, cuentaFalloGateway, ErrorIA, ESQUEMA_FOTO, MODELOS_GROQ_VISION, PROMPT_SISTEMA, PROMPT_SISTEMA_TEXTO, REGLA_NOMBRE_OFICIAL, RESPONSE_SCHEMA, TIMEOUT_GATEWAY_FOTO_MS } from '../functions/utils/ia.ts'
 import { normalizarProducto } from '../functions/utils/off.ts'
 
 test('el prompt obliga al nombre oficial y el esquema pide input_query y display_name', () => {
@@ -112,6 +112,8 @@ test('el prompt obliga al nombre oficial y el esquema pide input_query y display
   assert.match(PROMPT_SISTEMA, /Arroz blanco hervido/)
   assert.match(PROMPT_SISTEMA, /min_grams/)
   assert.match(PROMPT_SISTEMA, /No se distingue el alimento con claridad/)
+  assert.match(PROMPT_SISTEMA, /cruasán casero/)
+  assert.match(PROMPT_SISTEMA, /alternatives/)
   assert.doesNotMatch(PROMPT_SISTEMA, /```/)
   assert.equal(RESPONSE_SCHEMA.required.includes('input_query'), true)
   assert.equal(RESPONSE_SCHEMA.required.includes('display_name'), true)
@@ -119,6 +121,8 @@ test('el prompt obliga al nombre oficial y el esquema pide input_query y display
   assert.equal(ESQUEMA_FOTO.required.includes('is_food'), true)
   assert.deepEqual(ESQUEMA_FOTO.properties.items.items.required, ['input_query', 'display_name', 'grams', 'min_grams', 'max_grams', 'calories', 'protein', 'carbs', 'fat'])
   assert.equal(TIMEOUT_GATEWAY_FOTO_MS, 5_000)
+  assert.equal(CARRERA_VISION_MS, 2_000)
+  assert.equal(ESQUEMA_FOTO.required.includes('alternatives'), false)
   assert.deepEqual(MODELOS_GROQ_VISION, ['llama-3.2-11b-vision-preview', 'llama-3.2-90b-vision-preview'])
 })
 
@@ -194,6 +198,90 @@ test('una foto ilegible no inventa comida y conserva el mensaje fijo', () => {
     () => parsearRespuestaModelo({ is_food: false, error_message: 'otra cosa', items: [{ display_name: 'Pizza', grams: 300, calories: 800, protein: 30, carbs: 80, fat: 30 }] }),
     (e: unknown) => e instanceof FotoIlegible && e.message === MENSAJE_FOTO_ILEGIBLE,
   )
+})
+
+test('una foto sin alternatives sigue siendo válida y no inventa alternativas', () => {
+  const r = parsearRespuestaModelo({
+    is_food: true,
+    items: [{ display_name: 'Arroz blanco hervido', grams: 150, calories: 195, protein: 4, carbs: 42, fat: 0.5 }],
+    total: { calories: 195, protein: 4, carbs: 42, fat: 0.5 },
+  })
+  assert.equal(r.nombre_plato, 'Arroz blanco hervido')
+  assert.equal('alternativas' in r, false)
+})
+
+test('la foto conserva como máximo dos alternativas completas', () => {
+  const r = parsearRespuestaModelo({
+    is_food: true,
+    items: [{ display_name: 'Cruasán', grams: 70, calories: 280, protein: 5, carbs: 32, fat: 15 }],
+    total: { calories: 280, protein: 5, carbs: 32, fat: 15 },
+    alternatives: [
+      { display_name: 'Cruasán de mantequilla', grams: 60, calories: 240, protein: 4, carbs: 26, fat: 14 },
+      { display_name: 'Brioche', grams: 80, calories: 260, protein: 6, carbs: 34, fat: 11 },
+      { display_name: 'Napolitana', grams: 90, calories: 320, protein: 6, carbs: 36, fat: 16 },
+      { display_name: 'Incompleta' },
+    ],
+  })
+  assert.deepEqual(
+    r.alternativas?.map((a) => a.nombre),
+    ['Cruasán de mantequilla', 'Brioche'],
+  )
+  assert.equal(r.alternativas?.[0]?.gramos, 60)
+  assert.equal(r.alternativas?.[1]?.grasas, 11)
+})
+
+test('carreraVision: el principal rápido gana y no llama al secundario', async () => {
+  let secundario = 0
+  const r = await carreraVision(
+    () => Promise.resolve('principal'),
+    () => {
+      secundario += 1
+      return Promise.resolve('secundario')
+    },
+    80,
+  )
+  assert.equal(r, 'principal')
+  await new Promise((res) => setTimeout(res, 120))
+  assert.equal(secundario, 0)
+})
+
+test('carreraVision: si el principal no responde, el secundario arranca y gana', async () => {
+  let secundario = 0
+  const r = await carreraVision(
+    () => new Promise<string>(() => {}),
+    () => {
+      secundario += 1
+      return Promise.resolve('secundario')
+    },
+    40,
+  )
+  assert.equal(r, 'secundario')
+  assert.equal(secundario, 1)
+})
+
+test('carreraVision: un fallo rápido no definitivo arranca el secundario al momento', async () => {
+  const t0 = Date.now()
+  const r = await carreraVision(() => Promise.reject(new Error('gateway')), () => Promise.resolve('secundario'), 5_000)
+  assert.equal(r, 'secundario')
+  assert.ok(Date.now() - t0 < 500)
+})
+
+test('carreraVision: una foto ilegible no llama al secundario', async () => {
+  let secundario = 0
+  await assert.rejects(
+    () =>
+      carreraVision(
+        () => Promise.reject(new FotoIlegible()),
+        () => {
+          secundario += 1
+          return Promise.resolve('no')
+        },
+        30,
+      ),
+    FotoIlegible,
+  )
+  await new Promise((res) => setTimeout(res, 60))
+  assert.equal(secundario, 0)
 })
 
 test('una foto antigua, solo con name, sigue siendo un resultado válido', () => {

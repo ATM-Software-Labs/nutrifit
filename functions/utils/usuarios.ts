@@ -15,11 +15,17 @@ export interface Usuario {
   meta_proteinas: number | null
   meta_carbs: number | null
   meta_grasas: number | null
+  username: string | null
+  bio: string | null
+  avatar_url: string | null
+  banner_url: string | null
+  es_publico: number
+  meta_agua_base_ml: number
   creado_en: string
 }
 
 export const COLUMNAS_USUARIO =
-  'id, email, nombre, edad, sexo, peso_kg, altura_cm, nivel_actividad, objetivo, meta_calorias, meta_proteinas, meta_carbs, meta_grasas, creado_en'
+  'id, email, nombre, edad, sexo, peso_kg, altura_cm, nivel_actividad, objetivo, meta_calorias, meta_proteinas, meta_carbs, meta_grasas, username, bio, avatar_url, banner_url, es_publico, meta_agua_base_ml, creado_en'
 
 export function obtenerUsuario(env: Env, id: string) {
   return env.DB.prepare(`SELECT ${COLUMNAS_USUARIO} FROM usuarios WHERE id = ?1`).bind(id).first<Usuario>()

@@ -114,6 +114,15 @@ const ingredienteIA = z.object({
   grasas: numOpt(MAX.grasas),
 })
 
+const alternativaIA = z.object({
+  nombre: limpiarTexto(120),
+  gramos: num(MAX.gramos),
+  calorias: num(MAX.calorias),
+  proteinas: num(MAX.proteinas),
+  carbohidratos: num(MAX.carbohidratos),
+  grasas: num(MAX.grasas),
+})
+
 const analisisIA = z.object({
   nombre_plato: limpiarTexto(120),
   input_query: textoOpcional(300),
@@ -123,6 +132,7 @@ const analisisIA = z.object({
   proteinas: numOpt(MAX.proteinas),
   carbohidratos: numOpt(MAX.carbohidratos),
   grasas: numOpt(MAX.grasas),
+  alternativas: z.array(alternativaIA).max(2).optional(),
 })
 
 export type IngredienteAnalisis = z.infer<typeof ingredienteIA>
@@ -137,6 +147,8 @@ export interface ResultadoAnalisis {
   proteinas: number
   carbohidratos: number
   grasas: number
+  /** Hasta 2 lecturas alternativas de la misma foto, para elegirlas con un toque. */
+  alternativas?: { nombre: string; gramos: number; calorias: number; proteinas: number; carbohidratos: number; grasas: number }[]
 }
 
 type Macro = 'calorias' | 'proteinas' | 'carbohidratos' | 'grasas'
@@ -187,6 +199,7 @@ function adaptarEsquemaFoto(obj: unknown): unknown {
   })
   const nombres = ingredientes.map((i) => i.display_name).filter(Boolean)
   const oficialPlato = comoTexto(o.display_name) || (nombres.length ? nombres.slice(0, 4).join(', ') : 'Sin comida')
+  const alternativas = leerAlternativas(o)
   return {
     input_query: comoTexto(o.input_query),
     display_name: oficialPlato,
@@ -196,7 +209,32 @@ function adaptarEsquemaFoto(obj: unknown): unknown {
     proteinas: total.protein ?? total.proteinas,
     carbohidratos: total.carbs ?? total.carbohidratos,
     grasas: total.fat ?? total.grasas,
+    ...(alternativas.length ? { alternativas } : {}),
   }
+}
+
+function numeroFinito(v: unknown): v is number {
+  return typeof v === 'number' && Number.isFinite(v) && v >= 0
+}
+
+/** Como máximo 2 alternativas completas. Una incompleta se descarta, no tumba el plato. */
+function leerAlternativas(o: Record<string, unknown>): { nombre: string; gramos: number; calorias: number; proteinas: number; carbohidratos: number; grasas: number }[] {
+  const lista = Array.isArray(o.alternatives) ? o.alternatives : Array.isArray(o.alternativas) ? o.alternativas : []
+  const out: { nombre: string; gramos: number; calorias: number; proteinas: number; carbohidratos: number; grasas: number }[] = []
+  for (const crudo of lista) {
+    if (!crudo || typeof crudo !== 'object') continue
+    const it = crudo as Record<string, unknown>
+    const nombre = comoTexto(it.display_name) || comoTexto(it.nombre) || comoTexto(it.name)
+    const gramos = it.grams ?? it.gramos
+    const calorias = it.calories ?? it.calorias
+    const proteinas = it.protein ?? it.proteinas
+    const carbohidratos = it.carbs ?? it.carbohidratos
+    const grasas = it.fat ?? it.grasas
+    if (!nombre || !numeroFinito(gramos) || !numeroFinito(calorias) || !numeroFinito(proteinas) || !numeroFinito(carbohidratos) || !numeroFinito(grasas)) continue
+    out.push({ nombre, gramos, calorias, proteinas, carbohidratos, grasas })
+    if (out.length === 2) break
+  }
+  return out
 }
 
 /** display_name gana al alias coloquial. El texto original se conserva en input_query. */
@@ -250,12 +288,14 @@ export function normalizarAnalisis(obj: unknown): ResultadoAnalisis {
   if (total.calorias === 0 && kcalMacros > 0) total.calorias = r1(kcalMacros)
 
   const display_name = a.display_name || a.nombre_plato
+  const alternativas = a.alternativas ?? []
   return {
     input_query: a.input_query ?? '',
     display_name,
     nombre_plato: display_name,
     ingredientes: a.ingredientes.map((i) => ({ ...i, nombre: i.display_name || i.nombre, display_name: i.display_name || i.nombre })),
     ...total,
+    ...(alternativas.length ? { alternativas } : {}),
   }
 }
 

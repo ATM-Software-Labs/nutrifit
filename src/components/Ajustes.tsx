@@ -21,6 +21,8 @@ import type { Usuario } from '../lib/tipos.ts'
 import { SeccionDispositivos } from './SeccionDispositivos.tsx'
 import { SeccionIntegraciones } from './SeccionIntegraciones.tsx'
 import { SeccionPreferenciasAvanzadas } from './SeccionPreferenciasAvanzadas.tsx'
+import { useIdioma } from '../hooks/useIdioma.ts'
+import type { Idioma } from '../lib/i18n.ts'
 
 const SELECT =
   'h-12 w-full appearance-none rounded-2xl border border-neutral-200 bg-card px-4 text-[15px] focus:border-mint focus:outline-none focus:ring-4 focus:ring-mint/15 dark:border-neutral-800 dark:bg-card-dark'
@@ -44,8 +46,11 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
   const [objetivo, setObjetivo] = useState<Objetivo>(usuario.objetivo ?? 'mantenimiento')
   const [objetivoPeso, setObjetivoPeso] = useState(String(pesoObjetivo(usuario) ?? ''))
   const [guardando, setGuardando] = useState(false)
+  const [exportando, setExportando] = useState(false)
+  const [borrando, setBorrando] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const { preferencia, cambiar } = useTema()
+  const { idioma, t, cambiar: cambiarIdioma } = useIdioma()
   const { contenedorRef, obtenerToken } = useTurnstile('perfil')
   const toast = useToast()
 
@@ -84,10 +89,47 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
     }
   }
 
+  async function descargarDatos() {
+    setExportando(true)
+    try {
+      const { blob, nombre } = await api.exportarDatos()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = nombre
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      setTimeout(() => URL.revokeObjectURL(url), 10_000)
+      toast({ tipo: 'exito', mensaje: 'Volcado descargado' })
+    } catch (e) {
+      toast({ tipo: 'error', mensaje: e instanceof Error ? e.message : 'No se pudo descargar el volcado.' })
+    } finally {
+      setExportando(false)
+    }
+  }
+
+  async function eliminarCuenta() {
+    if (!window.confirm('Esto borra tu cuenta y todos tus registros. No se puede deshacer.')) return
+    setBorrando(true)
+    try {
+      await api.eliminarCuenta()
+      localStorage.removeItem('nf:peso:outbox')
+      localStorage.removeItem('nf:agua:outbox')
+      localStorage.removeItem('nf:last_synced_hash')
+      localStorage.removeItem(CLAVE_PESO_OBJETIVO)
+      indexedDB.deleteDatabase('nutrifit-local')
+      onSalir()
+    } catch (e) {
+      toast({ tipo: 'error', mensaje: e instanceof Error ? e.message : 'No se pudo eliminar la cuenta.' })
+      setBorrando(false)
+    }
+  }
+
   return (
-    <Sheet abierto onClose={onClose} titulo="Ajustes" ancho="lg">
+    <Sheet abierto onClose={onClose} titulo={t('ajustes.titulo')} ancho="lg">
       <div className="space-y-9 pb-2">
-        <Seccion titulo="Perfil">
+        <Seccion titulo={t('ajustes.perfil')}>
           <Input label="Nombre" value={nombre} maxLength={60} onChange={(e) => setNombre(e.target.value)} />
           <Segmented label="Sexo" valor={sexo} onChange={setSexo} opciones={[{ valor: 'hombre', etiqueta: 'Hombre' }, { valor: 'mujer', etiqueta: 'Mujer' }]} />
           <div className="grid grid-cols-3 gap-3">
@@ -152,7 +194,20 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
           </Button>
         </Seccion>
 
-        <Seccion titulo="Apariencia">
+        <Seccion titulo={t('ajustes.idioma')}>
+          <Segmented
+            label={t('ajustes.idioma')}
+            valor={idioma}
+            onChange={(siguiente) => cambiarIdioma(siguiente as Idioma)}
+            opciones={[
+              { valor: 'es', etiqueta: 'Español' },
+              { valor: 'ca', etiqueta: 'Català' },
+              { valor: 'en', etiqueta: 'English' },
+            ]}
+          />
+        </Seccion>
+
+        <Seccion titulo={t('ajustes.apariencia')}>
           <Segmented
             label="Tema"
             valor={preferencia}
@@ -203,8 +258,14 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
           <p className="text-sm text-neutral-500 dark:text-neutral-400">
             Sesión iniciada como <span className="font-medium text-graphite dark:text-neutral-200">{usuario.email}</span>
           </p>
+          <Button variant="outline" block icon={<Download size={16} />} loading={exportando} onClick={() => void descargarDatos()}>
+            Descargar mis datos
+          </Button>
           <Button variant="outline" block icon={<LogOut size={16} />} onClick={onSalir}>
             Cerrar sesión
+          </Button>
+          <Button variant="danger" block loading={borrando} onClick={() => void eliminarCuenta()}>
+            Eliminar mi cuenta
           </Button>
           <p className="text-center text-2xs text-neutral-500 dark:text-neutral-400">NutriFit v{__APP_VERSION__} · ¿Dudas? soporte@trujillomingorance.com</p>
         </Seccion>

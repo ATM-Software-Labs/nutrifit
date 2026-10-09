@@ -2,6 +2,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { cerrarSolicitudesLogin, crearCodigoLogin, generarCodigo, MAX_INTENTOS_CODIGO, verificarCodigoLogin } from '../functions/utils/codigoLogin.ts'
+import { DURACION_MAGIC } from '../functions/utils/magicLink.ts'
 import { onRequestPost as postCodigo } from '../functions/api/auth/codigo.ts'
 import { capturar, ctx, entornoTest, postJson } from './d1Sqlite.ts'
 
@@ -34,12 +35,12 @@ test(`${MAX_INTENTOS_CODIGO} fallos invalidan el código (aunque luego sea el co
   assert.equal((await verificarCodigoLogin(env, 'ana@ejemplo.es', c)).ok, false)
 })
 
-test('caducado (15 min) y código de otro email no valen', async () => {
+test('caducado (plazo del código) y código de otro email no valen', async () => {
   const env = entornoTest()
   const t0 = 1_800_000_000
   const c = await crearCodigoLogin(env, 'ana@ejemplo.es', t0)
   assert.equal((await verificarCodigoLogin(env, 'luis@ejemplo.es', c, t0 + 10)).ok, false)
-  assert.equal((await verificarCodigoLogin(env, 'ana@ejemplo.es', c, t0 + 15 * 60 + 1)).ok, false)
+  assert.equal((await verificarCodigoLogin(env, 'ana@ejemplo.es', c, t0 + DURACION_MAGIC + 1)).ok, false)
 })
 
 test('pedir un código nuevo invalida el anterior; entrar por enlace invalida el código', async () => {

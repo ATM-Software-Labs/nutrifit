@@ -19,6 +19,8 @@ export interface Env {
   GEMINI_MODEL?: string
   /** Modelo de visión en ai.trujillomingorance.com. Por defecto llama-3.2-11b-vision-instruct. */
   TRUJILLO_MODEL?: string
+  /** URL completa del chat de Trujillo. Si falta, se usa el gateway público. */
+  TRUJILLO_AI_URL?: string
 
   // Secretos
   AUTH_SECRET?: string
@@ -33,6 +35,10 @@ export interface Env {
   TURSO_DATABASE_URL?: string
   /** Token de Turso. Secreto: wrangler pages secret put TURSO_AUTH_TOKEN. */
   TURSO_AUTH_TOKEN?: string
+  /** ID público de Google OAuth. Vacío = el inicio con Google no arranca. */
+  GOOGLE_CLIENT_ID?: string
+  /** Secreto de Google OAuth. wrangler pages secret put GOOGLE_CLIENT_SECRET. */
+  GOOGLE_CLIENT_SECRET?: string
 }
 
 /** Sesión verificada: cookie __Host-nf_session (web) o token Bearer (app Android). */

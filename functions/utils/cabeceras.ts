@@ -30,6 +30,7 @@ export const CSP_API = "default-src 'none'; frame-ancestors 'none'; base-uri 'no
 
 export const PERMISSIONS_POLICY = 'camera=(self), microphone=(), geolocation=(), payment=()'
 export const HSTS = 'max-age=31536000; includeSubDomains; preload'
+export const REFERRER = 'strict-origin-when-cross-origin'
 
 export function aplicarCabecerasAsvs(headers: Headers, csp: string) {
   headers.set('Content-Security-Policy', csp)
@@ -37,7 +38,8 @@ export function aplicarCabecerasAsvs(headers: Headers, csp: string) {
   headers.set('X-Frame-Options', 'DENY')
   headers.set('Permissions-Policy', PERMISSIONS_POLICY)
   headers.set('Strict-Transport-Security', HSTS)
-  headers.set('Referrer-Policy', 'no-referrer')
+  // Un enlace mágico puede pedir no-referrer para no filtrar el token. El resto usa el valor estricto.
+  if (headers.get('Referrer-Policy') !== 'no-referrer') headers.set('Referrer-Policy', REFERRER)
   headers.set('Cross-Origin-Resource-Policy', 'same-origin')
   headers.set('Cross-Origin-Opener-Policy', 'same-origin')
 }

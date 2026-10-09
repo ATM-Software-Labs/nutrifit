@@ -1,4 +1,5 @@
 ﻿import { useEffect, useRef, useState } from 'react'
+import { ApiError, api } from '../lib/api'
 
 interface Props {
   abierto: boolean
@@ -55,16 +56,15 @@ export function EscanerBarcodeModal({ abierto, alDetectar, alCerrar }: Props) {
     setCargando(true)
     setError(null)
     try {
-      const res = await fetch(`/api/alimentos/barcode?ean=${ean}`)
-      const data = await res.json()
-      if (res.ok && data.producto) {
+      const data = await api.barcodeEan(ean)
+      if (data.producto) {
         alDetectar(data.producto)
         alCerrar()
       } else {
-        setError(data.error || 'Código no reconocido')
+        setError('Código no reconocido')
       }
     } catch (e) {
-      setError('Error al consultar el alimento')
+      setError(e instanceof ApiError ? e.message : 'Error al consultar el alimento')
     } finally {
       setCargando(false)
     }

@@ -174,6 +174,15 @@ export const api = {
       turnstile,
     })
   },
+  /** Escáner unificado. La respuesta no dice qué modelo ha respondido. */
+  escanear: (imagen: Blob, turnstile: string) => {
+    const fd = new FormData()
+    fd.append('imagen', imagen, imagen.type === 'image/webp' ? 'plato.webp' : 'plato.jpg')
+    return pedir<{ alimento: string; peso_aprox_g: number; calorias: number; macros: { proteinas: number; carbohidratos: number; grasas: number }; alternativas: string[] }>(
+      '/api/alimentos/escanear',
+      { method: 'POST', body: fd, turnstile },
+    )
+  },
 
   analizarTexto: (descripcion: string, turnstile: string) =>
     pedir<{ ok: true; proveedor: 'gemini' | 'workers-ai'; resultado: ResultadoAnalisis }>('/api/comidas/analizar-texto', {
@@ -190,6 +199,9 @@ export const api = {
 
   historial: (desde: string, hasta: string, signal?: AbortSignal) => pedir<{ ok: true } & Historial>(`/api/historial?${q({ desde, hasta })}`, { signal }),
   exportarCsv: (tipo: 'comidas' | 'peso' | 'agua', desde: string, hasta: string) => descargar(`/api/exportar?${q({ tipo, desde, hasta })}`),
+  /** Volcado RGPD: perfil, diario, peso, agua y entrenamientos. */
+  exportarDatos: () => descargar('/api/usuario/exportar-datos'),
+  eliminarCuenta: () => pedir<{ ok: true }>('/api/usuario/eliminar-cuenta', { method: 'POST', body: { confirmar: 'ELIMINAR' } }),
 
   agua: async (fecha: string, ml: number, modo: 'sumar' | 'fijar' = 'sumar', keepalive = false) => {
     const total = modo === 'fijar' ? Math.max(0, Math.min(10000, Math.round(ml))) : null
@@ -236,4 +248,66 @@ export const api = {
     if (res.sinCambios) return { ok: true as const, sinCambios: true as const, registro: { fecha: f, peso } }
     return res
   },
+
+  entrenamientos: (fecha?: string) =>
+    pedir<{ ok: true; fecha: string; entrenamientos: { id: string; tipo: string; nombre: string | null; minutos: number | null; duracion_min: number | null; intensidad: string | null; calorias: number; origen: string | null; fecha: string }[] }>(
+      `/api/entrenamientos${fecha ? `?${q({ fecha })}` : ''}`,
+    ),
+  entrenamientosRecientes: (limite = 12) =>
+    pedir<{ ok: true; entrenamientos: { id: string; tipo: string; nombre: string | null; minutos: number | null; duracion_min: number | null; intensidad: string | null; calorias: number; origen: string | null; fecha: string }[] }>(
+      `/api/entrenamientos?${q({ recientes: String(limite) })}`,
+    ),
+  guardarEntrenamiento: (datos: { tipo: string; nombre: string; minutos: number; duracion_min?: number; intensidad?: 'baja' | 'media' | 'alta'; calorias: number; fecha?: string }) =>
+    pedir<{ ok: true; id: string; fecha: string }>('/api/entrenamientos', { method: 'POST', body: datos, prioridad: 'alta' }),
+  borrarEntrenamiento: (id: string) => pedir<{ ok: true }>(`/api/entrenamientos/${encodeURIComponent(id)}`, { method: 'DELETE', prioridad: 'alta' }),
+  guardarFrecuente: (datos: {
+    tipo_comida: string
+    nombre: string
+    items?: { nombre: string; gramos?: number; calorias?: number; proteinas?: number; carbohidratos?: number; grasas?: number }[]
+  }) => pedir<{ ok: true }>('/api/comidas/frecuentes', { method: 'POST', body: datos, prioridad: 'alta' }),
+  amistades: () =>
+    pedir<{ ok: true; amistades: { id: string; estado: string; creado_en: string; username: string | null; direccion: 'enviada' | 'recibida' }[] }>('/api/amistades'),
+  solicitarAmistad: (username: string) => pedir<{ ok: true; id: string; estado: string }>('/api/amistades', { method: 'POST', body: { username } }),
+  responderAmistad: (id: string, estado: 'aceptada' | 'rechazada') =>
+    pedir<{ ok: true; id: string; estado: string }>(`/api/amistades/${encodeURIComponent(id)}`, { method: 'POST', body: { estado } }),
+  borrarAmistad: (id: string) => pedir<{ ok: true }>(`/api/amistades/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  perfilPublico: (username: string) =>
+    pedir<{ ok: true; perfil: { username: string; nombre: string | null; bio: string | null; avatar_url: string | null; banner_url: string | null } }>(
+      `/api/usuarios/publico?${q({ username })}`,
+    ),
+
+  perfilSocial: () =>
+    pedir<{ ok: true; perfil: { username: string | null; nombre: string | null; bio: string | null; avatar_url: string | null; banner_url: string | null; es_publico: number; meta_agua_base_ml: number } }>('/api/usuarios/social'),
+  guardarPerfilSocial: (datos: { username?: string | null; bio?: string | null; es_publico?: 0 | 1 | boolean; meta_agua_base_ml?: number }) =>
+    pedir<{ ok: true; perfil: { username: string | null; bio: string | null; es_publico: number; meta_agua_base_ml: number } }>('/api/usuarios/social', { method: 'POST', body: datos }),
+  subirAvatar: (imagen: Blob) => {
+    const fd = new FormData()
+    fd.append('imagen', imagen, 'avatar')
+    return pedir<{ ok: true; avatar_url: string }>('/api/usuarios/avatar', { method: 'POST', body: fd })
+  },
+  subirBanner: (imagen: Blob) => {
+    const fd = new FormData()
+    fd.append('imagen', imagen, 'banner')
+    return pedir<{ ok: true; banner_url: string }>('/api/usuarios/banner', { method: 'POST', body: fd })
+  },
+  subirFotoPlato: (imagen: Blob) => {
+    const fd = new FormData()
+    fd.append('imagen', imagen, 'plato')
+    return pedir<{ ok: true; id: string; imagen_url: string }>('/api/comidas/foto', { method: 'POST', body: fd })
+  },
+
+  integraciones: () => pedir<{ ok: true; integraciones: { proveedor: string; estado: string | null }[] }>('/api/integraciones', { silencio401: true }),
+  dispositivos: () =>
+    pedir<{ ok: true; dispositivos: { id: string; dispositivo?: string | null; navegador?: string | null; ip?: string | null; ultimo_acceso?: number | null }[] }>('/api/dispositivos'),
+  cerrarDispositivo: (sesionId: string) => pedir<{ ok: true }>('/api/dispositivos', { method: 'DELETE', body: { sesionId } }),
+
+  analizarMenu: (textoMenu: string) =>
+    pedir<{ platos?: { nombre: string; calorias: number; proteinas: number; carbohidratos: number; grasas: number; recomendado: boolean; motivo: string }[] }>('/api/alimentos/analizar-menu', {
+      method: 'POST',
+      body: { textoMenu },
+    }),
+  barcodeEan: (ean: string) =>
+    pedir<{ origen?: string; producto?: { id: string; nombre: string; marca: string; calorias: number; proteinas: number; carbohidratos: number; grasas: number; codigo_barras: string } }>(
+      `/api/alimentos/barcode?ean=${encodeURIComponent(ean)}`,
+    ),
 }

@@ -2,8 +2,8 @@
  * Preprocesado de la foto del plato, en el dispositivo, antes de
  * POST /api/comidas/analizar:
  *   · canvas HTML (OffscreenCanvas si existe);
- *   · el lado mayor no pasa de 768 px, sin recortar ni ampliar;
- *   · WebP calidad 0.70, o JPEG si el navegador no codifica WebP;
+ *   · el lado mayor no pasa de 800 px, sin recortar ni ampliar;
+ *   · WebP calidad 0.75, o JPEG si el navegador no codifica WebP;
  *   · se baja calidad y tamaño hasta quedar en 100 KB;
  *   · se vuelve a codificar: el EXIF (GPS incluido) no se copia.
  * La orientación EXIF se aplica al decodificar para que el plato no quede girado.
