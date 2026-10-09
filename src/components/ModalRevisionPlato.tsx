@@ -210,6 +210,9 @@ export default function ModalRevisionPlato({
         {resultado?.input_query && resultado.input_query !== nombre && (
           <p className="-mt-4 text-xs text-neutral-500 dark:text-neutral-400">Texto original: {resultado.input_query}</p>
         )}
+        {resultado?.descripcion && filas.length <= 1 && resultado.descripcion !== nombre && (
+          <p className="-mt-4 text-xs text-neutral-500 dark:text-neutral-400">{resultado.descripcion}</p>
+        )}
 
         <Segmented label="Tipo de comida" valor={tipo} onChange={setTipo} opciones={TIPOS_COMIDA.map((t) => ({ valor: t, etiqueta: NOMBRE_TIPO[t] }))} />
 

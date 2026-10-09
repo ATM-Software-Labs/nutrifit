@@ -12,6 +12,7 @@ import { guardarHashSincronizado, leerHashSincronizado } from './hashSync.ts'
 import { debeVolcar } from './ventanaCliente.ts'
 import { guardarPesoLocal, olvidarPesoLocal } from './pesoLocal.ts'
 import { hoy } from '../../functions/utils/fechas.ts'
+import type { PlatoEscaneo } from './platoEscaneo.ts'
 import type { Comida, DatosPerfil, Historial, InfoVinculo, NuevaComida, ProductoOFF, Resumen, ResultadoAnalisis, Usuario } from './tipos.ts'
 
 export class ApiError extends Error {
@@ -178,10 +179,7 @@ export const api = {
   escanear: (imagen: Blob, turnstile: string) => {
     const fd = new FormData()
     fd.append('imagen', imagen, imagen.type === 'image/webp' ? 'plato.webp' : 'plato.jpg')
-    return pedir<{ alimento: string; peso_aprox_g: number; calorias: number; macros: { proteinas: number; carbohidratos: number; grasas: number }; alternativas: string[] }>(
-      '/api/alimentos/escanear',
-      { method: 'POST', body: fd, turnstile },
-    )
+    return pedir<PlatoEscaneo>('/api/alimentos/escanear', { method: 'POST', body: fd, turnstile })
   },
 
   analizarTexto: (descripcion: string, turnstile: string) =>
@@ -274,6 +272,10 @@ export const api = {
   perfilPublico: (username: string) =>
     pedir<{ ok: true; perfil: { username: string; nombre: string | null; bio: string | null; avatar_url: string | null; banner_url: string | null } }>(
       `/api/usuarios/publico?${q({ username })}`,
+    ),
+  comunidad: (pagina = 1) =>
+    pedir<{ ok: true; comunidad: { username: string; nombre: string | null; avatar_url: string | null }[]; pagina: number; hay_mas: boolean }>(
+      `/api/usuarios/publico?${q({ pagina: String(pagina) })}`,
     ),
 
   perfilSocial: () =>

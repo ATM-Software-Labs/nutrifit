@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState, type FormEvent } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState, type FormEvent, type MouseEvent } from 'react'
 import { ArrowRight, Mail, MonitorSmartphone } from 'lucide-react'
 import { Logo } from './Logo.tsx'
 import { Button } from './ui/Button.tsx'
@@ -7,9 +7,11 @@ import { useTurnstile } from '../hooks/useTurnstile.ts'
 import { api, ApiError } from '../lib/api.ts'
 import { esNativa } from '../lib/plataforma.ts'
 import { URL_REPO } from '../lib/config.ts'
+import { clicPrivacidad } from '../lib/rutas.ts'
 import { guardarTokenApp } from '../lib/tokenApp.ts'
 import { ESCRITORIO, useMedia } from '../hooks/useMedia.ts'
 import { BloqueDescarga } from './BloqueDescarga.tsx'
+import { ControlInstalar } from './ControlInstalar.tsx'
 import { useIdioma } from '../hooks/useIdioma.ts'
 import type { Usuario } from '../lib/tipos.ts'
 
@@ -37,6 +39,41 @@ function leerAvisoUrl(): string | null {
 
 const EMAIL_OK = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 
+/** Marca G oficial (rojo, amarillo, verde y azul) para el botón de Google. */
+function IconoGoogle() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+      <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+    </svg>
+  )
+}
+
+/**
+ * Pide a la Function la URL de Google y sale hacia ella.
+ * En producción el redirect_uri es https://nutri.trujillomingorance.com/api/auth/callback/google.
+ * En localhost:8788 y 127.0.0.1:8788 el servidor usa ese origen. El log muestra el valor exacto.
+ */
+async function iniciarSesionGoogle(e: MouseEvent<HTMLButtonElement>) {
+  e.preventDefault()
+  const res = await fetch('/api/auth/google?formato=json', {
+    headers: { Accept: 'application/json' },
+    credentials: 'same-origin',
+  })
+  if (!res.ok) throw new Error('Google no está disponible.')
+  const datos = (await res.json()) as { location?: string }
+  const destino = new URL(datos.location ?? '')
+  if (destino.origin !== 'https://accounts.google.com' || destino.pathname !== '/o/oauth2/v2/auth') {
+    throw new Error('La respuesta de acceso no es de Google.')
+  }
+  const redirectUri = destino.searchParams.get('redirect_uri') ?? ''
+  console.log('Google Auth redirect_uri:', redirectUri)
+  if (!redirectUri) throw new Error('Falta redirect_uri.')
+  window.location.assign(destino.toString())
+}
+
 export default function Login({ onEntrar, vinculando = false }: { onEntrar: (u: Usuario, perfilCompleto: boolean) => void; vinculando?: boolean }) {
   const escritorio = useMedia(ESCRITORIO) && !esNativa && !vinculando
   const [email, setEmail] = useState('')
@@ -44,6 +81,7 @@ export default function Login({ onEntrar, vinculando = false }: { onEntrar: (u: 
   const [errorCodigo, setErrorCodigo] = useState<string | null>(null)
   const [comprobando, setComprobando] = useState(false)
   const ultimoProbado = useRef('')
+  const googleEnCurso = useRef(false)
   const [enviado, setEnviado] = useState(false)
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -161,12 +199,21 @@ export default function Login({ onEntrar, vinculando = false }: { onEntrar: (u: 
                 {!cargando && <ArrowRight size={18} strokeWidth={2} />}
               </Button>
             </form>
-            <a
-              href="/api/auth/google"
-              className="mt-3 flex h-12 w-full items-center justify-center rounded-2xl border border-neutral-200 text-[15px] font-medium transition hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-neutral-900"
+            <button
+              type="button"
+              onClick={(e) => {
+                if (googleEnCurso.current) return
+                googleEnCurso.current = true
+                void iniciarSesionGoogle(e).catch((err: unknown) => {
+                  googleEnCurso.current = false
+                  setError(err instanceof Error ? err.message : 'No se pudo continuar con Google.')
+                })
+              }}
+              className="mt-3 flex h-12 w-full items-center justify-center gap-3 rounded-2xl border border-neutral-200 text-[15px] font-medium transition hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-neutral-900"
             >
-              {t('login.google')}
-            </a>
+              <IconoGoogle />
+              <span>{t('login.google')}</span>
+            </button>
             {!vinculando && <BloqueDescarga className="mt-8" />}
           </div>
         ) : (
@@ -239,11 +286,11 @@ export default function Login({ onEntrar, vinculando = false }: { onEntrar: (u: 
       <footer className="mt-10 space-y-2 text-center text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">
         <nav aria-label="Enlaces" className="flex justify-center gap-4 font-medium">
           {!esNativa && (
-            <a href="/descargar" className="hover:text-graphite dark:hover:text-white">
+            <ControlInstalar className="bg-transparent p-0 font-medium text-inherit hover:text-graphite dark:hover:text-white">
               Instalar la app
-            </a>
+            </ControlInstalar>
           )}
-          <a href="/privacidad" className="hover:text-graphite dark:hover:text-white">
+          <a href="/privacidad" onClick={clicPrivacidad} className="hover:text-graphite dark:hover:text-white">
             Privacidad
           </a>
           <a href={URL_REPO} target="_blank" rel="noopener noreferrer" className="hover:text-graphite dark:hover:text-white">

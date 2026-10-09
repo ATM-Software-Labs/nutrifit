@@ -3,7 +3,6 @@
  * un renderizador Markdown mínimo y seguro (solo elementos React, sin HTML).
  */
 import type { ReactNode } from 'react'
-import { ArrowLeft } from 'lucide-react'
 import texto from '../../PRIVACIDAD.md?raw'
 
 function enLinea(s: string): ReactNode[] {
@@ -59,8 +58,8 @@ function renderizar(md: string): ReactNode[] {
 export default function Privacidad() {
   return (
     <div className="mx-auto min-h-dvh max-w-2xl px-5 pb-16 pt-[max(1rem,env(safe-area-inset-top))]">
-      <a href="/" className="-ml-2 mt-3 inline-flex items-center gap-1.5 rounded-full px-2 py-1.5 text-sm font-medium text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800">
-        <ArrowLeft size={18} /> Volver
+      <a href="/" className="-ml-2 mt-3 inline-flex items-center rounded-full px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-800">
+        ← Volver al inicio
       </a>
       <article className="mt-6 space-y-4 text-[15px] leading-relaxed text-neutral-600 dark:text-neutral-300">{renderizar(texto)}</article>
     </div>

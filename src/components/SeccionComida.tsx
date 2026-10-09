@@ -2,17 +2,22 @@ import { useId, useState } from 'react'
 import { ChevronDown, Copy, Plus, Trash2 } from 'lucide-react'
 import { cx } from './ui/cx.ts'
 import { entero } from '../lib/formato.ts'
-import { emojiMacro } from '../lib/miniaturaComida.ts'
+import { emojiComida, esFotoReal } from '../lib/miniaturaComida.ts'
 import { NOMBRE_TIPO, type Comida, type TipoComida } from '../lib/tipos.ts'
 
 function Miniatura({ c }: { c: Comida }) {
   const [rota, setRota] = useState(false)
-  if (c.imagen_url && !rota) {
-    return <img src={c.imagen_url} alt="" width={36} height={36} className="h-9 w-9 shrink-0 rounded-lg object-cover" onError={() => setRota(true)} />
+  const foto = esFotoReal(c.imagen_url) && !rota ? c.imagen_url : null
+  if (foto) {
+    return (
+      <span className="block h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-neutral-100 dark:bg-neutral-800">
+        <img src={foto} alt="" width={36} height={36} className="h-full w-full object-cover" onError={() => setRota(true)} />
+      </span>
+    )
   }
   return (
-    <span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-neutral-100 text-lg dark:bg-neutral-800">
-      {emojiMacro(c)}
+    <span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-neutral-100 text-[22px] leading-none dark:bg-neutral-800">
+      <span className="block leading-none">{emojiComida(c)}</span>
     </span>
   )
 }

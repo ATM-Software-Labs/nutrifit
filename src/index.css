@@ -104,6 +104,21 @@
   .slider:focus-visible::-webkit-slider-thumb {
     @apply ring-4 ring-mint/30;
   }
+
+  /* Fila de categorías del buscador: scroll táctil sin barra nativa y fade en los extremos. */
+  .chips-categorias {
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 1.25rem, #000 calc(100% - 1.25rem), transparent);
+    mask-image: linear-gradient(to right, transparent, #000 1.25rem, #000 calc(100% - 1.25rem), transparent);
+  }
+  .chips-categorias::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

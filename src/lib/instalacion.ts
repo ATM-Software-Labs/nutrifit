@@ -44,6 +44,13 @@ export function alCambiarPrompt(f: (e: EventoInstalar | null) => void) {
   return () => void oyentes.delete(f)
 }
 
+/**
+ * Texto cuando el navegador no entrega `beforeinstallprompt`
+ * (Safari/iOS, ya instalada, o Chrome sin el evento).
+ */
+export const MENSAJE_INSTALAR_MANUAL =
+  "Para instalar NutriFit, abre el menú del navegador y selecciona 'Añadir a la pantalla de inicio'."
+
 /** Lanza el diálogo nativo de instalación. Devuelve false si no está disponible. */
 export async function instalarPWA(): Promise<boolean> {
   const e = eventoGuardado

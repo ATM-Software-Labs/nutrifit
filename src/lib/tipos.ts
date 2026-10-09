@@ -85,6 +85,18 @@ export interface Resumen {
   num_comidas: number
 }
 
+export type CategoriaPlato =
+  | 'lacteo'
+  | 'carne'
+  | 'pescado_marisco'
+  | 'fruta'
+  | 'verdura'
+  | 'legumbre_cereal'
+  | 'panaderia'
+  | 'bebida'
+  | 'plato_elaborado'
+  | 'snack'
+
 export interface AlternativaPlato {
   nombre: string
   gramos: number
@@ -97,9 +109,12 @@ export interface AlternativaPlato {
 export interface ResultadoAnalisis {
   /** Texto original del usuario. Vacío en un análisis por foto. */
   input_query?: string
-  /** Nombre oficial del plato. Coincide con nombre_plato. */
+  /** Título gastronómico del plato. Coincide con nombre_plato. */
   display_name?: string
   nombre_plato: string
+  /** Desglose de ingredientes cuando el título no lo cuenta. */
+  descripcion?: string
+  categoria?: CategoriaPlato
   ingredientes: Ingrediente[]
   calorias: number
   proteinas: number

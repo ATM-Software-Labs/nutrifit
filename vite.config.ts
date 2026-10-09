@@ -47,6 +47,12 @@ function nutrifitSW(): Plugin {
         .replace('__VERSION__', version)
       writeFileSync(ruta, sw)
       this.info(`sw.js: ${precache.length} recursos precacheados · versión ${version}`)
+      const redirects = join(dir, '_redirects')
+      const publicado = readFileSync(new URL('./public/_redirects', import.meta.url), 'utf8')
+      if (!/^\s*\/\*\s+\/index\.html\s+200\s*$/m.test(publicado)) {
+        this.error('public/_redirects tiene que incluir /* /index.html 200')
+      }
+      writeFileSync(redirects, publicado.endsWith('\n') ? publicado : `${publicado}\n`)
     },
   }
 }

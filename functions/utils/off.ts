@@ -27,10 +27,33 @@ const DIA = 86_400
 export const TTL = { producto: 30 * DIA, noEncontrado: DIA, busqueda: DIA }
 const LIMITE_GLOBAL = { producto: 90, busqueda: 9 }
 
+/** España y Unión Europea. OFF acepta la lista en countries_tags_en. */
+export const PAISES_OFF = 'spain,european-union'
+
+/** Marcas de distribución españolas y globales habituales en el lineal de aquí. */
+const RE_MARCAS_COMUNES =
+  /\b(hacendado|pepsi|mercadona|carrefour|caprabo|eroski|alcampo|consum|lidl|dia|bonpreu|condis|gadis|milbona|danone|activia|nestle|nescafe|colacao|coca cola|cocacola|fanta|sprite|aquarius|bimbo|gullon|pescanova|campofrio|elpozo|tarradellas|pascual|puleva|nocilla|nutella)\b/
+
+export function urlOffMundo(camino: 'v2' | 'cgi', termino: string, campos: string, pageSize: number): string {
+  const q = encodeURIComponent(termino)
+  const paises = `countries_tags_en=${PAISES_OFF}`
+  if (camino === 'v2') {
+    return `${BASE}/api/v2/search?search_terms=${q}&${paises}&json=1&page_size=${pageSize}&lc=es&fields=${campos}`
+  }
+  return `${BASE}/cgi/search.pl?search_terms=${q}&search_simple=1&action=process&json=1&page_size=${pageSize}&${paises}&lc=es&fields=${campos}`
+}
+
+/** Término más el filtro de país para search-a-licious (Lucene). */
+export function consultaEuropa(termino: string): string {
+  return `${termino} (countries_tags:"en:spain" OR countries_tags:"en:european-union")`
+}
+
 export interface ProductoOFF {
   codigo: string
   nombre: string
   marca: string | null
+  /** Había product_name_es: el nombre no es una ficha extranjera sin traducir. */
+  traducido?: boolean
   por100: { calorias: number; proteinas: number; carbohidratos: number; grasas: number }
   extra: { azucares: number | null; saturadas: number | null; fibra: number | null; sal: number | null }
   /** Gramos (o ml) de una ración/unidad según el envase. */
@@ -84,7 +107,8 @@ export function parsearCantidad(texto: string): { cantidad: number; unidad: 'g' 
 export function normalizarProducto(p: unknown): ProductoOFF | null {
   const o = (p ?? {}) as Record<string, unknown>
   const nu = (o.nutriments ?? {}) as Record<string, unknown>
-  const nombre = limpio(o.product_name_es, 100) || limpio(o.product_name, 100)
+  const nombreEs = limpio(o.product_name_es, 100)
+  const nombre = nombreEs || limpio(o.product_name, 100)
   let kcal = n(nu['energy-kcal_100g'])
   if (kcal === null) {
     const kj = n(nu['energy-kj_100g'] ?? nu['energy_100g'])
@@ -112,6 +136,7 @@ export function normalizarProducto(p: unknown): ProductoOFF | null {
     codigo,
     nombre,
     marca,
+    traducido: nombreEs.length > 0,
     por100: { calorias: kcal, proteinas: n100(nu.proteins_100g) ?? 0, carbohidratos: n100(nu.carbohydrates_100g) ?? 0, grasas: n100(nu.fat_100g) ?? 0 },
     extra: { azucares: n100(nu.sugars_100g), saturadas: n100(nu['saturated-fat_100g']), fibra: n100(nu.fiber_100g), sal },
     racion,
@@ -216,7 +241,14 @@ export async function productoOFF(codigo: string, ctx: Ctx): Promise<ProductoOFF
 
 const sinAcentos = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ')
 
-/** Reordena (estable): primero los que contienen TODAS las palabras buscadas en nombre o marca. */
+export function puntosMarca(nombre: string, marca: string | null): number {
+  return RE_MARCAS_COMUNES.test(sinAcentos(`${nombre} ${marca ?? ''}`)) ? 3 : 0
+}
+
+/**
+ * Reordena (estable): primero la coincidencia del texto. A igualdad, la marca
+ * habitual en España y el nombre ya traducido van antes que una ficha extranjera.
+ */
 export function priorizarCoincidencias(lista: ProductoOFF[], termino: string): ProductoOFF[] {
   const ps = sinAcentos(termino).split(' ').filter((w) => w.length >= 2)
   if (!ps.length) return lista
@@ -225,9 +257,10 @@ export function priorizarCoincidencias(lista: ProductoOFF[], termino: string): P
     const todo = `${nombre} ${sinAcentos(p.marca ?? '')} `
     return ps.reduce((s, w) => s + (nombre.includes(` ${w} `) ? 2 : todo.includes(w) ? 1 : 0), 0)
   }
+  const local = (p: ProductoOFF) => puntosMarca(p.nombre, p.marca) + (p.traducido ? 2 : 0)
   return lista
-    .map((p, i) => ({ p, i, s: puntos(p) }))
-    .sort((a, b) => b.s - a.s || a.i - b.i)
+    .map((p, i) => ({ p, i, s: puntos(p), local: local(p) }))
+    .sort((a, b) => b.s - a.s || b.local - a.local || a.i - b.i)
     .map((x) => x.p)
 }
 
@@ -236,15 +269,15 @@ function deduplicar(lista: (ProductoOFF | null)[], max: number): ProductoOFF[] {
   return lista.filter((p): p is ProductoOFF => !!p && !vistos.has(p.codigo || p.nombre) && !!vistos.add(p.codigo || p.nombre)).slice(0, max)
 }
 
-async function buscarSearchALicious(termino: string, soloEspana: boolean): Promise<ProductoOFF[]> {
-  const q = soloEspana ? `${termino} countries_tags:"en:spain"` : termino
+async function buscarSearchALicious(termino: string, soloEuropa: boolean): Promise<ProductoOFF[]> {
+  const q = soloEuropa ? consultaEuropa(termino) : termino
   const url = `${BUSCADOR}?q=${encodeURIComponent(q)}&langs=es&page_size=24&fields=${CAMPOS_BUSCADOR}&sort_by=-unique_scans_n`
   const datos = (await pedirJson(url, 2, 5000)) as { hits?: unknown[] } | null
   return deduplicar((datos?.hits ?? []).map(normalizarProducto), 12)
 }
 
 async function buscarCgi(termino: string): Promise<ProductoOFF[]> {
-  const url = `${BASE}/cgi/search.pl?search_terms=${encodeURIComponent(termino)}&search_simple=1&action=process&json=1&page_size=20&cc=es&lc=es&fields=${CAMPOS}`
+  const url = urlOffMundo('cgi', termino, CAMPOS, 20)
   const datos = (await pedirJson(url, 1, 8000)) as { products?: unknown[] } | null
   return deduplicar((datos?.products ?? []).map(normalizarProducto), 12)
 }
@@ -284,7 +317,7 @@ export async function buscarOFF(q: string, ctx: Ctx): Promise<ProductoOFF[]> {
     let res: ProductoOFF[] = []
     try {
       res = await buscarSearchALicious(termino, true)
-      if (res.length < 5) res = deduplicar([...res, ...(await buscarSearchALicious(termino, false))], 12)
+      if (res.length === 0) res = await buscarSearchALicious(termino, false)
     } catch (e) {
       console.warn('[off] search-a-licious falla, uso cgi:', e instanceof Error ? e.message : e)
       res = await buscarCgi(termino)

@@ -7,7 +7,7 @@ import type { Usuario } from './lib/tipos.ts'
 import { activarActualizacion } from './lib/sw.ts'
 import { esNativa } from './lib/plataforma.ts'
 import { borrarTokenApp, guardarTokenApp } from './lib/tokenApp.ts'
-import { guardarVinculoPendiente, navegar, rutaActual, tomarVinculoPendiente, useRuta } from './lib/rutas.ts'
+import { EVENTO, esRutaPrivacidad, guardarVinculoPendiente, navegar, rutaActual, tomarVinculoPendiente, useRuta } from './lib/rutas.ts'
 
 // Pantallas en chunks separados. Se precargan en paralelo a /api/auth/yo según
 // la pista "nf:sesion" para no añadir una cascada de red.
@@ -27,8 +27,10 @@ const Privacidad = lazy(() => import('./components/Privacidad.tsx'))
 const Vincular = lazy(() => import('./components/Vincular.tsx'))
 
 const ruta = rutaActual()
+/** La política no pasa por el panel. Se mira el pathname real, no una ruta normalizada a Hoy. */
+const entraEnPrivacidad = window.location.pathname === '/privacidad' || esRutaPrivacidad(window.location.pathname)
 /** Página suelta (no necesita saber si hay sesión). */
-const paginaSuelta = (ruta === '/descargar' && !esNativa) || ruta === '/privacidad'
+const paginaSuelta = (ruta === '/descargar' && !esNativa) || entraEnPrivacidad
 
 // /vincular#<id>: el id del QR viaja en el fragmento (no llega a ningún servidor
 // ni a los logs). Lo sacamos de la URL nada más arrancar.
@@ -40,7 +42,7 @@ if (ruta === '/vincular') {
     guardarVinculoPendiente(id) // por si hay que entrar antes (enlace mágico en otra pestaña)
   }
   history.replaceState(null, '', '/vincular')
-} else if (!paginaSuelta && ruta !== '/' && ruta !== '/historial' && ruta !== '/profile') {
+} else if (!entraEnPrivacidad && !paginaSuelta && ruta !== '/' && ruta !== '/historial' && ruta !== '/profile') {
   history.replaceState(null, '', '/') // ruta desconocida → Hoy
 }
 
@@ -69,7 +71,18 @@ export default function App() {
   const [estado, setEstado] = useState<Estado>({ fase: 'cargando' })
   const [vinculo, setVinculo] = useState<string | null>(vinculoInicial)
   const rutaApp = useRuta()
+  const [enPrivacidad, setEnPrivacidad] = useState(entraEnPrivacidad)
   const toast = useToast()
+
+  useEffect(() => {
+    const sync = () => setEnPrivacidad(window.location.pathname === '/privacidad' || esRutaPrivacidad(window.location.pathname))
+    window.addEventListener('popstate', sync)
+    window.addEventListener(EVENTO, sync)
+    return () => {
+      window.removeEventListener('popstate', sync)
+      window.removeEventListener(EVENTO, sync)
+    }
+  }, [])
 
   /** Con sesión: si había una aprobación de QR pendiente, ir a ella. */
   const retomarVinculo = useCallback(() => {
@@ -192,8 +205,14 @@ export default function App() {
     setEstado({ fase: 'anonimo' })
   }, [])
 
+  if (window.location.pathname === '/privacidad' || enPrivacidad) {
+    return (
+      <Suspense fallback={<Cargando />}>
+        <Privacidad />
+      </Suspense>
+    )
+  }
   if (paginaSuelta && ruta === '/descargar') return <Suspense fallback={<Cargando />}><SeccionDescargas /></Suspense>
-  if (ruta === '/privacidad') return <Suspense fallback={<Cargando />}><Privacidad /></Suspense>
 
   let pantalla
   switch (estado.fase) {

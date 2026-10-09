@@ -8,6 +8,7 @@
  */
 import { z } from 'zod'
 import { MAX } from './schemas.ts'
+import { categoriaDe, descripcionPlato, esCategoriaPlato, tituloGastronomico, type CategoriaPlato } from './tituloPlato.ts'
 
 export class ErrorParseo extends Error {}
 
@@ -127,6 +128,9 @@ const analisisIA = z.object({
   nombre_plato: limpiarTexto(120),
   input_query: textoOpcional(300),
   display_name: textoOpcional(120),
+  alimento: textoOpcional(300),
+  descripcion: textoOpcional(300),
+  categoria: textoOpcional(40),
   ingredientes: z.array(ingredienteIA).max(30).default([]),
   calorias: numOpt(MAX.calorias),
   proteinas: numOpt(MAX.proteinas),
@@ -139,9 +143,12 @@ export type IngredienteAnalisis = z.infer<typeof ingredienteIA>
 export interface ResultadoAnalisis {
   /** Texto del usuario, sin corregir. Vacío si la entrada fue una foto. */
   input_query: string
-  /** Nombre oficial que se muestra y se guarda. */
+  /** Título gastronómico, como máximo 40 caracteres. Coincide con nombre_plato. */
   display_name: string
   nombre_plato: string
+  /** Desglose de ingredientes cuando el título no lo cuenta. Vacío si no aporta. */
+  descripcion?: string
+  categoria?: CategoriaPlato
   ingredientes: IngredienteAnalisis[]
   calorias: number
   proteinas: number
@@ -197,13 +204,17 @@ function adaptarEsquemaFoto(obj: unknown): unknown {
       grasas: it.fat ?? it.grasas,
     }
   })
-  const nombres = ingredientes.map((i) => i.display_name).filter(Boolean)
-  const oficialPlato = comoTexto(o.display_name) || (nombres.length ? nombres.slice(0, 4).join(', ') : 'Sin comida')
+  const nombres = ingredientes.map((i) => i.display_name).filter((n): n is string => !!n)
+  const crudo = comoTexto(o.alimento) || comoTexto(o.display_name) || comoTexto(o.nombre_plato)
+  const titulo = tituloGastronomico(crudo, nombres)
   const alternativas = leerAlternativas(o)
   return {
     input_query: comoTexto(o.input_query),
-    display_name: oficialPlato,
-    nombre_plato: oficialPlato,
+    alimento: crudo,
+    descripcion: comoTexto(o.descripcion),
+    categoria: comoTexto(o.categoria),
+    display_name: titulo,
+    nombre_plato: titulo,
     ingredientes,
     calorias: total.calories ?? total.calorias,
     proteinas: total.protein ?? total.proteinas,
@@ -287,12 +298,18 @@ export function normalizarAnalisis(obj: unknown): ResultadoAnalisis {
   const kcalMacros = total.proteinas * 4 + total.carbohidratos * 4 + total.grasas * 9
   if (total.calorias === 0 && kcalMacros > 0) total.calorias = r1(kcalMacros)
 
-  const display_name = a.display_name || a.nombre_plato
+  const nombresIng = a.ingredientes.map((i) => i.display_name || i.nombre).filter(Boolean)
+  const crudo = a.alimento || a.display_name || a.nombre_plato
+  const display_name = tituloGastronomico(crudo, nombresIng)
+  const descripcion = descripcionPlato(crudo, nombresIng, a.descripcion ?? '')
+  const categoria = a.categoria && esCategoriaPlato(a.categoria) ? a.categoria : categoriaDe([display_name, descripcion, ...nombresIng], a.ingredientes.length)
   const alternativas = a.alternativas ?? []
   return {
     input_query: a.input_query ?? '',
     display_name,
     nombre_plato: display_name,
+    ...(descripcion ? { descripcion } : {}),
+    categoria,
     ingredientes: a.ingredientes.map((i) => ({ ...i, nombre: i.display_name || i.nombre, display_name: i.display_name || i.nombre })),
     ...total,
     ...(alternativas.length ? { alternativas } : {}),

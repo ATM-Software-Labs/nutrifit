@@ -23,7 +23,8 @@ import { api } from '../lib/api.ts'
 import { conComida, reemplazarComida, sinComida } from '../lib/resumen.ts'
 import { fechaLarga, hoyISO, tipoPorHora } from '../lib/fechas.ts'
 import { blobDesdeDataUrl } from '../lib/imagen.ts'
-import { navegar } from '../lib/rutas.ts'
+import { esFotoReal } from '../lib/miniaturaComida.ts'
+import { clicPrivacidad, navegar } from '../lib/rutas.ts'
 import { fijarUsuarioSync } from '../lib/ventanaCliente.ts'
 import { TIPOS_COMIDA, type Comida, type NuevaComida, type ResultadoAnalisis, type TipoComida, type Usuario } from '../lib/tipos.ts'
 
@@ -127,7 +128,7 @@ export default function Dashboard({
   }
 
   function repetir(c: Comida) {
-    const imagen = c.imagen_url && (c.imagen_url.startsWith('https://') || c.imagen_url.startsWith('/api/archivos/') || c.imagen_url.startsWith('data:')) ? c.imagen_url : null
+    const imagen = esFotoReal(c.imagen_url) ? c.imagen_url : null
     void guardar({
       tipo_comida: c.tipo_comida,
       descripcion: c.descripcion,
@@ -308,6 +309,11 @@ export default function Dashboard({
           />
         </Suspense>
       )}
+      <footer className="px-5 pb-2 pt-8 text-center text-xs text-neutral-500 dark:text-neutral-400">
+        <a href="/privacidad" onClick={clicPrivacidad} className="font-medium underline-offset-2 hover:text-graphite hover:underline dark:hover:text-white">
+          Política de Privacidad
+        </a>
+      </footer>
       </div>
 
       {/* Botón flotante: añadir al tipo de comida que toca por la hora */}

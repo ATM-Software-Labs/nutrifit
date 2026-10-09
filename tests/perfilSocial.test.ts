@@ -169,6 +169,36 @@ test('amistad y perfil público no aceptan un usuario_id ni enseñan cuentas pri
   assert.equal('email' in perfil.perfil, false)
 })
 
+test('la comunidad pública sale de 5 en 5 sin término de búsqueda', async () => {
+  const env = entornoTest()
+  const yo = await entrar(env, 'yo', 'yo@b.es')
+  await entrar(env, 'privado', 'privado@b.es')
+  env.DB.sqlite.prepare("UPDATE usuarios SET username = 'oculto', es_publico = 0, actualizado_en = '2026-10-09T00:00:09' WHERE id = 'privado'").run()
+  env.DB.sqlite.prepare("UPDATE usuarios SET username = 'yo_fit', es_publico = 1 WHERE id = 'yo'").run()
+  for (let i = 1; i <= 6; i++) {
+    const id = `u${i}`
+    await entrar(env, id, `u${i}@b.es`)
+    env.DB.sqlite.prepare('UPDATE usuarios SET username = ?, es_publico = 1, nombre = ?, actualizado_en = ? WHERE id = ?').run(`fit_${i}`, `Nombre ${i}`, `2026-10-09T00:00:0${i}`, id)
+  }
+  const uno = await getPublico(conSesion(env, new Request('https://nutri.trujillomingorance.com/api/usuarios/publico'), yo))
+  assert.equal(uno.status, 200)
+  const cuerpo = (await uno.json()) as { comunidad: { username: string }[]; pagina: number; hay_mas: boolean }
+  assert.equal(cuerpo.pagina, 1)
+  assert.equal(cuerpo.comunidad.length, 5)
+  assert.equal(cuerpo.hay_mas, true)
+  const nombres = cuerpo.comunidad.map((c) => c.username)
+  assert.equal(nombres.includes('yo_fit'), false)
+  assert.equal(nombres.includes('oculto'), false)
+  assert.equal(JSON.stringify(cuerpo).includes('yo@b.es'), false)
+  assert.equal(JSON.stringify(cuerpo).includes('"email"'), false)
+  const dos = await getPublico(conSesion(env, new Request('https://nutri.trujillomingorance.com/api/usuarios/publico?pagina=2'), yo))
+  assert.equal(dos.status, 200)
+  const pagina2 = (await dos.json()) as { comunidad: { username: string }[]; hay_mas: boolean }
+  assert.equal(pagina2.comunidad.length, 1)
+  assert.equal(pagina2.hay_mas, false)
+  assert.equal(nombres.includes(pagina2.comunidad[0]!.username), false)
+})
+
 test('el username repetido no pisa a otra cuenta', async () => {
   const env = entornoTest()
   const ana = await entrar(env, 'ana', 'ana@b.es')

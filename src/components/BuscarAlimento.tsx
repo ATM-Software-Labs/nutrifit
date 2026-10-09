@@ -7,7 +7,7 @@
  *  · Productos envasados: Open Food Facts solo al pulsar Buscar o Enter.
  * Se eligen gramos, se van sumando a una «cesta» y se revisa como un plato.
  */
-import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { Barcode, Minus, Plus, Search, Sparkles, X } from 'lucide-react'
 import { Sheet } from './ui/Sheet.tsx'
 import { Button } from './ui/Button.tsx'
@@ -30,6 +30,42 @@ interface EnCesta {
 }
 
 let siguiente = 1
+
+/** Icono por nombre de categoría. El índice del filtro sigue el orden de `categorias`. */
+const ICONO_CATEGORIA: Record<string, string> = {
+  Frutas: '🍎',
+  Verduras: '🥦',
+  'Dulces y snacks': '🍪',
+  Legumbres: '🫘',
+  'Cereales y pan': '🍞',
+  Lácteos: '🥛',
+  'Aceites y grasas': '🫒',
+  Huevos: '🥚',
+  Carnes: '🥩',
+  Embutidos: '🥓',
+  'Pescados y mariscos': '🐟',
+  'Frutos secos': '🥜',
+  'Salsas y condimentos': '🧂',
+  Platos: '🍲',
+  Bebidas: '🥤',
+  Suplementos: '💊',
+}
+
+const CHIP_BASE = 'inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3.5 py-1.5 text-xs transition'
+const CHIP_REPOSO = 'border-zinc-200 bg-zinc-100/80 text-zinc-600 hover:bg-zinc-200/80 dark:border-zinc-700/50 dark:bg-zinc-800/60 dark:text-zinc-300 dark:hover:bg-white/[0.08]'
+const CHIP_ACTIVO = 'border-emerald-500 bg-emerald-500 font-semibold text-black shadow-md shadow-emerald-500/20'
+
+function centrarChip(el: HTMLElement) {
+  const fila = el.closest<HTMLElement>('.chips-categorias')
+  const suave = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+  if (!fila) {
+    el.scrollIntoView({ behavior: suave, inline: 'center', block: 'nearest' })
+    return
+  }
+  // Solo se mueve la fila: el scroll del modal no se lleva el chip.
+  const destino = fila.scrollLeft + (el.getBoundingClientRect().left - fila.getBoundingClientRect().left) - (fila.clientWidth - el.offsetWidth) / 2
+  fila.scrollTo({ left: destino, behavior: suave })
+}
 
 function lineaRacion(a: Alimento) {
   const g = a.racion ?? 100
@@ -107,6 +143,7 @@ export default function BuscarAlimento({ onClose, onResultado }: { onClose: () =
   const [ia, setIa] = useState<{ cargando: boolean; error: string | null }>({ cargando: false, error: null })
   const ctrl = useRef<AbortController | null>(null)
   const entrada = useRef<HTMLInputElement>(null)
+  const filaCats = useRef<HTMLDivElement>(null)
   const esperaOff = useRef<number | null>(null)
   const esperaSug = useRef<number | null>(null)
   const { contenedorRef, obtenerToken } = useTurnstile('analizar-texto', false)
@@ -147,6 +184,17 @@ export default function BuscarAlimento({ onClose, onResultado }: { onClose: () =
     ctrl.current?.abort()
     if (esperaOff.current) window.clearTimeout(esperaOff.current)
   }, [])
+
+  // Los huecos laterales permiten centrar el primer y el último chip.
+  // Al abrir, el primero queda alineado al borde para no mostrar ese hueco.
+  useLayoutEffect(() => {
+    const fila = filaCats.current
+    if (!fila) return
+    const primero = fila.querySelector('button')
+    if (!primero) return
+    const pad = Number.parseFloat(getComputedStyle(fila).paddingLeft) || 0
+    fila.scrollLeft += primero.getBoundingClientRect().left - fila.getBoundingClientRect().left - pad
+  }, [fuente])
 
   useEffect(() => {
     setResaltado(0)
@@ -393,21 +441,36 @@ export default function BuscarAlimento({ onClose, onResultado }: { onClose: () =
       )}
 
       {fuente === 'local' && (
-        <div className="-mx-6 mt-3 flex gap-1.5 overflow-x-auto px-6 pb-1" aria-label="Categorías">
+        <div ref={filaCats} className="chips-categorias -mx-6 mt-3 flex gap-1.5 px-6 pb-1" role="group" aria-label="Categorías">
+          <span aria-hidden="true" className="w-1/2 shrink-0" />
+          <button
+            type="button"
+            aria-pressed={categoria === null}
+            onClick={(e) => {
+              centrarChip(e.currentTarget)
+              setCategoria(null)
+            }}
+            className={cx(CHIP_BASE, categoria === null ? CHIP_ACTIVO : CHIP_REPOSO)}
+          >
+            <span aria-hidden="true">🍽️</span>
+            Todas
+          </button>
           {categorias.map((c, i) => (
             <button
               key={c}
               type="button"
               aria-pressed={categoria === i}
-              onClick={() => setCategoria((x) => (x === i ? null : i))}
-              className={cx(
-                'shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition',
-                categoria === i ? 'border-mint bg-mint-50 text-mint-800 dark:bg-mint-950 dark:text-mint-200' : 'border-neutral-200 text-neutral-600 hover:bg-neutral-50 dark:border-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-900',
-              )}
+              onClick={(e) => {
+                centrarChip(e.currentTarget)
+                setCategoria((x) => (x === i ? null : i))
+              }}
+              className={cx(CHIP_BASE, categoria === i ? CHIP_ACTIVO : CHIP_REPOSO)}
             >
+              <span aria-hidden="true">{ICONO_CATEGORIA[c] ?? '🍽️'}</span>
               {c}
             </button>
           ))}
+          <span aria-hidden="true" className="w-1/2 shrink-0" />
         </div>
       )}
 

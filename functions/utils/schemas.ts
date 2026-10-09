@@ -248,6 +248,11 @@ export const socialSchema = z
 
 export const usernameQuery = z.strictObject({ username: usernameSchema })
 
+/** Directorio público. La página la fija el servidor en 5 filas; aquí solo el índice. */
+export const comunidadQuery = z.strictObject({
+  pagina: z.coerce.number({ error: 'La página no es válida.' }).int().min(1).max(40).optional(),
+})
+
 // ------------------------------------------------------------ entrenamientos
 /** 'deportes' y 'movilidad' se mantienen: el registro de ejercicios ya los envía. */
 export const TIPOS_ENTRENO = ['fuerza', 'cardio', 'deportes', 'movilidad'] as const

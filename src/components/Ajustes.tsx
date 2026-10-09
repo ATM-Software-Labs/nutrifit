@@ -2,6 +2,7 @@
 import { useMemo, useState } from 'react'
 import { ChevronRight, Download, ExternalLink, LogOut, Monitor, Moon, Shield, Sun } from 'lucide-react'
 import { URL_REPO } from '../lib/config.ts'
+import { clicPrivacidad } from '../lib/rutas.ts'
 import { esNativa } from '../lib/plataforma.ts'
 import { Sheet } from './ui/Sheet.tsx'
 import { Button } from './ui/Button.tsx'
@@ -22,6 +23,7 @@ import { SeccionDispositivos } from './SeccionDispositivos.tsx'
 import { SeccionIntegraciones } from './SeccionIntegraciones.tsx'
 import { SeccionPreferenciasAvanzadas } from './SeccionPreferenciasAvanzadas.tsx'
 import { useIdioma } from '../hooks/useIdioma.ts'
+import { ControlInstalar } from './ControlInstalar.tsx'
 import type { Idioma } from '../lib/i18n.ts'
 
 const SELECT =
@@ -235,15 +237,22 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
         <Seccion titulo="Más">
           <div className="divide-y divide-neutral-100 rounded-2xl border border-neutral-200 dark:divide-neutral-800 dark:border-neutral-800">
             {!esNativa && (
-              <a href="/descargar" className="flex items-center gap-3 px-4 py-3.5 text-[15px] hover:bg-neutral-50 dark:hover:bg-neutral-900">
+              <ControlInstalar className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-[15px] hover:bg-neutral-50 dark:hover:bg-neutral-900">
                 <Download size={18} className="text-neutral-500 dark:text-neutral-400" />
                 <span className="flex-1">Instalar la app</span>
                 <ChevronRight size={16} className="text-neutral-400" />
-              </a>
+              </ControlInstalar>
             )}
-            <a href="/privacidad" className="flex items-center gap-3 px-4 py-3.5 text-[15px] hover:bg-neutral-50 dark:hover:bg-neutral-900">
+            <a
+              href="/privacidad"
+              onClick={(e) => {
+                clicPrivacidad(e)
+                if (e.defaultPrevented) onClose()
+              }}
+              className="flex items-center gap-3 px-4 py-3.5 text-[15px] hover:bg-neutral-50 dark:hover:bg-neutral-900"
+            >
               <Shield size={18} className="text-neutral-500 dark:text-neutral-400" />
-              <span className="flex-1">Privacidad</span>
+              <span className="flex-1">Política de Privacidad</span>
               <ChevronRight size={16} className="text-neutral-400" />
             </a>
             <a href={URL_REPO} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 px-4 py-3.5 text-[15px] hover:bg-neutral-50 dark:hover:bg-neutral-900">

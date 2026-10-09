@@ -94,12 +94,15 @@ test('quita etiquetas markdown y el razonamiento <think>', () => {
 })
 
 // ---------------------------------------------------------------- texto (Workers AI)
-import { CARRERA_VISION_MS, carreraVision, contenidoWorkersAI, cuentaFalloGateway, ErrorIA, ESQUEMA_FOTO, MODELOS_GROQ_VISION, PROMPT_SISTEMA, PROMPT_SISTEMA_TEXTO, REGLA_NOMBRE_OFICIAL, RESPONSE_SCHEMA, TIMEOUT_GATEWAY_FOTO_MS } from '../functions/utils/ia.ts'
+import { CARRERA_VISION_MS, carreraVision, contenidoWorkersAI, cuentaFalloGateway, ErrorIA, ESQUEMA_FOTO, MODELOS_GROQ_VISION, PROMPT_SISTEMA, PROMPT_SISTEMA_TEXTO, REGLA_NOMBRE_OFICIAL, REGLA_TITULO_PLATO, RESPONSE_SCHEMA, TIMEOUT_GATEWAY_FOTO_MS } from '../functions/utils/ia.ts'
 import { normalizarProducto } from '../functions/utils/off.ts'
 
 test('el prompt obliga al nombre oficial y el esquema pide input_query y display_name', () => {
   for (const prompt of [PROMPT_SISTEMA, PROMPT_SISTEMA_TEXTO]) {
     assert.ok(prompt.includes(REGLA_NOMBRE_OFICIAL))
+    assert.ok(prompt.includes(REGLA_TITULO_PLATO))
+    assert.match(prompt, /Hamburguesa completa de ternera/)
+    assert.match(prompt, /pescado_marisco/)
     assert.match(prompt, /pechu plancha/)
     assert.match(prompt, /monstercita blanca/)
     assert.match(prompt, /pan bimbo inte/)
@@ -117,6 +120,9 @@ test('el prompt obliga al nombre oficial y el esquema pide input_query y display
   assert.doesNotMatch(PROMPT_SISTEMA, /```/)
   assert.equal(RESPONSE_SCHEMA.required.includes('input_query'), true)
   assert.equal(RESPONSE_SCHEMA.required.includes('display_name'), true)
+  assert.equal(RESPONSE_SCHEMA.required.includes('alimento'), true)
+  assert.equal(RESPONSE_SCHEMA.required.includes('categoria'), true)
+  assert.equal(ESQUEMA_FOTO.properties.categoria.enum?.includes('lacteo'), true)
   assert.deepEqual(RESPONSE_SCHEMA.properties.ingredientes.items.required, ['input_query', 'display_name', 'gramos', 'calorias', 'proteinas', 'carbohidratos', 'grasas'])
   assert.equal(ESQUEMA_FOTO.required.includes('is_food'), true)
   assert.deepEqual(ESQUEMA_FOTO.properties.items.items.required, ['input_query', 'display_name', 'grams', 'min_grams', 'max_grams', 'calories', 'protein', 'carbs', 'fat'])
@@ -189,6 +195,54 @@ test('un plato combinado queda en ingredientes separados, no en un solo alimento
   )
   assert.equal(r.ingredientes[2]?.gramos, 8)
   assert.equal(r.calorias, 537)
+  assert.equal(r.nombre_plato, 'Arroz con pollo')
+  assert.equal(r.nombre_plato.includes(','), false)
+  assert.ok(r.nombre_plato.length <= 40)
+  assert.equal(r.categoria, 'plato_elaborado')
+  assert.match(r.descripcion ?? '', /Arroz blanco hervido/)
+  assert.match(r.descripcion ?? '', /Aceite de oliva/)
+})
+
+test('una lista de ingredientes no se queda como título del plato', () => {
+  const r = parsearRespuestaModelo({
+    is_food: true,
+    alimento: 'Pan de hamburguesa, Carne de res para hamburguesa',
+    items: [
+      { display_name: 'Pan de hamburguesa', grams: 60, calories: 160, protein: 5, carbs: 30, fat: 2 },
+      { display_name: 'Carne de res', grams: 120, calories: 250, protein: 26, carbs: 0, fat: 16 },
+    ],
+    total: { calories: 410, protein: 31, carbs: 30, fat: 18 },
+  })
+  assert.equal(r.nombre_plato, 'Hamburguesa completa de ternera')
+  assert.equal(r.display_name, 'Hamburguesa completa de ternera')
+  assert.ok(r.nombre_plato.length <= 40)
+  assert.equal(r.categoria, 'plato_elaborado')
+  assert.match(r.descripcion ?? '', /Pan de hamburguesa/)
+  assert.match(r.descripcion ?? '', /Carne de res/)
+})
+
+test('una categoria fuera del enum se corrige y una válida se conserva', () => {
+  const yogur = parsearRespuestaModelo({
+    nombre_plato: 'Yogur natural',
+    categoria: 'lacteos',
+    ingredientes: [{ nombre: 'Yogur natural', gramos: 125, calorias: 80, proteinas: 6, carbohidratos: 8, grasas: 2 }],
+    calorias: 80,
+    proteinas: 6,
+    carbohidratos: 8,
+    grasas: 2,
+  })
+  assert.equal(yogur.categoria, 'lacteo')
+  const marcada = parsearRespuestaModelo({
+    nombre_plato: 'Manzana',
+    categoria: 'snack',
+    ingredientes: [{ nombre: 'Manzana', gramos: 150, calorias: 80, proteinas: 0, carbohidratos: 20, grasas: 0 }],
+    calorias: 80,
+    proteinas: 0,
+    carbohidratos: 20,
+    grasas: 0,
+  })
+  assert.equal(marcada.categoria, 'snack')
+  assert.equal(marcada.nombre_plato, 'Manzana')
 })
 
 test('una foto ilegible no inventa comida y conserva el mensaje fijo', () => {

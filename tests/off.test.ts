@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { normalizarProducto, parsearCantidad, pedirJson, terminoOFF } from '../functions/utils/off.ts'
+import { consultaEuropa, normalizarProducto, parsearCantidad, pedirJson, priorizarCoincidencias, terminoOFF, urlOffMundo } from '../functions/utils/off.ts'
 
 test('OFF: cantidades del envase', () => {
   assert.deepEqual(parsearCantidad('2.25 l'), { cantidad: 2250, unidad: 'ml', unidades: null })
@@ -57,9 +57,24 @@ test('OFF: reintenta en 5xx y devuelve null en 404', async () => {
   assert.equal(n, 1) // 4xx no se reintenta
 })
 
-test('OFF: prioriza productos que contienen todas las palabras', async () => {
-  const { priorizarCoincidencias } = await import('../functions/utils/off.ts')
+test('OFF: prioriza productos que contienen todas las palabras', () => {
   const mk = (nombre: string, marca: string) => normalizarProducto({ product_name: nombre, brands: marca, nutriments: { 'energy-kcal_100g': 1 } })!
   const r = priorizarCoincidencias([mk('Coca-Cola', 'Coca-Cola'), mk('Coca-Cola zero', 'Coca Cola'), mk('Zero Azúcar', 'Coca-Cola')], 'coca cola zero')
   assert.equal(r[0]!.nombre, 'Coca-Cola zero')
+})
+
+test('OFF: España y la UE van antes que una ficha sin traducir', () => {
+  const local = normalizarProducto({ product_name_es: 'Yogur natural', brands: 'Hacendado', nutriments: { 'energy-kcal_100g': 60 } })!
+  const extranjero = normalizarProducto({ product_name: 'Yogur natural', brands: 'Foreign Dairy', nutriments: { 'energy-kcal_100g': 60 } })!
+  const r = priorizarCoincidencias([extranjero, local], 'yogur natural')
+  assert.equal(r[0]!.marca, 'Hacendado')
+  assert.equal(local.traducido, true)
+  assert.equal(extranjero.traducido, false)
+  const v2 = urlOffMundo('v2', 'yogur', 'code,product_name', 24)
+  assert.match(v2, /^https:\/\/world\.openfoodfacts\.org\/api\/v2\/search\?/)
+  assert.match(v2, /countries_tags_en=spain,european-union/)
+  assert.match(v2, /lc=es/)
+  assert.match(consultaEuropa('yogur'), /en:spain/)
+  assert.match(consultaEuropa('yogur'), /en:european-union/)
+  assert.match(urlOffMundo('cgi', 'pepsi', 'code', 20), /lc=es/)
 })

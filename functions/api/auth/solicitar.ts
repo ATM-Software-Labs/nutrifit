@@ -4,7 +4,7 @@ import { leerBody } from '../../utils/http.ts'
 import { solicitarSchema } from '../../utils/schemas.ts'
 import { claveLimite, exigirLimite } from '../../utils/rateLimit.ts'
 import { crearMagicToken } from '../../utils/magicLink.ts'
-import { enviarMagicLink } from '../../utils/brevo.ts'
+import { enviarMagicLink } from '../../utils/email.ts'
 import { crearCodigoLogin } from '../../utils/codigoLogin.ts'
 
 const MENSAJE_ENVIADO = 'Enlace y código enviados. Revisa tu bandeja de entrada o spam.'

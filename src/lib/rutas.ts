@@ -13,17 +13,39 @@ const RUTAS: RutaApp[] = ['/', '/historial', '/profile', '/vincular']
 
 export const rutaActual = () => location.pathname.replace(/\/+$/, '') || '/'
 
+/** `/privacidad` y `/privacidad/` son la política. El resto no. */
+export function esRutaPrivacidad(path: string): boolean {
+  return path === '/privacidad' || path.replace(/\/+$/, '') === '/privacidad'
+}
+
 export function rutaApp(r = rutaActual()): RutaApp {
   return (RUTAS as string[]).includes(r) ? (r as RutaApp) : '/'
 }
 
-const EVENTO = 'nf:ruta'
+export const EVENTO = 'nf:ruta'
 
 export function navegar(ruta: RutaApp, { reemplazar = false } = {}) {
   if (ruta === rutaActual() && !location.hash) return
   history[reemplazar ? 'replaceState' : 'pushState'](null, '', ruta)
   window.dispatchEvent(new Event(EVENTO))
   window.scrollTo({ top: 0 })
+}
+
+/** Abre la política sin recargar: el estado interno y la URL cambian a la vez. */
+export function abrirPrivacidad() {
+  if (window.location.pathname !== '/privacidad') history.pushState(null, '', '/privacidad')
+  window.dispatchEvent(new Event(EVENTO))
+  window.scrollTo({ top: 0 })
+}
+
+/**
+ * Clic normal: abre la política en esta página. Un clic con modificador o el
+ * botón central conserva el href para abrir otra pestaña.
+ */
+export function clicPrivacidad(e: { preventDefault(): void; metaKey: boolean; ctrlKey: boolean; shiftKey: boolean; altKey: boolean; button: number }) {
+  if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return
+  e.preventDefault()
+  abrirPrivacidad()
 }
 
 /** Ruta actual, reactiva a navegar() y a los botones atrás/adelante. */

@@ -11,9 +11,13 @@ import { z } from 'zod'
 import type { Env } from './env.ts'
 import { ErrorIA, pasoEscaneo, TIMEOUT_ESCANER_MS, TIMEOUT_GATEWAY_FOTO_MS, type Imagen } from './ia.ts'
 import { FotoIlegible, type ResultadoAnalisis } from './iaParseo.ts'
+import { CATEGORIAS_PLATO, categoriaDe, descripcionPlato, esCategoriaPlato, tituloGastronomico, type CategoriaPlato } from './tituloPlato.ts'
 
 export interface PlatoEscaneo {
   alimento: string
+  /** Desglose. Vacío cuando el título ya nombra el alimento. */
+  descripcion: string
+  categoria: CategoriaPlato
   peso_aprox_g: number
   calorias: number
   macros: { proteinas: number; carbohidratos: number; grasas: number }
@@ -21,7 +25,9 @@ export interface PlatoEscaneo {
 }
 
 const platoSchema = z.strictObject({
-  alimento: z.string().trim().min(1).max(120),
+  alimento: z.string().trim().min(1).max(40),
+  descripcion: z.string().trim().max(200),
+  categoria: z.enum(CATEGORIAS_PLATO),
   peso_aprox_g: z.number().finite().min(0).max(5000),
   calorias: z.number().finite().min(0).max(5000),
   macros: z.strictObject({
@@ -29,7 +35,7 @@ const platoSchema = z.strictObject({
     carbohidratos: z.number().finite().min(0).max(1000),
     grasas: z.number().finite().min(0).max(500),
   }),
-  alternativas: z.array(z.string().trim().min(1).max(120)).max(2),
+  alternativas: z.array(z.string().trim().min(1).max(80)).max(2),
 })
 
 const redondear = (n: number, max: number) => {
@@ -39,13 +45,19 @@ const redondear = (n: number, max: number) => {
 
 export function aPlato(r: ResultadoAnalisis): PlatoEscaneo {
   const peso = r.ingredientes.reduce((a, i) => a + (Number.isFinite(i.gramos) ? i.gramos : 0), 0)
-  const alimento = (r.display_name || r.nombre_plato || 'Plato').trim().slice(0, 120) || 'Plato'
+  const nombres = r.ingredientes.map((i) => (i.display_name || i.nombre).trim()).filter((n) => n.length > 0)
+  const crudo = (r.display_name || r.nombre_plato || '').trim()
+  const alimento = tituloGastronomico(crudo, nombres)
+  const descripcion = descripcionPlato(crudo, nombres, r.descripcion ?? '')
+  const categoria = r.categoria && esCategoriaPlato(r.categoria) ? r.categoria : categoriaDe([alimento, descripcion, ...nombres], nombres.length)
   const alternativas = (r.alternativas ?? [])
-    .map((a) => a.nombre.trim())
+    .map((a) => tituloGastronomico(a.nombre.trim()))
     .filter((n) => n.length > 0 && n.toLowerCase() !== alimento.toLowerCase())
     .slice(0, 2)
   return platoSchema.parse({
     alimento,
+    descripcion,
+    categoria,
     peso_aprox_g: redondear(peso, 5000),
     calorias: redondear(r.calorias, 5000),
     macros: {

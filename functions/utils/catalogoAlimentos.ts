@@ -10,7 +10,7 @@
  */
 import type { Env } from './env.ts'
 import { HttpError } from './response.ts'
-import { hayCupoOff, parsearCantidad, pedirJson, terminoOFF } from './off.ts'
+import { hayCupoOff, parsearCantidad, pedirJson, puntosMarca, terminoOFF, urlOffMundo } from './off.ts'
 import { foodQuery, guardarKv, leerKv } from './cacheBusquedaKv.ts'
 import { aplazarEnTurso, guardarCheckpoint, leerCheckpoint } from './turso.ts'
 import { buscarFrescoBedca, esConsultaFresco, type Nutrientes } from './bedca.ts'
@@ -46,6 +46,8 @@ export interface AlimentoCatalogo {
   por_porcion: Nutrientes | null
   gramos_porcion: number | null
   fuente: 'off' | 'bedca' | 'propio'
+  /** El nombre venía de product_name_es. */
+  traducido?: boolean
 }
 
 type Ctx = { env: Env; waitUntil(p: Promise<unknown>): void }
@@ -161,7 +163,8 @@ function gramosRacionDe(o: Record<string, unknown>, nombre: string): number | nu
 export function normalizarProductoOff(p: unknown, codigoForzado?: string): AlimentoCatalogo | null {
   const o = (p ?? {}) as Record<string, unknown>
   const nu = (o.nutriments ?? {}) as Record<string, unknown>
-  const nombre = limpio(o.product_name_es, 100) || limpio(o.product_name, 100)
+  const nombreEs = limpio(o.product_name_es, 100)
+  const nombre = nombreEs || limpio(o.product_name, 100)
   if (!nombre) return null
   const codigo = codigoForzado && /^\d{8,14}$/.test(codigoForzado) ? codigoForzado : typeof o.code === 'string' && /^\d{4,14}$/.test(o.code) ? o.code : ''
   const gramos = gramosRacionDe(o, nombre)
@@ -197,6 +200,7 @@ export function normalizarProductoOff(p: unknown, codigoForzado?: string): Alime
     gramos_porcion: gramos,
     por_porcion: gramos ? escalarNutrientes(por100, gramos) : null,
     fuente: 'off',
+    traducido: nombreEs.length > 0,
   }
 }
 
@@ -233,9 +237,10 @@ export function ordenarCatalogo(lista: AlimentoCatalogo[], consulta: string): Al
     .map((p, i) => {
       const n = sinAcentos(`${p.nombre} ${p.marca ?? ''}`)
       const s = ps.reduce((acc, w) => acc + (n.includes(w) ? 2 : 0), 0)
-      return { p, i, s, r: rango(p.cadena_prioritaria) }
+      const local = puntosMarca(p.nombre, p.marca) + (p.cadena_prioritaria ? 2 : 0) + (p.traducido ? 2 : 0)
+      return { p, i, s, r: rango(p.cadena_prioritaria), local }
     })
-    .sort((a, b) => b.s - a.s || a.r - b.r || a.i - b.i)
+    .sort((a, b) => b.s - a.s || b.local - a.local || a.r - b.r || a.i - b.i)
     .map((x) => x.p)
 }
 
@@ -304,8 +309,7 @@ function guardarCache(ctx: Ctx, clave: string, tipo: 'barcode' | 'buscar', datos
 }
 
 async function productosOffEspana(consulta: string): Promise<unknown[]> {
-  const q = encodeURIComponent(consulta)
-  const v2 = `${BASE}/api/v2/search?search_terms=${q}&countries_tags_en=spain&json=1&page_size=24&lc=es&fields=${CAMPOS}`
+  const v2 = urlOffMundo('v2', consulta, CAMPOS, 24)
   try {
     const datos = (await pedirJson(v2, 1, 4000)) as { products?: unknown[] } | null
     const products = Array.isArray(datos?.products) ? datos.products : []
@@ -314,7 +318,7 @@ async function productosOffEspana(consulta: string): Promise<unknown[]> {
   } catch (e) {
     console.warn('[catalogo] búsqueda v2 no disponible:', e instanceof Error ? e.message : e)
   }
-  const cgi = `${BASE}/cgi/search.pl?search_terms=${q}&search_simple=1&action=process&json=1&page_size=24&countries_tags_en=spain&lc=es&fields=${CAMPOS}`
+  const cgi = urlOffMundo('cgi', consulta, CAMPOS, 24)
   const datos = (await pedirJson(cgi, 1, 7000)) as { products?: unknown[] } | null
   return Array.isArray(datos?.products) ? datos.products : []
 }

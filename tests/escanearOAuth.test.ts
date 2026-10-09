@@ -3,7 +3,8 @@ import { test } from 'node:test'
 import { ErrorIA } from '../functions/utils/ia.ts'
 import { FotoIlegible } from '../functions/utils/iaParseo.ts'
 import { aPlato, cascadaEscaneo, debeContinuarCascada, huellaImagen } from '../functions/utils/orquestadorVision.ts'
-import { leerStateGoogle, prepararAutorizacion } from '../functions/utils/googleOAuth.ts'
+import { destinoTrasGoogle, leerStateGoogle, prepararAutorizacion, redirectGoogle } from '../functions/utils/googleOAuth.ts'
+import { onRequestGet as inicioGoogle } from '../functions/api/auth/google/index.ts'
 import { firmar } from '../functions/utils/crypto.ts'
 import { resolverIdioma, traducir } from '../src/lib/i18n.ts'
 import type { ResultadoAnalisis } from '../functions/utils/iaParseo.ts'
@@ -26,8 +27,10 @@ const plato = (): ResultadoAnalisis => ({
 
 test('el plato unificado no arrastra el proveedor y deja como máximo dos alternativas', () => {
   const u = aPlato(plato())
-  assert.deepEqual(Object.keys(u).sort(), ['alimento', 'alternativas', 'calorias', 'macros', 'peso_aprox_g'])
+  assert.deepEqual(Object.keys(u).sort(), ['alimento', 'alternativas', 'calorias', 'categoria', 'descripcion', 'macros', 'peso_aprox_g'])
   assert.equal(u.alimento, 'Cruasán de mantequilla')
+  assert.equal(u.descripcion, '')
+  assert.equal(u.categoria, 'panaderia')
   assert.equal(u.peso_aprox_g, 70)
   assert.deepEqual(u.macros, { proteinas: 5, carbohidratos: 32, grasas: 15 })
   assert.deepEqual(u.alternativas, ['Brioche', 'Napolitana'])
@@ -110,6 +113,39 @@ test('Google firma el state, lo deja en cookie Lax y no pone el verificador en l
     headers: { Cookie: `__Host-nf_google=${caducado}` },
   })
   assert.equal(await leerStateGoogle(env, viejo), null)
+})
+
+test('redirect_uri usa el origen permitido y no un host ajeno', async () => {
+  const env = {
+    AUTH_SECRET: 's'.repeat(48),
+    ENVIRONMENT: 'production',
+    APP_URL: 'https://nutri.trujillomingorance.com',
+    GOOGLE_CLIENT_ID: 'cliente.apps.googleusercontent.com',
+    GOOGLE_CLIENT_SECRET: 'secreto',
+  } as any
+  for (const origen of ['http://localhost:8788', 'http://127.0.0.1:8788']) {
+    const uri = redirectGoogle(env, new Request(`${origen}/api/auth/google`))
+    assert.equal(uri, `${origen}/api/auth/callback/google`)
+    assert.equal(destinoTrasGoogle(env, new Request(`${origen}/api/auth/callback/google?code=1`)), `${origen}/?auth=error`)
+  }
+  const produccion = 'https://nutri.trujillomingorance.com/api/auth/callback/google'
+  for (const origen of ['https://nutri.trujillomingorance.com', 'https://nutrifit.trujillomingorance.com', 'https://evil.example']) {
+    assert.equal(redirectGoogle(env, new Request(`${origen}/api/auth/google`)), produccion)
+    assert.equal(destinoTrasGoogle(env, new Request(`${origen}/api/auth/callback/google?code=1`)), 'https://nutri.trujillomingorance.com/?auth=error')
+  }
+
+  const res = await inicioGoogle({
+    env,
+    request: new Request('http://localhost:8788/api/auth/google?formato=json'),
+  } as any)
+  assert.equal(res.status, 200)
+  const cuerpo = (await res.json()) as { redirect_uri: string; location: string }
+  assert.equal(cuerpo.redirect_uri, 'http://localhost:8788/api/auth/callback/google')
+  const location = new URL(cuerpo.location)
+  assert.equal(location.origin, 'https://accounts.google.com')
+  assert.equal(location.pathname, '/o/oauth2/v2/auth')
+  assert.equal(location.searchParams.get('redirect_uri'), cuerpo.redirect_uri)
+  assert.equal(cuerpo.location.includes('secreto'), false)
 })
 
 test('el idioma sale de nutrifit_lang y, si no hay, de navigator.language', () => {

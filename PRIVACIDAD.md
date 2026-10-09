@@ -2,6 +2,8 @@
 
 Última actualización: 9 de octubre de 2026.
 
+> **NutriFit es local-first.** La app se instala en tu dispositivo. En este navegador se guardan tus preferencias, el historial de alimentos que buscas y las anotaciones de agua y peso (IndexedDB y almacenamiento local). El diario de macronutrientes que confirmas queda en tu cuenta y el navegador conserva además una copia local para consultarlo sin conexión. Esta página se puede leer sin iniciar sesión.
+
 ### Quién es el responsable
 
 NutriFit es un proyecto de código abierto titularidad de Alberto Trujillo Mingorance (Barcelona, España). Contacto de privacidad y soporte: [soporte@trujillomingorance.com](mailto:soporte@trujillomingorance.com).
@@ -14,7 +16,7 @@ El tratamiento de tus datos de registro y uso se realiza sobre la base de la eje
 
 - **Cuenta:** tu email (para enviarte el enlace o código de acceso sin contraseñas). Del código de acceso de 6 cifras solo se almacena una huella criptográfica (HMAC) durante un máximo de 15 minutos.
 - **Perfil:** nombre o alias público, sexo, edad, peso, altura, nivel de actividad física y objetivo calórico/macros.
-- **Diario y actividad:** comidas registradas (ingredientes, calorías y macronutrientes), historial de peso, ingesta de agua y sesiones de entrenamiento manuales.
+- **Diario y actividad:** comidas registradas (ingredientes, calorías y macronutrientes), historial de peso, ingesta de agua y sesiones de entrenamiento manuales. Esos datos nutricionales se guardan en el dispositivo; con sesión iniciada, las comidas confirmadas también se asocian a tu cuenta.
 - **Técnicos:** dirección IP tratada de forma transitoria y sometida a hash para mitigación de abusos y control de peticiones (rate limiting), junto a registros técnicos de errores sin datos personales vinculados.
 
 ### Fotos, descripciones e inteligencia artificial
@@ -43,7 +45,7 @@ Cuando inicias sesión en un ordenador escaneando un código QR desde el móvil,
 ### Cookies y almacenamiento local
 
 - **Cookie técnica obligatoria:** cookie `__Host-nf_session`, configurada con directivas HttpOnly, Secure y SameSite=Lax con expiración a 30 días, destinada exclusivamente al mantenimiento de la sesión autenticada. Su identificador se guarda cifrado y queda invalidado al cerrar sesión. En la aplicación móvil se emplea un token de sesión en almacenamiento seguro local.
-- **Almacenamiento web (Local-first):** en tu navegador se guardan tus preferencias de interfaz (modo oscuro, idioma), metas y la caché de la aplicación para permitir su operativa fuera de línea (PWA).
+- **Almacenamiento local (local-first):** en tu navegador se guardan las preferencias de interfaz (modo oscuro, idioma), las metas, el historial de alimentos buscados, las anotaciones de agua y peso, y una copia del diario de macronutrientes para seguir la app sin conexión. Esa copia vive en IndexedDB (`nutrifit-local`) y en el almacenamiento local. La cookie de sesión no contiene el diario.
 
 ### Conservación de la información
 

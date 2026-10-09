@@ -1,7 +1,9 @@
-import type { ResultadoAnalisis } from './tipos.ts'
+import type { CategoriaPlato, ResultadoAnalisis } from './tipos.ts'
 
 export interface PlatoEscaneo {
   alimento: string
+  descripcion?: string
+  categoria?: CategoriaPlato
   peso_aprox_g: number
   calorias: number
   macros: { proteinas: number; carbohidratos: number; grasas: number }
@@ -22,6 +24,8 @@ export function resultadoDesdePlato(p: PlatoEscaneo): ResultadoAnalisis {
   return {
     nombre_plato: p.alimento,
     display_name: p.alimento,
+    ...(p.descripcion ? { descripcion: p.descripcion } : {}),
+    ...(p.categoria ? { categoria: p.categoria } : {}),
     ingredientes: [fila],
     calorias: p.calorias,
     proteinas: p.macros.proteinas,

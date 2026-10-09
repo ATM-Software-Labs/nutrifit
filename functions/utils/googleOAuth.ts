@@ -4,7 +4,7 @@
  * para que el navegador la envíe al volver desde accounts.google.com.
  * El verificador PKCE no viaja en la URL.
  */
-import { esProduccion, type Env } from './env.ts'
+import type { Env } from './env.ts'
 import { authSecret, crearCookieSesion, leerCookie } from './session.ts'
 import { base64urlEncode, bytesAleatorios, firmar, timingSafeEqual, verificarFirma } from './crypto.ts'
 import { sanitizarTextoLibre } from './sanitizar.ts'
@@ -14,6 +14,35 @@ export const COOKIE_GOOGLE = '__Host-nf_google'
 const MAX_EDAD = 300
 const PROPOSITO = 'google-oauth'
 
+/** Callback de producción. En Google Cloud tiene que estar este URI, tal cual. */
+export const REDIRECT_GOOGLE_PRODUCCION = 'https://nutri.trujillomingorance.com'
+
+/** Solo el dev de Pages usa el origen de la petición. El resto va al dominio nutri. */
+const ORIGENES_LOCAL = new Set(['http://localhost:8788', 'http://127.0.0.1:8788'])
+
+function origenLocal(valor: string | null | undefined): string | null {
+  if (!valor) return null
+  try {
+    const origen = new URL(valor).origin
+    return ORIGENES_LOCAL.has(origen) ? origen : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Origen del callback. En local es el de la petición
+ * (`http://localhost:8788` o `http://127.0.0.1:8788`).
+ * En cualquier otro host es `https://nutri.trujillomingorance.com`.
+ */
+export function origenOAuth(env: Env, request: Request): string {
+  const local = origenLocal(request.url)
+  if (local) return local
+  const app = env.APP_URL?.trim().replace(/\/$/, '')
+  if (app === REDIRECT_GOOGLE_PRODUCCION) return app
+  return REDIRECT_GOOGLE_PRODUCCION
+}
+
 interface StateGoogle {
   n: string
   v: string
@@ -21,10 +50,8 @@ interface StateGoogle {
 }
 
 export function redirectGoogle(env: Env, request: Request): string | null {
-  const base = env.APP_URL?.trim().replace(/\/$/, '')
-  if (base && /^https:\/\/[^\s/]+/i.test(base)) return `${base}/api/auth/callback/google`
-  if (!esProduccion(env)) return `${new URL(request.url).origin}/api/auth/callback/google`
-  return null
+  const origen = origenOAuth(env, request)
+  return origen ? `${origen}/api/auth/callback/google` : null
 }
 
 function cookieState(token: string, maxAge: number): string {
@@ -85,9 +112,7 @@ function emailVerificado(u: GoogleUser): string | null {
 }
 
 export function destinoTrasGoogle(env: Env, request: Request, auth = 'error'): string {
-  const base = env.APP_URL?.trim().replace(/\/$/, '')
-  const origen = base && /^https:\/\/[^\s/]+/i.test(base) ? base : new URL(request.url).origin
-  return `${origen}/?auth=${auth}`
+  return `${origenOAuth(env, request)}/?auth=${auth}`
 }
 
 /** Canjea el código solo si el state de la cookie cuadra. No devuelve el error de Google. */

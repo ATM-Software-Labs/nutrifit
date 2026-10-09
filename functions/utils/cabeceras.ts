@@ -4,6 +4,8 @@
  * pasan por Pages Functions). Las dos copias deben decir lo mismo.
  *
  * Respecto a la CSP pedida se añaden solo orígenes que la app ya usa:
+ *   · img-src data: y blob: → miniaturas y fotos locales en <img src>
+ *   · connect-src data: y blob: → el mismo origen local, sin salir a la red
  *   · frame-src y connect-src de challenges.cloudflare.com → widget Turnstile
  *   · worker-src 'self' blob: → canvas-confetti
  *   · font-src y object-src → fuente autoalojada y plugins
@@ -16,7 +18,7 @@ export const CSP_DOCUMENTO = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self'",
-  "connect-src 'self' https://api.groq.com https://generativelanguage.googleapis.com https://ai.trujillomingorance.com https://challenges.cloudflare.com",
+  "connect-src 'self' data: blob: https://generativelanguage.googleapis.com https://api.groq.com https://challenges.cloudflare.com https://ai.trujillomingorance.com",
   "frame-src https://challenges.cloudflare.com",
   "worker-src 'self' blob:",
   "object-src 'none'",
