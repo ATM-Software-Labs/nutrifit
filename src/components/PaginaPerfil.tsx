@@ -24,6 +24,7 @@ interface Sugerido {
   username: string
   nombre: string | null
   avatar_url: string | null
+  bio: string | null
 }
 
 interface Sesion {
@@ -40,10 +41,25 @@ function texto(v: string | null | undefined): string {
   return v ? desescaparHtml(v) : ''
 }
 
-function fotoDirecta(url: string | null): string | null {
-  if (!url) return null
-  if (url.startsWith('data:image/') || url.startsWith('blob:') || url.startsWith('/api/archivos/') || url.startsWith('https://')) return url
-  return null
+function fotoDirecta(url: string | null | undefined): string | null {
+  const valor = url?.trim() ?? ''
+  if (!valor) return null
+  if (valor.startsWith('data:image/') || valor.startsWith('blob:') || valor.startsWith('/api/archivos/')) return valor
+  if (!valor.startsWith('https://')) return null
+  try {
+    return new URL(valor).hostname ? valor : null
+  } catch {
+    return null
+  }
+}
+
+function Silueta() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-1/2 w-1/2">
+      <circle cx="12" cy="8" r="3.2" fill="currentColor" />
+      <path fill="currentColor" d="M5.2 19.4c.7-3.3 3.2-5 6.8-5s6.1 1.7 6.8 5H5.2z" />
+    </svg>
+  )
 }
 
 function BotonAmistad({
@@ -56,7 +72,7 @@ function BotonAmistad({
   onAceptar: (id: string) => void
 }) {
   if (relacion?.estado === 'aceptada') return <span className="shrink-0 text-xs text-neutral-500">Amigos</span>
-  if (relacion?.estado === 'pendiente' && relacion.direccion === 'enviada') return <span className="shrink-0 text-xs text-neutral-500">Pendiente</span>
+  if (relacion?.estado === 'pendiente' && relacion.direccion === 'enviada') return <span className="shrink-0 text-xs text-neutral-500">Solicitud enviada</span>
   if (relacion?.estado === 'pendiente' && relacion.direccion === 'recibida') {
     return (
       <button type="button" onClick={() => onAceptar(relacion.id)} className="h-9 shrink-0 rounded-xl bg-mint px-3 text-sm font-medium text-white">
@@ -66,7 +82,7 @@ function BotonAmistad({
   }
   return (
     <button type="button" onClick={onAnadir} className="h-9 shrink-0 rounded-full bg-emerald-500 px-3.5 text-sm font-semibold text-black transition hover:-translate-y-0.5 hover:bg-emerald-400">
-      + Añadir
+      Añadir amigo
     </button>
   )
 }
@@ -108,14 +124,50 @@ function AnilloMeta({ valor, meta }: { valor: number; meta: number }) {
   )
 }
 
-function Cara({ nombre, avatar }: { nombre: string; avatar: string | null }) {
-  const foto = fotoDirecta(avatar)
-  const letra = nombre.replace(/^@/, '').trim().charAt(0).toUpperCase() || '?'
-  if (foto) return <img src={foto} alt="" width={36} height={36} className="h-9 w-9 shrink-0 rounded-full object-cover" />
+function FotoAvatar({ url, letra, grande = false }: { url: string | null; letra: string; grande?: boolean }) {
+  const foto = fotoDirecta(url)
+  const [rota, setRota] = useState(false)
+  const caja = grande ? 'h-full w-full text-2xl' : 'h-9 w-9 shrink-0 text-sm'
+  if (!foto || rota) {
+    return (
+      <span aria-hidden="true" className={`flex items-center justify-center rounded-full bg-mint-50 font-semibold text-mint-800 dark:bg-mint-950 dark:text-mint-300 ${caja}`}>
+        {letra.trim() ? letra : <Silueta />}
+      </span>
+    )
+  }
   return (
-    <span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-mint-50 text-sm font-semibold text-mint-800 dark:bg-mint-950 dark:text-mint-300">
-      {letra}
-    </span>
+    <img
+      src={foto}
+      alt=""
+      width={grande ? 96 : 36}
+      height={grande ? 96 : 36}
+      referrerPolicy="no-referrer"
+      onError={() => setRota(true)}
+      className={`rounded-full object-cover ${caja}`}
+    />
+  )
+}
+
+function Cara({ nombre, avatar }: { nombre: string; avatar: string | null }) {
+  const letra = nombre.replace(/^@/, '').trim().charAt(0).toUpperCase()
+  return <FotoAvatar key={avatar || 'vacio'} url={avatar} letra={letra} />
+}
+
+function BannerFoto({ url }: { url: string }) {
+  const foto = fotoDirecta(url)
+  const [oculta, setOculta] = useState(false)
+  if (!foto || oculta) return null
+  return (
+    <img
+      src={foto}
+      alt=""
+      referrerPolicy="no-referrer"
+      className="absolute inset-0 h-full w-full object-cover"
+      onError={(evento) => {
+        evento.currentTarget.hidden = true
+        setOculta(true)
+      }}
+    />
   )
 }
 
@@ -135,9 +187,7 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
   const [hallado, setHallado] = useState<{ username: string; nombre: string | null; bio: string | null; avatar_url: string | null } | null>(null)
   const [editando, setEditando] = useState(false)
   const [sugeridos, setSugeridos] = useState<Sugerido[]>([])
-  const [paginaComunidad, setPaginaComunidad] = useState(0)
-  const [hayMas, setHayMas] = useState(false)
-  const [cargandoComunidad, setCargandoComunidad] = useState(false)
+  const [cargandoSugerencias, setCargandoSugerencias] = useState(false)
 
   useEffect(() => {
     let vivo = true
@@ -206,43 +256,27 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
     }
   }
 
-  async function cargarComunidad(pagina: number, acumular: boolean) {
-    setCargandoComunidad(true)
-    try {
-      const r = await api.comunidad(pagina)
-      setSugeridos((prev) => (acumular ? [...prev, ...r.comunidad] : r.comunidad))
-      setPaginaComunidad(r.pagina)
-      setHayMas(r.hay_mas)
-    } catch (e) {
-      toast({ tipo: 'error', mensaje: e instanceof ApiError ? e.message : 'No se pudo cargar la comunidad.' })
-    } finally {
-      setCargandoComunidad(false)
-    }
-  }
-
   useEffect(() => {
-    if (pestana !== 'amigos' || paginaComunidad > 0) return
+    if (pestana !== 'amigos') return
     let vivo = true
-    setCargandoComunidad(true)
+    setCargandoSugerencias(true)
     api
-      .comunidad(1)
-      .then((r) => {
+      .sugerencias()
+      .then((lista) => {
         if (!vivo) return
-        setSugeridos(r.comunidad)
-        setPaginaComunidad(r.pagina)
-        setHayMas(r.hay_mas)
+        setSugeridos(Array.isArray(lista) ? lista : [])
       })
       .catch((e: unknown) => {
         if (!vivo) return
         toast({ tipo: 'error', mensaje: e instanceof ApiError ? e.message : 'No se pudo cargar la comunidad.' })
       })
       .finally(() => {
-        if (vivo) setCargandoComunidad(false)
+        if (vivo) setCargandoSugerencias(false)
       })
     return () => {
       vivo = false
     }
-  }, [pestana, paginaComunidad])
+  }, [pestana])
 
   async function buscar(e: FormEvent) {
     e.preventDefault()
@@ -269,11 +303,21 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
   }
 
   async function solicitar(nombre: string) {
+    const clave = nombre.toLowerCase()
+    setAmistades((prev) => {
+      if (prev.some((a) => a.username?.toLowerCase() === clave)) return prev
+      return [...prev, { id: `local-${clave}`, estado: 'pendiente', username: nombre, direccion: 'enviada' }]
+    })
     try {
-      await api.solicitarAmistad(nombre)
-      const r = await api.amistades()
-      setAmistades(r.amistades)
+      const r = await api.solicitarAmistad(nombre)
+      setAmistades((prev) => prev.map((a) => (a.username?.toLowerCase() === clave ? { ...a, id: r.id, estado: r.estado } : a)))
     } catch (e) {
+      if (e instanceof ApiError && e.status === 409) {
+        const lista = await api.amistades().catch(() => null)
+        if (lista) setAmistades(lista.amistades)
+        return
+      }
+      setAmistades((prev) => prev.filter((a) => !(a.id.startsWith('local-') && a.username?.toLowerCase() === clave)))
       toast({ tipo: 'error', mensaje: e instanceof ApiError ? e.message : 'No se pudo enviar la solicitud.' })
     }
   }
@@ -319,7 +363,7 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
                   'radial-gradient(circle at 12% 18%, rgba(16,185,129,0.55), transparent 42%), radial-gradient(circle at 88% 8%, rgba(52,211,153,0.32), transparent 34%), radial-gradient(circle at 72% 88%, rgba(6,78,59,0.9), transparent 46%), linear-gradient(135deg, #022c22 0%, #111827 52%, #064e3b 100%)',
               }}
             />
-            {banner ? <img src={banner} alt="" className="absolute inset-0 h-full w-full object-cover" /> : null}
+            {fotoDirecta(banner) ? <BannerFoto key={banner} url={banner} /> : null}
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
           </div>
           <label className="absolute bottom-3 right-3 cursor-pointer rounded-full bg-black/45 px-3 py-1 text-xs text-white backdrop-blur-sm transition hover:bg-black/60">
@@ -328,7 +372,7 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
           </label>
           <label className="absolute -bottom-11 left-5 cursor-pointer">
             <span className="relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-4 border-[#10b981] bg-mint-50 text-2xl font-semibold text-mint-800 shadow-lg ring-2 ring-white dark:bg-mint-950 dark:text-mint-200 dark:ring-[#111827]">
-              {avatar ? <img src={avatar} alt="" className="h-full w-full object-cover" /> : inicial}
+              <FotoAvatar key={avatar || 'vacio'} url={avatar} letra={inicial} grande />
             </span>
             <span className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full border-2 border-white bg-[#10b981]" title="Activo">
               <span className="sr-only">Estado activo</span>
@@ -522,29 +566,25 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
                 <BotonAmistad relacion={relacion(hallado.username)} onAnadir={() => void solicitar(hallado.username)} onAceptar={(id) => void responder(id, 'aceptada')} />
               </div>
             )}
-            <section className="tarjeta p-4" aria-busy={cargandoComunidad}>
-              <h2 className="font-semibold">Usuarios sugeridos</h2>
-              <p className="mt-1 text-xs text-neutral-500">Comunidad pública, de 5 en 5.</p>
-              {sugeridos.length === 0 && !cargandoComunidad && <p className="mt-3 text-sm text-neutral-500">Todavía no hay más perfiles públicos.</p>}
+            <section className="tarjeta p-4" aria-busy={cargandoSugerencias}>
+              <h2 className="font-semibold">Gente que te podría interesar</h2>
+              <p className="mt-1 text-xs text-neutral-500">Perfiles públicos que todavía no son tus amigos.</p>
+              {sugeridos.length === 0 && !cargandoSugerencias && <p className="mt-3 text-sm text-neutral-500">Todavía no hay más perfiles públicos.</p>}
               <ul className="mt-3 grid gap-2">
-                  {sugeridos.map((s) => (
+                  {sugeridos.filter((s) => relacion(s.username)?.estado !== 'aceptada').map((s) => (
                     <li key={s.username} className="flex items-center justify-between gap-3 rounded-2xl border border-neutral-200 px-3 py-3 dark:border-neutral-800">
                       <div className="flex min-w-0 items-center gap-3">
                         <Cara nombre={s.nombre || s.username} avatar={s.avatar_url} />
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-medium">{s.nombre || s.username}</p>
+                          <p className="truncate text-sm font-medium">{texto(s.nombre) || s.username}</p>
                           <p className="truncate text-xs text-neutral-500">@{s.username}</p>
+                          {s.bio ? <p className="truncate text-xs text-neutral-500">{texto(s.bio)}</p> : null}
                         </div>
                       </div>
                       <BotonAmistad relacion={relacion(s.username)} onAnadir={() => void solicitar(s.username)} onAceptar={(id) => void responder(id, 'aceptada')} />
                     </li>
                   ))}
                 </ul>
-              {hayMas && (
-                <button type="button" disabled={cargandoComunidad} onClick={() => void cargarComunidad(paginaComunidad + 1, true)} className="mt-3 h-9 rounded-xl border border-neutral-200 px-3 text-sm dark:border-neutral-800">
-                  {cargandoComunidad ? 'Cargando…' : 'Ver más'}
-                </button>
-              )}
             </section>
             {amistades.length > 0 && (
             <ul className="tarjeta divide-y divide-neutral-100 px-4 dark:divide-neutral-800">
@@ -558,7 +598,7 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
                     </span>
                   ) : (
                     <span className="text-xs text-neutral-500">
-                      {a.estado === 'aceptada' ? 'Amigos' : a.estado === 'pendiente' ? 'Pendiente' : 'Rechazada'}
+                      {a.estado === 'aceptada' ? 'Amigos' : a.estado === 'pendiente' ? (a.direccion === 'enviada' ? 'Solicitud enviada' : 'Pendiente') : 'Rechazada'}
                     </span>
                   )}
                 </li>

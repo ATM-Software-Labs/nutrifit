@@ -277,6 +277,8 @@ export const api = {
     pedir<{ ok: true; comunidad: { username: string; nombre: string | null; avatar_url: string | null }[]; pagina: number; hay_mas: boolean }>(
       `/api/usuarios/publico?${q({ pagina: String(pagina) })}`,
     ),
+  sugerencias: () =>
+    pedir<{ username: string; nombre: string | null; avatar_url: string | null; bio: string | null }[]>('/api/users/suggestions'),
 
   perfilSocial: () =>
     pedir<{ ok: true; perfil: { username: string | null; nombre: string | null; bio: string | null; avatar_url: string | null; banner_url: string | null; es_publico: number; meta_agua_base_ml: number } }>('/api/usuarios/social'),

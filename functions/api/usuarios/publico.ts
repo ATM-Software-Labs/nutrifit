@@ -11,14 +11,9 @@ import { comunidadQuery, usernameQuery } from '../../utils/schemas.ts'
 import { exigirIdentidad } from '../../utils/identidad.ts'
 import { exigirLimite } from '../../utils/rateLimit.ts'
 import { presentarTexto } from '../../utils/sanitizar.ts'
+import { avatarPublico, SQL_EXCLUIR_AMIGOS } from '../../utils/comunidad.ts'
 
 const POR_PAGINA = 5
-
-function avatarPublico(url: string | null): string | null {
-  if (!url) return null
-  if (url.startsWith('/api/archivos/') || url.startsWith('https://') || url.startsWith('data:image/')) return url
-  return null
-}
 
 export const onRequestGet: Handler = async ({ request, env, data }) => {
   const sesion = await exigirIdentidad(env, data.sesion)
@@ -58,6 +53,7 @@ export const onRequestGet: Handler = async ({ request, env, data }) => {
        AND username IS NOT NULL
        AND length(username) >= 3
        AND id != ?1
+       ${SQL_EXCLUIR_AMIGOS}
      ORDER BY actualizado_en IS NULL, actualizado_en DESC, username COLLATE NOCASE
      LIMIT ?2 OFFSET ?3`,
   )

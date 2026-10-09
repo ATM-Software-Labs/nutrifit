@@ -11,6 +11,9 @@ import { HttpError } from '../functions/utils/response.ts'
 import { onRequestPost as postEntreno, onRequestGet as getEntreno } from '../functions/api/entrenamientos/index.ts'
 import { onRequestPost as postSocial } from '../functions/api/usuarios/social.ts'
 import { onRequestGet as getPublico } from '../functions/api/usuarios/publico.ts'
+import { onRequestGet as getSugerencias } from '../functions/api/usuarios/sugerencias.ts'
+import { onRequestGet as getSuggestions } from '../functions/api/users/suggestions.ts'
+import { fotoGoogle } from '../functions/utils/googleOAuth.ts'
 import { onRequestPost as postAmistad, onRequestGet as getAmistad } from '../functions/api/amistades/index.ts'
 import { onRequestPost as postAvatar } from '../functions/api/usuarios/avatar.ts'
 import { onRequestPost as postFoto } from '../functions/api/comidas/foto.ts'
@@ -197,6 +200,55 @@ test('la comunidad pública sale de 5 en 5 sin término de búsqueda', async () 
   assert.equal(pagina2.comunidad.length, 1)
   assert.equal(pagina2.hay_mas, false)
   assert.equal(nombres.includes(pagina2.comunidad[0]!.username), false)
+})
+
+test('las sugerencias excluyen al usuario y a sus amigos y devuelven []', async () => {
+  const env = entornoTest()
+  const yo = await entrar(env, 'yo', 'yo@b.es')
+  await entrar(env, 'amigo', 'amigo@b.es')
+  await entrar(env, 'pendiente', 'pendiente@b.es')
+  await entrar(env, 'nuevo', 'nuevo@b.es')
+  await entrar(env, 'privado', 'privado@b.es')
+  env.DB.sqlite.prepare("UPDATE usuarios SET username = 'yo_fit', es_publico = 1, creado_en = '2026-10-01' WHERE id = 'yo'").run()
+  env.DB.sqlite.prepare("UPDATE usuarios SET username = 'amigo_fit', nombre = 'Amigo', es_publico = 1, creado_en = '2026-10-02' WHERE id = 'amigo'").run()
+  env.DB.sqlite.prepare("UPDATE usuarios SET username = 'espera_fit', es_publico = 1, creado_en = '2026-10-03' WHERE id = 'pendiente'").run()
+  env.DB.sqlite.prepare("UPDATE usuarios SET username = 'nuevo_fit', nombre = 'Nueva <b>persona</b>', bio = 'Hola', avatar_url = 'https://lh3.googleusercontent.com/a/foto', es_publico = 1, creado_en = '2026-10-09' WHERE id = 'nuevo'").run()
+  env.DB.sqlite.prepare("UPDATE usuarios SET username = 'oculto', es_publico = 0, creado_en = '2026-10-09' WHERE id = 'privado'").run()
+  env.DB.sqlite.prepare("INSERT INTO amistades (id, solicitante_id, receptor_id, estado) VALUES ('am-1', 'yo', 'amigo', 'aceptada')").run()
+  env.DB.sqlite.prepare("INSERT INTO amistades (id, solicitante_id, receptor_id, estado) VALUES ('am-2', 'pendiente', 'yo', 'pendiente')").run()
+
+  const res = await getSugerencias(conSesion(env, new Request('https://nutri.trujillomingorance.com/api/usuarios/sugerencias'), yo))
+  assert.equal(res.status, 200)
+  assert.equal(res.headers.get('content-type'), 'application/json; charset=utf-8')
+  const lista = (await res.json()) as { username: string; nombre: string | null; avatar_url: string | null; bio: string | null; id?: string; email?: string }[]
+  assert.ok(Array.isArray(lista))
+  assert.deepEqual(lista.map((f) => f.username), ['nuevo_fit', 'espera_fit'])
+  assert.equal(lista[0]?.nombre, 'Nueva persona')
+  assert.equal(lista[0]?.bio, 'Hola')
+  assert.equal(lista[0]?.avatar_url, 'https://lh3.googleusercontent.com/a/foto')
+  assert.equal('id' in (lista[0] ?? {}), false)
+  assert.equal(JSON.stringify(lista).includes('yo@b.es'), false)
+  assert.equal(JSON.stringify(lista).includes('email'), false)
+
+  const alias = await getSuggestions(conSesion(env, new Request('https://nutri.trujillomingorance.com/api/users/suggestions'), yo))
+  assert.equal(alias.status, 200)
+  const otra = (await alias.json()) as { username: string }[]
+  assert.deepEqual(otra.map((f) => f.username), ['nuevo_fit', 'espera_fit'])
+
+  assert.equal(fotoGoogle('https://lh3.googleusercontent.com/a/abc'), 'https://lh3.googleusercontent.com/a/abc')
+  assert.equal(fotoGoogle('http://lh3.googleusercontent.com/a/abc'), null)
+  assert.equal(fotoGoogle('https://evil.example/a'), null)
+  assert.equal(fotoGoogle(''), null)
+})
+
+test('sin otros perfiles públicos las sugerencias son []', async () => {
+  const env = entornoTest()
+  const yo = await entrar(env, 'solo', 'solo@b.es')
+  env.DB.sqlite.prepare("UPDATE usuarios SET username = 'solo_fit', es_publico = 1 WHERE id = 'solo'").run()
+  const res = await getSugerencias(conSesion(env, new Request('https://nutri.trujillomingorance.com/api/usuarios/sugerencias'), yo))
+  assert.equal(res.status, 200)
+  assert.equal(res.headers.get('content-type'), 'application/json; charset=utf-8')
+  assert.deepEqual(await res.json(), [])
 })
 
 test('el username repetido no pisa a otra cuenta', async () => {

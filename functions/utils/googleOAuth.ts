@@ -102,6 +102,25 @@ interface GoogleUser {
   email?: string
   email_verified?: boolean | string
   name?: string
+  picture?: string
+}
+
+/** Foto de perfil de Google. Solo https de sus hosts de imagen, y cabe en avatar_url (500). */
+export function fotoGoogle(valor: unknown): string | null {
+  if (typeof valor !== 'string') return null
+  let url: URL
+  try {
+    url = new URL(valor.trim())
+  } catch {
+    return null
+  }
+  if (url.protocol !== 'https:') return null
+  const host = url.hostname
+  if (host !== 'lh3.googleusercontent.com' && !host.endsWith('.googleusercontent.com')) return null
+  if (host.includes('..') || host.length > 80) return null
+  const href = url.toString()
+  if (href.length > 500) return null
+  return href
 }
 
 function emailVerificado(u: GoogleUser): string | null {
@@ -131,6 +150,7 @@ export async function completarGoogle(env: Env, request: Request): Promise<Respo
 
   let email: string | null = null
   let nombre: string | null = null
+  let foto: string | null = null
   try {
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
@@ -157,6 +177,7 @@ export async function completarGoogle(env: Env, request: Request): Promise<Respo
     email = emailVerificado(googleUser)
     const limpio = googleUser.name ? sanitizarTextoLibre(googleUser.name).slice(0, 80) : ''
     nombre = limpio || null
+    foto = fotoGoogle(googleUser.picture)
   } catch {
     return fallo()
   }
@@ -165,6 +186,13 @@ export async function completarGoogle(env: Env, request: Request): Promise<Respo
   if (!u) return fallo()
   if (nombre) {
     await env.DB.prepare('UPDATE usuarios SET nombre = ?1 WHERE id = ?2 AND (nombre IS NULL OR nombre = \'\')').bind(nombre, u.id).run()
+  }
+  if (foto) {
+    try {
+      await env.DB.prepare(`UPDATE usuarios SET avatar_url = ?1 WHERE id = ?2 AND (avatar_url IS NULL OR avatar_url = '')`).bind(foto, u.id).run()
+    } catch {
+      // Sin la columna de 0007, o si D1 rechaza la URL, el login sigue.
+    }
   }
   const h = new Headers({ Location: destinoTrasGoogle(env, request, 'ok').replace('/?auth=ok', '/'), 'Cache-Control': 'no-store' })
   h.append('Set-Cookie', await crearCookieSesion(env, u.id, u.email))
