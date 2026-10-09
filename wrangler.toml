@@ -1,62 +1,7 @@
-# NutriFit · Cloudflare Pages (+ Pages Functions en /functions)
-# Docs: https://developers.cloudflare.com/pages/functions/wrangler-configuration/
-name = "nutrifit"
+﻿name = "nutrifit"
 compatibility_date = "2026-10-01"
 compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = "dist"
 
-# Variables NO secretas (en local, .dev.vars las sobrescribe).
 [vars]
 ENVIRONMENT = "production"
-APP_URL = "https://nutri.trujillomingorance.com"
-# Orígenes extra aceptados en peticiones de escritura (además del propio host).
-ALLOWED_ORIGINS = "https://nutri.trujillomingorance.com,https://nutrifit-ac9.pages.dev"
-# Site key PÚBLICA de Turnstile (widget en modo Invisible). En local, .dev.vars usa la clave de prueba.
-TURNSTILE_SITE_KEY = "0x4AAAAAAFPhRCuPz21TsJR5"
-# Modelo de Gemini (Flash estable con free tier en oct-2026).
-GEMINI_MODEL = "gemini-3.8-flash"
-# Historial de peso, eventos y cachés de alimentos. Vacío = esas escrituras siguen en D1.
-# Crear la base gratuita en Turso y pegar aquí la URL libsql://…. El token es secreto.
-TURSO_DATABASE_URL = ""
-
-# --- Cloudflare D1 -----------------------------------------------------------
-# Creada con `npx wrangler d1 create nutrifit-db` (el id no es secreto).
-[[d1_databases]]
-binding = "DB"
-database_name = "nutrifit-db"
-database_id = "c7f77ed4-a5d0-4c3a-a686-ecc1fb77d1f1"
-migrations_dir = "migrations"
-
-# Base de alimentos genéricos (USDA + Ciqual) con búsqueda FTS5. Va en una BD
-# APARTE porque D1 no exporta BDs con tablas virtuales: así las copias de
-# seguridad de nutrifit-db (`wrangler d1 export`) siguen funcionando. Son datos
-# de referencia que se regeneran con scripts/alimentos-db/ (ver docs/ALIMENTOS.md).
-[[d1_databases]]
-binding = "ALIMENTOS"
-database_name = "nutrifit-alimentos"
-database_id = "4ca3a77e-63b4-4090-bfa2-05e4032860c4"
-
-# --- KV: búsquedas públicas de alimentos (binding KV) ------------------------
-# El Worker lee env.KV.get(food_query) y, si no hay copia, guarda el resultado
-# 30 días (expirationTtl 2592000). Sin este binding sigue la caché D1/Turso.
-# Crear el namespace una vez (hace falta `npx wrangler login`) y pegar el id:
-#   npx wrangler kv namespace create nutrifit-alimentos
-# [[kv_namespaces]]
-# binding = "KV"
-# id = ""
-
-# --- Workers AI (fallback de visión) -----------------------------------------
-# Visión sin Gemini: gemma-4 → qwen3.8 → mistral-small (sin licencia de Meta); Llama 3.2
-# Vision queda como último recurso y solo funciona si se aceptó su licencia (docs/BACKEND.md).
-[ai]
-binding = "AI"
-
-# --- SECRETOS: NUNCA en este archivo ni en git -------------------------------
-#   npx wrangler pages secret put AUTH_SECRET          --project-name nutrifit   # ✓ configurado
-#   npx wrangler pages secret put TURNSTILE_SECRET_KEY --project-name nutrifit   # ✓ configurado
-#   npx wrangler pages secret put BREVO_API_KEY        --project-name nutrifit   # pendiente
-#   npx wrangler pages secret put GEMINI_API_KEY       --project-name nutrifit   # pendiente
-#   npx wrangler pages secret put GROQ_API_KEY         --project-name nutrifit   # pendiente (visión)
-#   npx wrangler pages secret put TRUJILLO_API_KEY     --project-name nutrifit   # opcional (ai.trujillomingorance.com)
-#   npx wrangler pages secret put TURSO_AUTH_TOKEN     --project-name nutrifit   # historial, eventos y cachés
-# En local van en .dev.vars (ver .dev.vars.example).

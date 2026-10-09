@@ -43,3 +43,6 @@ coverage/
 
 # Capturas locales de pruebas (las del README están en docs/screenshots/)
 previews/
+
+# Configuracion privada con IDs de Cloudflare
+wrangler.local.toml
