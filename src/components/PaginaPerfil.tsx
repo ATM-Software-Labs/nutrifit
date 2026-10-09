@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent, type MouseEvent } from 'react'
 import { BadgeCheck, Flame, User } from 'lucide-react'
 import { api, ApiError } from '../lib/api.ts'
 import { comprimirImagen, ErrorImagen } from '../lib/imagen.ts'
@@ -21,11 +21,18 @@ interface Amistad {
 }
 
 interface Sugerido {
+  id: string
   username: string
-  nombre: string | null
+  name: string | null
   avatar_url: string | null
   bio: string | null
 }
+
+/** Silueta de respaldo si lh3.googleusercontent.com responde 403. El # va como %23. */
+const AVATAR_FALLBACK =
+  "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 24 24' fill='none' stroke='%2310b981' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='8' r='5'/%3E%3Cpath d='M20 21a8 8 0 0 0-16 0'/%3E%3C/svg%3E"
+
+const BANNER_VACIO = 'linear-gradient(135deg, #064e3b 0%, #022c22 100%)'
 
 interface Sesion {
   id: string
@@ -126,9 +133,9 @@ function AnilloMeta({ valor, meta }: { valor: number; meta: number }) {
 
 function FotoAvatar({ url, letra, grande = false }: { url: string | null; letra: string; grande?: boolean }) {
   const foto = fotoDirecta(url)
-  const [rota, setRota] = useState(false)
+  const [src, setSrc] = useState(foto)
   const caja = grande ? 'h-full w-full text-2xl' : 'h-9 w-9 shrink-0 text-sm'
-  if (!foto || rota) {
+  if (!src) {
     return (
       <span aria-hidden="true" className={`flex items-center justify-center rounded-full bg-mint-50 font-semibold text-mint-800 dark:bg-mint-950 dark:text-mint-300 ${caja}`}>
         {letra.trim() ? letra : <Silueta />}
@@ -137,12 +144,16 @@ function FotoAvatar({ url, letra, grande = false }: { url: string | null; letra:
   }
   return (
     <img
-      src={foto}
+      src={src}
       alt=""
       width={grande ? 96 : 36}
       height={grande ? 96 : 36}
       referrerPolicy="no-referrer"
-      onError={() => setRota(true)}
+      loading={grande ? 'eager' : 'lazy'}
+      onError={(evento) => {
+        evento.currentTarget.onerror = null
+        setSrc(AVATAR_FALLBACK)
+      }}
       className={`rounded-full object-cover ${caja}`}
     />
   )
@@ -161,10 +172,12 @@ function BannerFoto({ url }: { url: string }) {
     <img
       src={foto}
       alt=""
+      loading="lazy"
       referrerPolicy="no-referrer"
       className="absolute inset-0 h-full w-full object-cover"
       onError={(evento) => {
-        evento.currentTarget.hidden = true
+        evento.currentTarget.onerror = null
+        evento.currentTarget.style.display = 'none'
         setOculta(true)
       }}
     />
@@ -262,9 +275,9 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
     setCargandoSugerencias(true)
     api
       .sugerencias()
-      .then((lista) => {
+      .then((r) => {
         if (!vivo) return
-        setSugeridos(Array.isArray(lista) ? lista : [])
+        setSugeridos(Array.isArray(r.suggestions) ? r.suggestions : [])
       })
       .catch((e: unknown) => {
         if (!vivo) return
@@ -300,6 +313,35 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
 
   function relacion(username: string): Amistad | undefined {
     return amistades.find((a) => a.username?.toLowerCase() === username.toLowerCase())
+  }
+
+  async function seguir(targetUserId: string) {
+    const persona = sugeridos.find((s) => s.id === targetUserId)
+    const clave = persona?.username.toLowerCase() ?? ''
+    setAmistades((prev) => {
+      if (!clave || prev.some((a) => a.username?.toLowerCase() === clave)) return prev
+      return [...prev, { id: `local-${targetUserId}`, estado: 'pendiente', username: persona?.username ?? null, direccion: 'enviada' }]
+    })
+    try {
+      const r = await api.seguir(targetUserId)
+      const estado = r.status === 'accepted' ? 'aceptada' : 'pendiente'
+      setAmistades((prev) => prev.map((a) => (a.username?.toLowerCase() === clave ? { ...a, id: r.id, estado } : a)))
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 409) {
+        const lista = await api.amistades().catch(() => null)
+        if (lista) setAmistades(lista.amistades)
+        return
+      }
+      setAmistades((prev) => prev.filter((a) => a.id !== `local-${targetUserId}`))
+      toast({ tipo: 'error', mensaje: e instanceof ApiError ? e.message : 'No se pudo seguir a esta persona.' })
+    }
+  }
+
+  function clicListaAmigos(e: MouseEvent<HTMLUListElement>) {
+    const boton = (e.target as HTMLElement).closest('button.btn-add-friend')
+    const id = boton?.getAttribute('data-user-id')
+    if (!id) return
+    void seguir(id)
   }
 
   async function solicitar(nombre: string) {
@@ -355,14 +397,8 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
     <main className="px-5 pb-28 lg:px-10 lg:pb-12 lg:pt-8">
       <div className="mx-auto max-w-3xl">
         <div className="relative">
-          <div className="relative aspect-[2.4/1] overflow-hidden rounded-3xl bg-[#111827]">
-            <div
-              className="absolute inset-0"
-              style={{
-                background:
-                  'radial-gradient(circle at 12% 18%, rgba(16,185,129,0.55), transparent 42%), radial-gradient(circle at 88% 8%, rgba(52,211,153,0.32), transparent 34%), radial-gradient(circle at 72% 88%, rgba(6,78,59,0.9), transparent 46%), linear-gradient(135deg, #022c22 0%, #111827 52%, #064e3b 100%)',
-              }}
-            />
+          <div className="bannerContainer relative aspect-[2.4/1] overflow-hidden rounded-3xl bg-[#022c22]">
+            <div className="absolute inset-0" style={{ background: BANNER_VACIO }} />
             {fotoDirecta(banner) ? <BannerFoto key={banner} url={banner} /> : null}
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
           </div>
@@ -371,7 +407,7 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
             <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(e) => { const f = e.target.files?.[0]; if (f) void subir(f, 'banner'); e.target.value = '' }} />
           </label>
           <label className="absolute -bottom-11 left-5 cursor-pointer">
-            <span className="relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-4 border-[#10b981] bg-mint-50 text-2xl font-semibold text-mint-800 shadow-lg ring-2 ring-white dark:bg-mint-950 dark:text-mint-200 dark:ring-[#111827]">
+            <span id="userAvatar" className="relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-4 border-[#10b981] bg-mint-50 text-2xl font-semibold text-mint-800 shadow-lg ring-2 ring-white dark:bg-mint-950 dark:text-mint-200 dark:ring-[#111827]">
               <FotoAvatar key={avatar || 'vacio'} url={avatar} letra={inicial} grande />
             </span>
             <span className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full border-2 border-white bg-[#10b981]" title="Activo">
@@ -444,6 +480,7 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
           {(['feed', 'amigos'] as const).map((id) => (
             <button
               key={id}
+              id={id === 'feed' ? 'tab-feed' : 'tab-friends'}
               type="button"
               role="tab"
               aria-selected={pestana === id}
@@ -570,20 +607,36 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
               <h2 className="font-semibold">Gente que te podría interesar</h2>
               <p className="mt-1 text-xs text-neutral-500">Perfiles públicos que todavía no son tus amigos.</p>
               {sugeridos.length === 0 && !cargandoSugerencias && <p className="mt-3 text-sm text-neutral-500">Todavía no hay más perfiles públicos.</p>}
-              <ul className="mt-3 grid gap-2">
-                  {sugeridos.filter((s) => relacion(s.username)?.estado !== 'aceptada').map((s) => (
-                    <li key={s.username} className="flex items-center justify-between gap-3 rounded-2xl border border-neutral-200 px-3 py-3 dark:border-neutral-800">
+              <ul id="friends-list" className="mt-3 grid gap-2" onClick={clicListaAmigos}>
+                  {sugeridos.filter((s) => relacion(s.username)?.estado !== 'aceptada').map((s) => {
+                    const vinculo = relacion(s.username)
+                    const siguiendo = vinculo?.estado === 'aceptada'
+                    const enviada = vinculo?.estado === 'pendiente' && vinculo.direccion === 'enviada'
+                    const recibida = vinculo?.estado === 'pendiente' && vinculo.direccion === 'recibida'
+                    return (
+                    <li key={s.id} className="flex items-center justify-between gap-3 rounded-2xl border border-neutral-200 px-3 py-3 dark:border-neutral-800">
                       <div className="flex min-w-0 items-center gap-3">
-                        <Cara nombre={s.nombre || s.username} avatar={s.avatar_url} />
+                        <Cara nombre={s.name || s.username} avatar={s.avatar_url} />
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-medium">{texto(s.nombre) || s.username}</p>
+                          <p className="truncate text-sm font-medium">{texto(s.name) || s.username}</p>
                           <p className="truncate text-xs text-neutral-500">@{s.username}</p>
                           {s.bio ? <p className="truncate text-xs text-neutral-500">{texto(s.bio)}</p> : null}
                         </div>
                       </div>
-                      <BotonAmistad relacion={relacion(s.username)} onAnadir={() => void solicitar(s.username)} onAceptar={(id) => void responder(id, 'aceptada')} />
+                      {siguiendo ? (
+                        <span className="shrink-0 text-xs text-neutral-500">Siguiendo</span>
+                      ) : enviada ? (
+                        <span className="shrink-0 text-xs text-neutral-500">Solicitud enviada</span>
+                      ) : recibida ? (
+                        <button type="button" onClick={() => void responder(vinculo.id, 'aceptada')} className="h-9 shrink-0 rounded-xl bg-mint px-3 text-sm font-medium text-white">Aceptar</button>
+                      ) : (
+                        <button type="button" className="btn-add-friend h-9 shrink-0 rounded-full bg-emerald-500 px-3.5 text-sm font-semibold text-black transition hover:-translate-y-0.5 hover:bg-emerald-400" data-user-id={s.id}>
+                          Seguir
+                        </button>
+                      )}
                     </li>
-                  ))}
+                    )
+                  })}
                 </ul>
             </section>
             {amistades.length > 0 && (

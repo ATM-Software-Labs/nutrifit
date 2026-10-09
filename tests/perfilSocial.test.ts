@@ -13,6 +13,8 @@ import { onRequestPost as postSocial } from '../functions/api/usuarios/social.ts
 import { onRequestGet as getPublico } from '../functions/api/usuarios/publico.ts'
 import { onRequestGet as getSugerencias } from '../functions/api/usuarios/sugerencias.ts'
 import { onRequestGet as getSuggestions } from '../functions/api/users/suggestions.ts'
+import { onRequestGet as getFriendsSuggestions } from '../functions/api/friends/suggestions.ts'
+import { onRequestPost as postFollow } from '../functions/api/friends/follow.ts'
 import { fotoGoogle } from '../functions/utils/googleOAuth.ts'
 import { onRequestPost as postAmistad, onRequestGet as getAmistad } from '../functions/api/amistades/index.ts'
 import { onRequestPost as postAvatar } from '../functions/api/usuarios/avatar.ts'
@@ -239,6 +241,51 @@ test('las sugerencias excluyen al usuario y a sus amigos y devuelven []', async 
   assert.equal(fotoGoogle('http://lh3.googleusercontent.com/a/abc'), null)
   assert.equal(fotoGoogle('https://evil.example/a'), null)
   assert.equal(fotoGoogle(''), null)
+})
+
+test('GET /api/friends/suggestions devuelve success y follow inserta en amistades', async () => {
+  const env = entornoTest()
+  const yoId = '11111111-1111-4111-8111-111111111111'
+  const amigoId = '22222222-2222-4222-8222-222222222222'
+  const nuevoId = '33333333-3333-4333-8333-333333333333'
+  const yo = await entrar(env, yoId, 'yo@b.es')
+  await entrar(env, amigoId, 'amigo@b.es')
+  await entrar(env, nuevoId, 'nuevo@b.es')
+  env.DB.sqlite.prepare("UPDATE usuarios SET username = 'yo_fit', es_publico = 1, creado_en = '2026-10-01' WHERE id = ?").run(yoId)
+  env.DB.sqlite.prepare("UPDATE usuarios SET username = 'amigo_fit', nombre = 'Amigo', es_publico = 1, creado_en = '2026-10-02' WHERE id = ?").run(amigoId)
+  env.DB.sqlite.prepare("UPDATE usuarios SET username = 'nuevo_fit', nombre = 'Nueva', bio = 'Hola', es_publico = 1, creado_en = '2026-10-09' WHERE id = ?").run(nuevoId)
+  env.DB.sqlite.prepare("INSERT INTO amistades (id, solicitante_id, receptor_id, estado) VALUES ('am-f', ?, ?, 'aceptada')").run(yoId, amigoId)
+
+  const res = await getFriendsSuggestions(conSesion(env, new Request('https://nutri.trujillomingorance.com/api/friends/suggestions'), yo))
+  assert.equal(res.status, 200)
+  assert.equal(res.headers.get('content-type'), 'application/json; charset=utf-8')
+  const cuerpo = (await res.json()) as { success: boolean; suggestions: { id: string; username: string; name: string | null; email?: string }[] }
+  assert.equal(cuerpo.success, true)
+  assert.deepEqual(cuerpo.suggestions.map((s) => s.username), ['nuevo_fit'])
+  assert.equal(cuerpo.suggestions[0]?.id, nuevoId)
+  assert.equal(cuerpo.suggestions[0]?.name, 'Nueva')
+  assert.equal(JSON.stringify(cuerpo).includes('email'), false)
+  assert.equal(JSON.stringify(cuerpo).includes('amigo@b.es'), false)
+
+  const colado = await capturar(postFollow(conSesion(env, postJson('/api/friends/follow', { targetUserId: nuevoId, usuario_id: yoId }), yo)))
+  assert.equal(colado.status, 400)
+  const alta = await postFollow(conSesion(env, postJson('/api/friends/follow', { targetUserId: nuevoId }), yo))
+  assert.equal(alta.status, 201)
+  const seguido = (await alta.json()) as { success: boolean; status: string }
+  assert.equal(seguido.success, true)
+  assert.equal(seguido.status, 'pending')
+  const fila = env.DB.sqlite.prepare('SELECT solicitante_id, receptor_id, estado FROM amistades WHERE receptor_id = ?').get(nuevoId) as {
+    solicitante_id: string
+    receptor_id: string
+    estado: string
+  }
+  assert.equal(fila.solicitante_id, yoId)
+  assert.equal(fila.receptor_id, nuevoId)
+  assert.equal(fila.estado, 'pendiente')
+
+  const otra = await getFriendsSuggestions(conSesion(env, new Request('https://nutri.trujillomingorance.com/api/friends/suggestions'), yo))
+  const despues = (await otra.json()) as { suggestions: unknown[] }
+  assert.deepEqual(despues.suggestions, [])
 })
 
 test('sin otros perfiles públicos las sugerencias son []', async () => {

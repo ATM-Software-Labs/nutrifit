@@ -278,7 +278,11 @@ export const api = {
       `/api/usuarios/publico?${q({ pagina: String(pagina) })}`,
     ),
   sugerencias: () =>
-    pedir<{ username: string; nombre: string | null; avatar_url: string | null; bio: string | null }[]>('/api/users/suggestions'),
+    pedir<{ success: true; suggestions: { id: string; username: string; name: string | null; avatar_url: string | null; bio: string | null }[] }>(
+      '/api/friends/suggestions',
+    ),
+  seguir: (targetUserId: string) =>
+    pedir<{ success: true; id: string; status: 'pending' | 'accepted' }>('/api/friends/follow', { method: 'POST', body: { targetUserId } }),
 
   perfilSocial: () =>
     pedir<{ ok: true; perfil: { username: string | null; nombre: string | null; bio: string | null; avatar_url: string | null; banner_url: string | null; es_publico: number; meta_agua_base_ml: number } }>('/api/usuarios/social'),

@@ -301,6 +301,10 @@ export const comidaFrecuenteSchema = z.strictObject({
 
 // ----------------------------------------------------------------- amistades
 export const amistadSolicitudSchema = z.strictObject({ username: usernameSchema })
+/** POST /api/friends/follow. El id es el de `usuarios.id` (UUID). La sesión no se toma del cuerpo. */
+export const seguirSchema = z.strictObject({
+  targetUserId: uuid,
+})
 export const amistadEstadoSchema = z.strictObject({
   estado: z.enum(['aceptada', 'rechazada'], { error: 'Estado inválido.' }),
 })
