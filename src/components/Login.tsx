@@ -6,7 +6,7 @@ import { Input } from './ui/Input.tsx'
 import { useTurnstile } from '../hooks/useTurnstile.ts'
 import { api, ApiError } from '../lib/api.ts'
 import { esNativa } from '../lib/plataforma.ts'
-import { urlApi, URL_REPO } from '../lib/config.ts'
+import { urlApi, URL_REPO, URL_SITIO } from '../lib/config.ts'
 import { clicPrivacidad } from '../lib/rutas.ts'
 import { guardarTokenApp } from '../lib/tokenApp.ts'
 import { ESCRITORIO, useMedia } from '../hooks/useMedia.ts'
@@ -30,11 +30,20 @@ const AVISOS: Record<string, string> = {
 /** Lee y limpia ?auth=… de la URL (lo pone /api/auth/verificar al redirigir). */
 function leerAvisoUrl(): string | null {
   const url = new URL(window.location.href)
-  const motivo = url.searchParams.get('auth')
-  if (!motivo) return null
+  const auth = url.searchParams.get('auth')
+  if (!auth) return null
+  
+  if (auth === 'error') {
+    const motivo = url.searchParams.get('motivo') || 'Desconocido'
+    const detalle = url.searchParams.get('detalle') || 'Sin detalle'
+    console.error('Detalle del error de Google OAuth:', { auth, motivo, detalle })
+  }
+  
   url.searchParams.delete('auth')
+  url.searchParams.delete('motivo')
+  url.searchParams.delete('detalle')
   history.replaceState(null, '', url.pathname + url.search + url.hash)
-  return AVISOS[motivo] ?? AVISOS.error!
+  return AVISOS[auth] ?? AVISOS.error!
 }
 
 const EMAIL_OK = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
@@ -52,13 +61,20 @@ function IconoGoogle() {
 }
 
 /**
- * Pide al gateway la URL de Google y sale hacia ella.
- * En producción el redirect_uri es https://api.trujillomingorance.com/v1/auth/callback/google.
- * En localhost el servidor usa el origen de Pages. El log muestra el valor exacto.
+ * Pide la URL de Google al mismo host que recibirá el callback.
+ * La cookie `__Host-nf_google` no puede viajar de api. a nutri.
+ * En localhost sigue el proxy de Vite.
  */
+function urlInicioGoogle(): string {
+  if (!esNativa && typeof location !== 'undefined' && location.origin === URL_SITIO) {
+    return `${URL_SITIO}/api/auth/google?formato=json`
+  }
+  return urlApi('/api/auth/google?formato=json')
+}
+
 async function iniciarSesionGoogle(e: MouseEvent<HTMLButtonElement>) {
   e.preventDefault()
-  const res = await fetch(urlApi('/api/auth/google?formato=json'), {
+  const res = await fetch(urlInicioGoogle(), {
     headers: { Accept: 'application/json' },
     credentials: esNativa ? 'omit' : 'include',
     mode: 'cors',

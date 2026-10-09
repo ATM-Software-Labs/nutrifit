@@ -1,4 +1,4 @@
-﻿/** Ajustes: perfil y objetivos (recalculados al momento), tema, cuenta y enlaces. */
+/** Ajustes: perfil y objetivos (recalculados al momento), tema, cuenta y enlaces. */
 import { useMemo, useState } from 'react'
 import { ChevronRight, Download, ExternalLink, LogOut, Monitor, Moon, Shield, Sun } from 'lucide-react'
 import { URL_REPO } from '../lib/config.ts'
@@ -132,15 +132,15 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
     <Sheet abierto onClose={onClose} titulo={t('ajustes.titulo')} ancho="lg">
       <div className="space-y-9 pb-2">
         <Seccion titulo={t('ajustes.perfil')}>
-          <Input label="Nombre" value={nombre} maxLength={60} onChange={(e) => setNombre(e.target.value)} />
-          <Segmented label="Sexo" valor={sexo} onChange={setSexo} opciones={[{ valor: 'hombre', etiqueta: 'Hombre' }, { valor: 'mujer', etiqueta: 'Mujer' }]} />
+          <Input label={t('ajustes.nombre')} value={nombre} maxLength={60} onChange={(e) => setNombre(e.target.value)} />
+          <Segmented label={t('ajustes.sexo')} valor={sexo} onChange={setSexo} opciones={[{ valor: 'hombre', etiqueta: t('ajustes.hombre') }, { valor: 'mujer', etiqueta: t('ajustes.mujer') }]} />
           <div className="grid grid-cols-3 gap-3">
-            <Input label="Edad" type="number" inputMode="numeric" value={edad} onChange={(e) => setEdad(e.target.value)} sufijo="años" />
-            <Input label="Peso" type="number" inputMode="decimal" step="0.1" value={peso} onChange={(e) => setPeso(e.target.value)} sufijo="kg" />
-            <Input label="Altura" type="number" inputMode="numeric" value={altura} onChange={(e) => setAltura(e.target.value)} sufijo="cm" />
+            <Input label={t('ajustes.edad')} type="number" inputMode="numeric" value={edad} onChange={(e) => setEdad(e.target.value)} sufijo="años" />
+            <Input label={t('ajustes.peso')} type="number" inputMode="decimal" step="0.1" value={peso} onChange={(e) => setPeso(e.target.value)} sufijo="kg" />
+            <Input label={t('ajustes.altura')} type="number" inputMode="numeric" value={altura} onChange={(e) => setAltura(e.target.value)} sufijo="cm" />
           </div>
           <label className="block">
-            <span className="mb-1.5 block text-sm font-medium text-neutral-700 dark:text-neutral-300">Actividad</span>
+            <span className="mb-1.5 block text-sm font-medium text-neutral-700 dark:text-neutral-300">{t('ajustes.actividad')}</span>
             <select className={SELECT} value={actividad} onChange={(e) => setActividad(e.target.value as NivelActividad)}>
               {ACTIVIDADES.map((a) => (
                 <option key={a.valor} value={a.valor}>
@@ -150,7 +150,7 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
             </select>
           </label>
           <label className="block">
-            <span className="mb-1.5 block text-sm font-medium text-neutral-700 dark:text-neutral-300">Objetivo</span>
+            <span className="mb-1.5 block text-sm font-medium text-neutral-700 dark:text-neutral-300">{t('ajustes.objetivo')}</span>
             <select className={SELECT} value={objetivo} onChange={(e) => setObjetivo(e.target.value as Objetivo)}>
               {OBJETIVOS_UI.map((o) => (
                 <option key={o.valor} value={o.valor}>
@@ -159,7 +159,7 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
               ))}
             </select>
           </label>
-          <Input label="Peso objetivo" hint="Se muestra como línea discontinua en la gráfica de peso." type="number" inputMode="decimal" step="0.1" value={objetivoPeso} onChange={(e) => setObjetivoPeso(e.target.value)} sufijo="kg" />
+          <Input label={t('ajustes.peso_objetivo')} hint={t('ajustes.peso_hint')} type="number" inputMode="decimal" step="0.1" value={objetivoPeso} onChange={(e) => setObjetivoPeso(e.target.value)} sufijo="kg" />
 
           <div className="grid grid-cols-4 gap-2 rounded-2xl bg-neutral-50 p-4 text-center dark:bg-neutral-900/60" aria-live="polite">
             {plan ? (
@@ -182,7 +182,7 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
                 </div>
               </>
             ) : (
-              <p className="col-span-4 text-sm text-neutral-500 dark:text-neutral-400">Completa los datos para ver tus objetivos</p>
+              <p className="col-span-4 text-sm text-neutral-500 dark:text-neutral-400">{t('ajustes.completa_datos')}</p>
             )}
           </div>
           <div ref={contenedorRef} className="flex justify-center empty:hidden" />
@@ -192,7 +192,7 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
             </p>
           )}
           <Button block loading={guardando} onClick={() => void guardar()}>
-            Guardar cambios
+            {t('ajustes.guardar')}
           </Button>
         </Seccion>
 
@@ -211,35 +211,35 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
 
         <Seccion titulo={t('ajustes.apariencia')}>
           <Segmented
-            label="Tema"
+            label={t('ajustes.tema')}
             valor={preferencia}
             onChange={cambiar}
             opciones={[
-              { valor: 'sistema', etiqueta: <span className="flex items-center gap-1.5"><Monitor size={14} /> Sistema</span> },
-              { valor: 'claro', etiqueta: <span className="flex items-center gap-1.5"><Sun size={14} /> Claro</span> },
-              { valor: 'oscuro', etiqueta: <span className="flex items-center gap-1.5"><Moon size={14} /> Oscuro</span> },
+              { valor: 'sistema', etiqueta: <span className="flex items-center gap-1.5"><Monitor size={14} /> {t('ajustes.sistema')}</span> },
+              { valor: 'claro', etiqueta: <span className="flex items-center gap-1.5"><Sun size={14} /> {t('ajustes.claro')}</span> },
+              { valor: 'oscuro', etiqueta: <span className="flex items-center gap-1.5"><Moon size={14} /> {t('ajustes.oscuro')}</span> },
             ]}
           />
         </Seccion>
 
-                <Seccion titulo="Dispositivos y Seguridad">
+        <Seccion titulo={t('ajustes.dispositivos')}>
           <SeccionDispositivos />
         </Seccion>
 
-        <Seccion titulo="Conexiones y Wearables">
+        <Seccion titulo={t('ajustes.conexiones')}>
           <SeccionIntegraciones />
         </Seccion>
 
-        <Seccion titulo="Estrategia y Ayuno">
+        <Seccion titulo={t('ajustes.estrategia')}>
           <SeccionPreferenciasAvanzadas />
         </Seccion>
 
-        <Seccion titulo="Más">
+        <Seccion titulo={t('ajustes.mas')}>
           <div className="divide-y divide-neutral-100 rounded-2xl border border-neutral-200 dark:divide-neutral-800 dark:border-neutral-800">
             {!esNativa && (
               <ControlInstalar className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-[15px] hover:bg-neutral-50 dark:hover:bg-neutral-900">
                 <Download size={18} className="text-neutral-500 dark:text-neutral-400" />
-                <span className="flex-1">Instalar la app</span>
+                <span className="flex-1">{t('ajustes.instalar')}</span>
                 <ChevronRight size={16} className="text-neutral-400" />
               </ControlInstalar>
             )}
@@ -252,31 +252,31 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
               className="flex items-center gap-3 px-4 py-3.5 text-[15px] hover:bg-neutral-50 dark:hover:bg-neutral-900"
             >
               <Shield size={18} className="text-neutral-500 dark:text-neutral-400" />
-              <span className="flex-1">Política de Privacidad</span>
+              <span className="flex-1">{t('ajustes.privacidad')}</span>
               <ChevronRight size={16} className="text-neutral-400" />
             </a>
             <a href={URL_REPO} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 px-4 py-3.5 text-[15px] hover:bg-neutral-50 dark:hover:bg-neutral-900">
               <ExternalLink size={18} className="text-neutral-500 dark:text-neutral-400" />
-              <span className="flex-1">Código abierto en GitHub</span>
+              <span className="flex-1">{t('ajustes.codigo')}</span>
               <span className="text-xs text-neutral-500 dark:text-neutral-400">MIT</span>
             </a>
           </div>
         </Seccion>
 
-        <Seccion titulo="Cuenta">
+        <Seccion titulo={t('ajustes.cuenta')}>
           <p className="text-sm text-neutral-500 dark:text-neutral-400">
-            Sesión iniciada como <span className="font-medium text-graphite dark:text-neutral-200">{usuario.email}</span>
+            {t('ajustes.sesion')} <span className="font-medium text-graphite dark:text-neutral-200">{usuario.email}</span>
           </p>
           <Button variant="outline" block icon={<Download size={16} />} loading={exportando} onClick={() => void descargarDatos()}>
-            Descargar mis datos
+            {t('ajustes.descargar')}
           </Button>
           <Button variant="outline" block icon={<LogOut size={16} />} onClick={onSalir}>
-            Cerrar sesión
+            {t('ajustes.cerrar')}
           </Button>
           <Button variant="danger" block loading={borrando} onClick={() => void eliminarCuenta()}>
-            Eliminar mi cuenta
+            {t('ajustes.eliminar')}
           </Button>
-          <p className="text-center text-2xs text-neutral-500 dark:text-neutral-400">NutriFit v{__APP_VERSION__} · ¿Dudas? soporte@trujillomingorance.com</p>
+          <p className="text-center text-2xs text-neutral-500 dark:text-neutral-400">NutriFit v{__APP_VERSION__} · {t('ajustes.dudas')} soporte@trujillomingorance.com</p>
         </Seccion>
       </div>
     </Sheet>

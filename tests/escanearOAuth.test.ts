@@ -3,7 +3,7 @@ import { test } from 'node:test'
 import { ErrorIA } from '../functions/utils/ia.ts'
 import { FotoIlegible } from '../functions/utils/iaParseo.ts'
 import { aPlato, cascadaEscaneo, debeContinuarCascada, huellaImagen } from '../functions/utils/orquestadorVision.ts'
-import { destinoTrasGoogle, leerStateGoogle, prepararAutorizacion, redirectGoogle } from '../functions/utils/googleOAuth.ts'
+import { completarGoogle, destinoTrasGoogle, leerStateGoogle, prepararAutorizacion, redirectGoogle } from '../functions/utils/googleOAuth.ts'
 import { onRequestGet as inicioGoogle } from '../functions/api/auth/google/index.ts'
 import { firmar } from '../functions/utils/crypto.ts'
 import { firmarIpCliente } from '../functions/utils/ipPasarela.ts'
@@ -97,6 +97,9 @@ test('Google firma el state, lo deja en cookie Lax y no pone el verificador en l
   assert.match(preparado.cookie, /HttpOnly/)
   assert.match(preparado.cookie, /Secure/)
   assert.match(preparado.cookie, /SameSite=Lax/)
+  assert.doesNotMatch(preparado.cookie, /SameSite=Strict/)
+  assert.doesNotMatch(preparado.cookie, /Domain=/i)
+  assert.match(preparado.cookie, /Path=\//)
   assert.match(preparado.cookie, /Max-Age=300/)
   const state = location.searchParams.get('state')!
   assert.equal(preparado.location.includes(preparado.cookie.split(';')[0]!.split('=').slice(1).join('=')), false)
@@ -149,11 +152,11 @@ test('redirect_uri usa el origen permitido y no un host ajeno', async () => {
   assert.equal(cuerpo.location.includes('secreto'), false)
 })
 
-test('una petición firmada por la pasarela usa el callback /v1 y vuelve a la PWA', async () => {
+test('una petición firmada por la pasarela sigue usando el callback de la PWA', async () => {
   const env = {
     AUTH_SECRET: 's'.repeat(48),
     ENVIRONMENT: 'production',
-    APP_URL: 'https://nutri.trujillomingorance.com',
+    APP_URL: 'https://nutri.trujillomingorance.com/',
     GOOGLE_CLIENT_ID: 'cliente.apps.googleusercontent.com',
     GOOGLE_CLIENT_SECRET: 'secreto',
   } as any
@@ -161,12 +164,50 @@ test('una petición firmada por la pasarela usa el callback /v1 y vuelve a la PW
   const req = new Request('https://nutri.trujillomingorance.com/api/auth/google', {
     headers: { 'x-nf-via': 'gateway', 'x-nf-client-sig': sig },
   })
-  assert.equal(await redirectGoogle(env, req), 'https://api.trujillomingorance.com/v1/auth/callback/google')
+  const uri = redirectGoogle(env, req)
+  assert.equal(uri, 'https://nutri.trujillomingorance.com/api/auth/callback/google')
+  assert.equal(new URL(uri).pathname, '/api/auth/callback/google')
   assert.equal(destinoTrasGoogle(env, req), 'https://nutri.trujillomingorance.com/?auth=error')
-  const sinFirma = new Request('https://nutri.trujillomingorance.com/api/auth/google', {
-    headers: { 'x-nf-via': 'gateway' },
-  })
-  assert.equal(await redirectGoogle(env, sinFirma), 'https://nutri.trujillomingorance.com/api/auth/callback/google')
+  assert.equal(redirectGoogle(env, req), redirectGoogle(env, new Request('https://api.trujillomingorance.com/v1/auth/callback/google?code=1')))
+})
+
+test('el canje usa el mismo redirect_uri y registra el cuerpo si Google lo rechaza', async () => {
+  const env = {
+    AUTH_SECRET: 's'.repeat(48),
+    ENVIRONMENT: 'production',
+    APP_URL: 'https://nutri.trujillomingorance.com',
+    GOOGLE_CLIENT_ID: 'cliente.apps.googleusercontent.com\n',
+    GOOGLE_CLIENT_SECRET: 'secreto\n',
+  } as any
+  const preparado = await prepararAutorizacion(env, new Request('https://nutri.trujillomingorance.com/api/auth/google'))
+  assert.ok(preparado)
+  const state = new URL(preparado.location).searchParams.get('state')!
+  const token = preparado.cookie.split(';')[0]!.split('=').slice(1).join('=')
+  const originalFetch = globalThis.fetch
+  const originalError = console.error
+  const avisos: unknown[][] = []
+  console.error = (...args: unknown[]) => {
+    avisos.push(args)
+  }
+  globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+    const cuerpo = String(init?.body ?? '')
+    assert.match(cuerpo, /redirect_uri=https%3A%2F%2Fnutri\.trujillomingorance\.com%2Fapi%2Fauth%2Fcallback%2Fgoogle(?:&|$)/)
+    assert.equal(cuerpo.includes('%0A'), false)
+    assert.equal(cuerpo.includes('secreto%0A'), false)
+    return new Response('{"error":"invalid_grant","error_description":"Bad Request"}', { status: 400 })
+  }) as typeof fetch
+  try {
+    const res = await completarGoogle(env, new Request(`https://nutri.trujillomingorance.com/api/auth/callback/google?code=abc&state=${state}`, {
+      headers: { Cookie: `__Host-nf_google=${token}` },
+    }))
+    assert.equal(res.status, 302)
+    assert.equal(res.headers.get('location'), 'https://nutri.trujillomingorance.com/?auth=error')
+    assert.equal(avisos.some((a) => a[0] === '[Google OAuth Error]' && String(a[1]).includes('invalid_grant')), true)
+    assert.equal(JSON.stringify(avisos).includes('secreto'), false)
+  } finally {
+    globalThis.fetch = originalFetch
+    console.error = originalError
+  }
 })
 
 test('el idioma sale de nutrifit_lang y, si no hay, de navigator.language', () => {

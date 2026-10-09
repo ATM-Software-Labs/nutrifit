@@ -314,6 +314,24 @@ test('GET / es el portal estático y no nombra servicios', async () => {
   assert.equal(otro.status, 404)
 })
 
+test('GET /v1/auth/google vuelve a la PWA y no reenvía el canje', async () => {
+  let llamadas = 0
+  const res = await atender(new Request('https://api.trujillomingorance.com/v1/auth/google?formato=json', {
+    headers: { origin: 'https://nutri.trujillomingorance.com' },
+  }), env(), ctx, async () => {
+    llamadas += 1
+    return new Response('no')
+  })
+  assert.equal(llamadas, 0)
+  assert.equal(res.status, 302)
+  assert.equal(res.headers.get('location'), 'https://nutri.trujillomingorance.com/api/auth/google?formato=json')
+  assert.equal(res.headers.get('cache-control'), 'no-store')
+  assert.equal(res.headers.get('access-control-allow-origin'), 'https://nutri.trujillomingorance.com')
+  assert.equal(res.headers.get('access-control-allow-credentials'), 'true')
+  const barra = await atender(new Request('https://api.trujillomingorance.com/v1/auth/google/'), env(), ctx)
+  assert.equal(barra.headers.get('location'), 'https://nutri.trujillomingorance.com/api/auth/google')
+})
+
 test('sin PAGES_ORIGIN /v1 no sale a la red y una ruta fuera de /v1 es 404', async () => {
   const auth = await atender(new Request('https://api.trujillomingorance.com/v1/auth'), env(), ctx)
   assert.equal(auth.status, 502)

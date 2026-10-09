@@ -342,17 +342,20 @@ export const api = {
     pedir<{ ok: true; perfil: { username: string | null; bio: string | null; es_publico: number; meta_agua_base_ml: number } }>('/api/usuarios/social', { method: 'POST', body: datos }),
   subirAvatar: (imagen: Blob) => {
     const fd = new FormData()
-    fd.append('imagen', imagen, 'avatar')
+    const ext = imagen.type === 'image/png' ? 'png' : imagen.type === 'image/webp' ? 'webp' : 'jpg'
+    fd.append('imagen', imagen, `avatar.${ext}`)
     return pedir<{ ok: true; avatar_url: string }>('/api/usuarios/avatar', { method: 'POST', body: fd })
   },
   subirBanner: (imagen: Blob) => {
     const fd = new FormData()
-    fd.append('imagen', imagen, 'banner')
+    const ext = imagen.type === 'image/png' ? 'png' : imagen.type === 'image/webp' ? 'webp' : 'jpg'
+    fd.append('imagen', imagen, `banner.${ext}`)
     return pedir<{ ok: true; banner_url: string }>('/api/usuarios/banner', { method: 'POST', body: fd })
   },
   subirFotoPlato: (imagen: Blob) => {
     const fd = new FormData()
-    fd.append('imagen', imagen, 'plato')
+    const ext = imagen.type === 'image/png' ? 'png' : imagen.type === 'image/webp' ? 'webp' : 'jpg'
+    fd.append('imagen', imagen, `plato.${ext}`)
     return pedir<{ ok: true; id: string; imagen_url: string }>('/api/comidas/foto', { method: 'POST', body: fd })
   },
 

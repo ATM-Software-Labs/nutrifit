@@ -12,6 +12,7 @@ import { useResumen } from '../hooks/useResumen.ts'
 import { useToast } from './ui/Toast.tsx'
 import { BarraMacro } from './BarrasMacros.tsx'
 import type { Usuario } from '../lib/tipos.ts'
+import { CropperModal } from './CropperModal.tsx'
 
 type Pestana = 'feed' | 'amigos'
 
@@ -198,6 +199,7 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
   const [editando, setEditando] = useState(false)
   const [sugeridos, setSugeridos] = useState<Sugerido[]>([])
   const [cargandoSugerencias, setCargandoSugerencias] = useState(false)
+  const [cropImage, setCropImage] = useState<{ url: string; tipo: 'avatar' | 'banner' } | null>(null)
 
   useEffect(() => {
     let vivo = true
@@ -235,7 +237,7 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
     }
   }, [hoy])
 
-  async function subir(archivo: File, clase: 'avatar' | 'banner') {
+  async function subir(archivo: File | Blob, clase: 'avatar' | 'banner') {
     try {
       const blob = await comprimirImagen(archivo)
       if (clase === 'avatar') {
@@ -265,6 +267,7 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
       toast({ tipo: 'error', mensaje: e instanceof ApiError ? e.message : 'No se pudo guardar el perfil.' })
     }
   }
+
 
   useEffect(() => {
     if (pestana !== 'amigos') return
@@ -385,7 +388,12 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
   const pctCalorias = metas.calorias > 0 ? Math.round((totales.calorias / metas.calorias) * 100) : 0
   const logros = [
     { id: 'racha7', titulo: '7 días seguidos', detalle: 'Una semana registrando', ok: racha >= 7 },
+    { id: 'racha30', titulo: '30 días seguidos', detalle: 'Un mes de constancia', ok: racha >= 30 },
+    { id: 'racha100', titulo: '100 días seguidos', detalle: 'Una dedicación increíble', ok: racha >= 100 },
     { id: 'prote', titulo: 'Meta de proteína alcanzada', detalle: 'El objetivo de hoy', ok: metas.proteinas > 0 && totales.proteinas >= metas.proteinas },
+    { id: 'deportista', titulo: 'Deportista activo', detalle: 'Has registrado al menos 5 entrenamientos', ok: sesiones.length >= 5 },
+    { id: 'intenso', titulo: 'Entrenamiento intenso', detalle: 'Registraste una sesión de alta intensidad', ok: sesiones.some(s => s.intensidad === 'alta') },
+    { id: 'social', titulo: 'Amigable', detalle: 'Tienes al menos 1 amigo', ok: amigos >= 1 },
     { id: 'pionero', titulo: 'Pionero', detalle: 'Cuenta creada en NutriFit', ok: Boolean(usuario.creado_en) },
   ]
 
@@ -400,7 +408,11 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
           </div>
           <label className="absolute bottom-3 right-3 cursor-pointer rounded-full bg-black/45 px-3 py-1 text-xs text-white backdrop-blur-sm transition hover:bg-black/60">
             Banner
-            <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(e) => { const f = e.target.files?.[0]; if (f) void subir(f, 'banner'); e.target.value = '' }} />
+            <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) setCropImage({ url: URL.createObjectURL(f), tipo: 'banner' });
+              e.target.value = '';
+            }} />
           </label>
           <label className="absolute -bottom-11 left-5 cursor-pointer">
             <span id="userAvatar" className="relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-4 border-[#10b981] bg-mint-50 text-2xl font-semibold text-mint-800 shadow-lg ring-2 ring-white dark:bg-mint-950 dark:text-mint-200 dark:ring-[#111827]">
@@ -409,9 +421,29 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
             <span className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full border-2 border-white bg-[#10b981]" title="Activo">
               <span className="sr-only">Estado activo</span>
             </span>
-            <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(e) => { const f = e.target.files?.[0]; if (f) void subir(f, 'avatar'); e.target.value = '' }} />
+            <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) setCropImage({ url: URL.createObjectURL(f), tipo: 'avatar' });
+              e.target.value = '';
+            }} />
           </label>
         </div>
+
+        {cropImage && (
+          <CropperModal
+            imageSrc={cropImage.url}
+            aspectRatio={cropImage.tipo === 'avatar' ? 1 : 3}
+            onCrop={(blob) => {
+              void subir(blob, cropImage.tipo);
+              URL.revokeObjectURL(cropImage.url);
+              setCropImage(null);
+            }}
+            onCancel={() => {
+              URL.revokeObjectURL(cropImage.url);
+              setCropImage(null);
+            }}
+          />
+        )}
 
         <div className="mt-14 flex items-start justify-between gap-3">
           <div className="min-w-0">

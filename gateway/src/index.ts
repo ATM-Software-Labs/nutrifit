@@ -4,7 +4,7 @@
  * El resto de /v1 se reenvía a Pages. La cookie __Host- queda en este host.
  */
 import { verificarFirma } from '../../functions/utils/crypto.ts'
-import { destinoDeProxy } from '../../functions/utils/pasarela.ts'
+import { destinoDeProxy, URL_PAGINA } from '../../functions/utils/pasarela.ts'
 import { payloadTicketValido, PROPOSITO_VISION } from '../../functions/utils/ticketVision.ts'
 import type { ContextoGateway, GatewayEnv } from './env.ts'
 import { aplicarCabecerasGateway, aplicarCors, dentroDelCupo, esRastreador, ipDeGateway, origenPermitido, origenRechazado, secFetchValido, tokenInternoValido } from './politica.ts'
@@ -68,6 +68,17 @@ export async function atender(request: Request, env: GatewayEnv, ctx: ContextoGa
         vision: Boolean(env.GEMINI_API_KEY || env.GROQ_API_KEY || env.TRUJILLO_API_KEY || env.AI),
         limite: Boolean(env.VISION_LIMITE),
       },
+    }))
+  }
+
+  // La cookie __Host- solo vive en el host que la escribe. Google vuelve a la
+  // PWA, así que el inicio tiene que salir de ese mismo host y no de este.
+  if (request.method === 'GET' && ruta === '/v1/auth/google') {
+    const destino = new URL('/api/auth/google', URL_PAGINA)
+    destino.search = url.search
+    return cerrar(request, new Response(null, {
+      status: 302,
+      headers: { Location: destino.toString(), 'Cache-Control': 'no-store' },
     }))
   }
 

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Middleware global de NutriFit (se ejecuta antes de cada Function).
  * public/_routes.json limita la invocación de Functions a /api/* y /assets/*
  * (este último solo para fijar bien la caché, ver functions/assets/[[ruta]].ts);
@@ -257,7 +257,7 @@ export const onRequest: Handler = async (ctx) => {
     }
 
     if (RUTAS_LOGIN.has(url.pathname)) {
-      await exigirLimite(env, await claveLimite('login:ip', datos.ip), 5, 900, MENSAJE_LOGIN, OPCIONES_PICO)
+      await exigirLimite(env, await claveLimite('login:ip', datos.ip), 50, 900, MENSAJE_LOGIN, OPCIONES_PICO)
     }
 
     if (ESCRITURA.has(request.method)) {

@@ -3,7 +3,7 @@
  * Detecta la plataforma y pone primero la recomendada.
  */
 import { useMemo, type ReactNode } from 'react'
-import { ArrowLeft, ExternalLink, Globe, Smartphone } from 'lucide-react'
+import { ArrowLeft, ExternalLink, Globe, Smartphone, Download } from 'lucide-react'
 import { Logo } from './Logo.tsx'
 import { cx } from './ui/cx.ts'
 import { GITHUB_REPO, URL_REPO } from '../lib/config.ts'
@@ -130,12 +130,24 @@ function Android({ recomendada }: { recomendada?: string }) {
   return (
     <Tarjeta icono={<Smartphone size={20} strokeWidth={1.75} />} titulo="Android" recomendada={recomendada}>
       <p className="mb-4 text-sm leading-relaxed text-neutral-600 dark:text-neutral-300">
-        Se instala desde Chrome, a pantalla completa y con el motor del navegador.
+        Se instala desde Chrome, a pantalla completa y con el motor del navegador. También puedes descargar el archivo APK directamente.
       </p>
-      <BotonInstalar />
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex-1">
+          <BotonInstalar />
+        </div>
+        <a
+          href="/NutriFit.apk"
+          download="NutriFit.apk"
+          className="flex flex-1 h-12 items-center justify-center gap-2 rounded-2xl bg-neutral-800 text-[15px] font-semibold text-white transition hover:bg-neutral-700"
+        >
+          <Download size={18} /> Descargar APK
+        </a>
+      </div>
     </Tarjeta>
   )
 }
+
 
 function Iphone({ recomendada }: { recomendada?: string }) {
   return (
