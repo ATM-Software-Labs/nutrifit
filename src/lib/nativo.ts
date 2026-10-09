@@ -8,7 +8,7 @@
  */
 import { App } from '@capacitor/app'
 import { StatusBar, Style } from '@capacitor/status-bar'
-import { URL_API_NATIVA } from './config.ts'
+import { URL_SITIO } from './config.ts'
 
 export const ESQUEMA_APP = 'com.trujillomingorance.nutrifit'
 
@@ -17,7 +17,7 @@ export function tokenDeUrl(url: string): string | null {
   try {
     const u = new URL(url)
     const ruta = u.pathname.replace(/\/+$/, '')
-    const appLink = u.protocol === 'https:' && u.hostname === new URL(URL_API_NATIVA).hostname && ruta === '/app-login'
+    const appLink = u.protocol === 'https:' && u.hostname === new URL(URL_SITIO).hostname && ruta === '/app-login'
     const esquema = u.protocol === `${ESQUEMA_APP}:` && (u.hostname === 'login' || ruta.replace(/^\/+/, '') === 'login')
     if (!appLink && !esquema) return null
     const t = u.searchParams.get('token')
@@ -31,7 +31,7 @@ export function tokenDeUrl(url: string): string | null {
 export function vinculoDeUrl(url: string): string | null {
   try {
     const u = new URL(url)
-    if (u.protocol !== 'https:' || u.hostname !== new URL(URL_API_NATIVA).hostname || u.pathname.replace(/\/+$/, '') !== '/vincular') return null
+    if (u.protocol !== 'https:' || u.hostname !== new URL(URL_SITIO).hostname || u.pathname.replace(/\/+$/, '') !== '/vincular') return null
     const id = u.hash.slice(1)
     return /^[A-Za-z0-9_-]{43}$/.test(id) ? id : null
   } catch {

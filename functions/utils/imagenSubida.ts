@@ -2,7 +2,7 @@
 import { HttpError } from './response.ts'
 import { leerBody } from './http.ts'
 import { analizarJsonSchema, subirImagenSchema } from './schemas.ts'
-import { detectarMime, MAX_IMAGEN_BYTES, type Imagen } from './ia.ts'
+import { contieneScriptPoliglota, detectarMime, MAX_IMAGEN_BYTES, type Imagen } from './ia.ts'
 import { MAX_SUBIDA_BYTES, validarImagenSubida } from './archivos.ts'
 
 export const MAX_JSON_IMAGEN = 2_300_000
@@ -48,7 +48,8 @@ async function leer(request: Request, maxBytes: number, jsonMax: number, estrict
   if (!estricto && maxBytes < MAX_SUBIDA_BYTES) {
     if (bytes.byteLength === 0) throw new HttpError(400, 'La imagen está vacía.')
     const mime = detectarMime(bytes)
-    if (!mime) throw new HttpError(415, 'Formato no soportado. Usa JPEG, PNG o WebP.')
+    // La firma manda. Un binario sin JPEG/PNG/WebP, o con un script políglota, no llega al modelo.
+    if (!mime || contieneScriptPoliglota(bytes)) throw new HttpError(400, 'Formato no soportado. Usa JPEG, PNG o WebP.')
     return validarImagenSubida(bytes, mimeDeclarado, false)
   }
   return validarImagenSubida(bytes, mimeDeclarado, estricto)

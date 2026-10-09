@@ -1,34 +1,41 @@
 /**
- * Análisis de una foto: lado mayor 800 px, WebP 0.75 (JPEG si no hay WebP),
- * como mucho 100 KB y sin EXIF → /api/comidas/analizar con Turnstile.
- * Errores: 429 (límite diario) y 503 (IA no disponible) → manual.
+ * Análisis de una foto: lado mayor 1024 px (baja si pasa de 130 KB), WebP 0.72–0.78
+ * (JPEG a 0.75 si no hay WebP), sin EXIF. En producción la foto va a
+ * api.trujillomingorance.com con un ticket; en localhost sigue en /api/alimentos/escanear.
+ * Un fallo de red se reintenta solo, con espera 1 s y luego 2 s.
+ * Un límite corto enseña la cuenta atrás y reintenta una vez.
  */
 import { useEffect, useRef, useState } from 'react'
-import { CircleAlert, PenLine, RotateCcw } from 'lucide-react'
 import { Sheet } from './ui/Sheet.tsx'
-import { Button } from './ui/Button.tsx'
+import { FalloAnalisis } from './FalloAnalisis.tsx'
 import { useTurnstile } from '../hooks/useTurnstile.ts'
-import { api, ApiError } from '../lib/api.ts'
-import { blobDesdeDataUrl, compressFoodImage, ErrorImagen } from '../lib/imagen.ts'
+import { api } from '../lib/api.ts'
+import { falloDeAnalisis, type FalloAnalisisUi } from '../lib/falloAnalisis.ts'
+import { blobDesdeDataUrl, compressFoodImage } from '../lib/imagen.ts'
 import { resultadoDesdePlato } from '../lib/platoEscaneo.ts'
 import { useIdioma } from '../hooks/useIdioma.ts'
 import type { ResultadoAnalisis } from '../lib/tipos.ts'
 
-type Estado = { fase: 'procesando' } | { fase: 'error'; mensaje: string; manual: boolean; reintentar: boolean }
+type Estado =
+  | { fase: 'comprimiendo' }
+  | { fase: 'analizando' }
+  | { fase: 'error'; fallo: FalloAnalisisUi; cuentaAtras: number }
 
 export default function ScannerComida({
   archivo,
   onClose,
   onResultado,
   onManual,
+  onElegirOtra,
 }: {
   archivo: File
   onClose: () => void
   onResultado: (r: ResultadoAnalisis, imagenUrl: string) => void
   onManual: (imagenUrl: string | null) => void
+  onElegirOtra?: () => void
 }) {
   const { t } = useIdioma()
-  const [estado, setEstado] = useState<Estado>({ fase: 'procesando' })
+  const [estado, setEstado] = useState<Estado>({ fase: 'comprimiendo' })
   const [miniatura, setMiniatura] = useState<string | null>(null)
   const [intento, setIntento] = useState(0)
   const { contenedorRef, obtenerToken } = useTurnstile('analizar')
@@ -36,12 +43,15 @@ export default function ScannerComida({
 
   useEffect(() => {
     let cancelado = false
-    setEstado({ fase: 'procesando' })
+    let timer = 0
+    let pulso = 0
+    setEstado({ fase: 'comprimiendo' })
     ;(async () => {
       try {
         const dataUrl = await compressFoodImage(archivo)
         if (cancelado) return
         setMiniatura(dataUrl)
+        setEstado({ fase: 'analizando' })
         const token = await obtenerToken()
         const plato = await api.escanear(blobDesdeDataUrl(dataUrl), token)
         if (cancelado) return
@@ -49,33 +59,50 @@ export default function ScannerComida({
         onResultado(resultadoDesdePlato(plato), dataUrl)
       } catch (e) {
         if (cancelado) return
-        if (e instanceof ErrorImagen) setEstado({ fase: 'error', mensaje: e.message, manual: true, reintentar: false })
-        else if (e instanceof ApiError && e.status === 429)
-          setEstado({ fase: 'error', mensaje: e.message || 'Has alcanzado el límite de análisis de hoy.', manual: true, reintentar: false })
-        else if (e instanceof ApiError && e.status === 503)
-          setEstado({ fase: 'error', mensaje: 'La IA no está disponible ahora mismo. Puedes añadir la comida a mano.', manual: true, reintentar: true })
-        else setEstado({ fase: 'error', mensaje: e instanceof Error ? e.message : 'No se pudo analizar la foto.', manual: true, reintentar: true })
+        const fallo = falloDeAnalisis(e)
+        const tope = fallo.codigo === 'RATE_LIMIT_EXCEEDED' ? 1 : 2
+        if (fallo.auto && intento < tope) {
+          const segundos = fallo.esperaSeg ?? 2 ** intento
+          const espera = Math.max(1, segundos) * 1000
+          const inicio = Date.now()
+          setEstado({ fase: 'error', fallo, cuentaAtras: Math.max(1, Math.round(espera / 1000)) })
+          pulso = window.setInterval(() => {
+            const quedan = Math.max(0, Math.ceil((espera - (Date.now() - inicio)) / 1000))
+            setEstado((prev) => (prev.fase === 'error' ? { ...prev, cuentaAtras: quedan } : prev))
+          }, 250)
+          timer = window.setTimeout(() => {
+            if (!cancelado) setIntento((i) => i + 1)
+          }, espera)
+          return
+        }
+        setEstado({ fase: 'error', fallo, cuentaAtras: 0 })
       }
     })()
     return () => {
       cancelado = true
+      window.clearTimeout(timer)
+      window.clearInterval(pulso)
     }
+    // obtenerToken cambia de identidad; el efecto solo debe repetirse al reintentar.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [archivo, intento])
 
+  const procesando = estado.fase !== 'error'
+  const texto =
+    estado.fase === 'comprimiendo' ? t('scan.comprimiendo') : estado.fase === 'analizando' ? t('scan.macros') : ''
+
   return (
-    <Sheet abierto onClose={onClose} titulo={estado.fase === 'procesando' ? t('scan.analizando') : 'No hemos podido analizarlo'} ancho="sm">
+    <Sheet abierto onClose={onClose} titulo={procesando ? t('scan.analizando') : 'No hemos podido analizarlo'} ancho="sm">
       <div className="relative mx-auto aspect-square w-full max-w-[280px] overflow-hidden rounded-3xl bg-neutral-100 dark:bg-neutral-900">
         {miniatura ? (
           <img src={miniatura} alt="Foto del plato" className="h-full w-full object-cover" />
         ) : (
-          <div className="h-full w-full animate-pulse bg-neutral-200 dark:bg-neutral-800" role="status" aria-label="Analizando foto..." />
+          <div className="h-full w-full animate-pulse bg-neutral-200 dark:bg-neutral-800" role="status" aria-label={t('scan.comprimiendo')} />
         )}
-        {estado.fase === 'procesando' && (
+        {procesando && (
           <div className="absolute inset-0" aria-hidden="true">
             <div className="absolute inset-0 bg-gradient-to-b from-mint/5 via-transparent to-mint/10" />
             <div className="absolute inset-x-0 h-0.5 animate-laser bg-mint shadow-[0_0_16px_4px_rgb(16_185_129_/_0.55)] motion-reduce:top-1/2" />
-            {/* esquinas del visor */}
             <span className="absolute left-3 top-3 h-6 w-6 rounded-tl-xl border-l-2 border-t-2 border-white/90" />
             <span className="absolute right-3 top-3 h-6 w-6 rounded-tr-xl border-r-2 border-t-2 border-white/90" />
             <span className="absolute bottom-3 left-3 h-6 w-6 rounded-bl-xl border-b-2 border-l-2 border-white/90" />
@@ -86,36 +113,25 @@ export default function ScannerComida({
 
       <div ref={contenedorRef} className="mt-4 flex justify-center empty:hidden" />
 
-      {estado.fase === 'procesando' ? (
+      {procesando ? (
         <p className="mt-6 text-center text-sm text-neutral-500 dark:text-neutral-400" role="status" aria-live="polite">
-          Analizando foto...
+          {texto}
         </p>
       ) : (
-        <div className="mt-6 space-y-4" role="alert">
-          <p className="flex items-start gap-2.5 rounded-2xl bg-neutral-100 p-4 text-sm dark:bg-neutral-900">
-            <CircleAlert size={18} className="mt-px shrink-0 text-fats" />
-            <span>{estado.mensaje}</span>
-          </p>
-          <div className="flex gap-2">
-            {estado.reintentar && (
-              <Button variant="outline" block icon={<RotateCcw size={16} />} onClick={() => setIntento((i) => i + 1)}>
-                Reintentar
-              </Button>
-            )}
-            {estado.manual && (
-              <Button
-                block
-                icon={<PenLine size={16} />}
-                onClick={() => {
+        <FalloAnalisis
+          fallo={estado.fallo}
+          cuentaAtras={estado.cuentaAtras}
+          onReintentar={() => setIntento((i) => i + 1)}
+          onElegirOtra={onElegirOtra ?? onClose}
+          onManual={
+            estado.fallo.manual
+              ? () => {
                   entregado.current = true
                   onManual(miniatura)
-                }}
-              >
-                Añadir a mano
-              </Button>
-            )}
-          </div>
-        </div>
+                }
+              : undefined
+          }
+        />
       )}
     </Sheet>
   )

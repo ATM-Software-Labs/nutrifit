@@ -184,6 +184,49 @@ function rangoGramos(it: Record<string, unknown>): { gramos: unknown; min_gramos
   return { gramos: it.grams ?? it.gramos ?? medio, min_gramos: min, max_gramos: max }
 }
 
+/**
+ * Contrato clínico (`dish_name` / `detected_ingredients` / `macros`) → el esquema
+ * corto de la foto. La fibra y las banderas no tienen columna en el diario.
+ */
+function adaptarContratoClinico(obj: unknown): unknown {
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return obj
+  const o = obj as Record<string, unknown>
+  if (!Array.isArray(o.detected_ingredients)) return obj
+  const macros = o.macros && typeof o.macros === 'object' ? (o.macros as Record<string, unknown>) : {}
+  const items = (o.detected_ingredients as unknown[]).map((crudo) => {
+    const it = crudo && typeof crudo === 'object' ? (crudo as Record<string, unknown>) : {}
+    const nombre = comoTexto(it.name) || comoTexto(it.nombre)
+    const gramos = it.weight_est_g ?? it.grams ?? it.gramos
+    return {
+      input_query: nombre,
+      display_name: nombre,
+      grams: gramos,
+      min_grams: gramos,
+      max_grams: gramos,
+      calories: it.calories_kcal ?? it.calories ?? it.calorias,
+      protein: it.protein_g ?? it.protein ?? it.proteinas,
+      carbs: it.carbs_g ?? it.carbs ?? it.carbohidratos,
+      fat: it.fats_g ?? it.fat ?? it.grasas,
+    }
+  })
+  const titulo = comoTexto(o.dish_name) || comoTexto(o.alimento) || comoTexto(o.display_name)
+  return {
+    is_food: o.is_food ?? true,
+    alimento: titulo,
+    display_name: titulo,
+    descripcion: comoTexto(o.descripcion),
+    categoria: comoTexto(o.categoria),
+    items,
+    total: {
+      calories: macros.calories_kcal ?? macros.calories,
+      protein: macros.protein_g ?? macros.protein,
+      carbs: macros.carbs_g ?? macros.carbs,
+      fat: macros.fats_g ?? macros.fats ?? macros.fat,
+    },
+    alternatives: o.alternatives ?? o.alternativas,
+  }
+}
+
 /** El esquema corto de la foto (`items`/`total`) pasa al ResultadoAnalisis de la app. */
 function adaptarEsquemaFoto(obj: unknown): unknown {
   if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return obj
@@ -273,30 +316,32 @@ export function normalizarAnalisis(obj: unknown): ResultadoAnalisis {
   // Algunos modelos envuelven la respuesta: {"resultado": {...}} / {"response": {...}}
   if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
     const o = obj as Record<string, unknown>
-    if (!('nombre_plato' in o) && !('items' in o)) {
+    if (!('nombre_plato' in o) && !('items' in o) && !('detected_ingredients' in o)) {
       const interno = Object.values(o).find((v) => v && typeof v === 'object' && ('nombre_plato' in (v as object) || 'items' in (v as object)))
       if (interno) obj = interno
     }
   }
   rechazarSiNoEsComida(obj)
-  obj = canonizarNombres(adaptarEsquemaFoto(obj))
+  obj = canonizarNombres(adaptarEsquemaFoto(adaptarContratoClinico(obj)))
   const r = analisisIA.safeParse(obj)
   if (!r.success) throw new ErrorParseo('La respuesta del modelo no cumple el esquema: ' + r.error.issues[0]?.message)
   const a = r.data
 
-  // Totales ausentes → suma de ingredientes (si todos traen ese macro).
+  // Si cada ingrediente trae el macro, el total es esa suma. Un promedio
+  // genérico del plato (guiso, cocido) no puede tapar el chorizo o la panceta.
   const total = {} as Record<Macro, number>
   for (const m of MACROS) {
     const suma = a.ingredientes.every((i) => i[m] !== undefined) && a.ingredientes.length > 0
       ? r1(a.ingredientes.reduce((acc, i) => acc + (i[m] ?? 0), 0))
       : undefined
-    const v = a[m] ?? suma
+    const v = suma !== undefined ? suma : a[m]
     if (v === undefined) throw new ErrorParseo(`Falta el total de ${m}`)
     total[m] = v
   }
-  // Si el modelo no dio kcal coherentes, recalcular con Atwater.
-  const kcalMacros = total.proteinas * 4 + total.carbohidratos * 4 + total.grasas * 9
-  if (total.calorias === 0 && kcalMacros > 0) total.calorias = r1(kcalMacros)
+  // Atwater (4P + 4C + 9G). Solo sustituye si el total se aleja más de 15 kcal o del 15 %.
+  const kcalMacros = r1(total.proteinas * 4 + total.carbohidratos * 4 + total.grasas * 9)
+  const tope = Math.max(15, 0.15 * Math.max(total.calorias, kcalMacros))
+  if (kcalMacros > 0 && (total.calorias === 0 || Math.abs(total.calorias - kcalMacros) > tope)) total.calorias = kcalMacros
 
   const nombresIng = a.ingredientes.map((i) => i.display_name || i.nombre).filter(Boolean)
   const crudo = a.alimento || a.display_name || a.nombre_plato

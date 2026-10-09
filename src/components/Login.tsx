@@ -6,7 +6,7 @@ import { Input } from './ui/Input.tsx'
 import { useTurnstile } from '../hooks/useTurnstile.ts'
 import { api, ApiError } from '../lib/api.ts'
 import { esNativa } from '../lib/plataforma.ts'
-import { URL_REPO } from '../lib/config.ts'
+import { urlApi, URL_REPO } from '../lib/config.ts'
 import { clicPrivacidad } from '../lib/rutas.ts'
 import { guardarTokenApp } from '../lib/tokenApp.ts'
 import { ESCRITORIO, useMedia } from '../hooks/useMedia.ts'
@@ -52,15 +52,16 @@ function IconoGoogle() {
 }
 
 /**
- * Pide a la Function la URL de Google y sale hacia ella.
- * En producción el redirect_uri es https://nutri.trujillomingorance.com/api/auth/callback/google.
- * En localhost:8788 y 127.0.0.1:8788 el servidor usa ese origen. El log muestra el valor exacto.
+ * Pide al gateway la URL de Google y sale hacia ella.
+ * En producción el redirect_uri es https://api.trujillomingorance.com/v1/auth/callback/google.
+ * En localhost el servidor usa el origen de Pages. El log muestra el valor exacto.
  */
 async function iniciarSesionGoogle(e: MouseEvent<HTMLButtonElement>) {
   e.preventDefault()
-  const res = await fetch('/api/auth/google?formato=json', {
+  const res = await fetch(urlApi('/api/auth/google?formato=json'), {
     headers: { Accept: 'application/json' },
-    credentials: 'same-origin',
+    credentials: esNativa ? 'omit' : 'include',
+    mode: 'cors',
   })
   if (!res.ok) throw new Error('Google no está disponible.')
   const datos = (await res.json()) as { location?: string }

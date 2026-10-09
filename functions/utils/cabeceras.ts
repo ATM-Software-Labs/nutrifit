@@ -8,6 +8,7 @@
  *   · connect-src data: y blob: → el mismo origen local, sin salir a la red
  *   · frame-src y connect-src de challenges.cloudflare.com → widget Turnstile
  *   · worker-src 'self' blob: → canvas-confetti
+ *   · connect-src api.trujillomingorance.com → foto del escáner, con ticket
  *   · font-src y object-src → fuente autoalojada y plugins
  * style-src lleva 'unsafe-inline' porque la UI usa estilos en el elemento
  * (barras, gráficas). No hay script inline: boot.js y el bundle son 'self'.
@@ -18,7 +19,7 @@ export const CSP_DOCUMENTO = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self'",
-  "connect-src 'self' data: blob: https://generativelanguage.googleapis.com https://api.groq.com https://challenges.cloudflare.com https://ai.trujillomingorance.com",
+  "connect-src 'self' data: blob: https://generativelanguage.googleapis.com https://api.groq.com https://challenges.cloudflare.com https://ai.trujillomingorance.com https://api.trujillomingorance.com",
   "frame-src https://challenges.cloudflare.com",
   "worker-src 'self' blob:",
   "object-src 'none'",

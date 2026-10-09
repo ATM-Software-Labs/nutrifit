@@ -17,6 +17,21 @@ export function sanitizarTextoLibre(valor: string): string {
     .trim()
 }
 
+/**
+ * Texto que se va a pegar en el prompt. Además de las etiquetas, quita
+ * marcas de rol y órdenes típicas de inyección. No es comida: no hace falta.
+ */
+export function sanitizarContextoModelo(valor: string, max = 300): string {
+  return sanitizarTextoLibre(valor)
+    .replace(/\b(system|assistant|developer)\s*:/gi, ' ')
+    .replace(/ignore\s+(all\s+|any\s+)?(previous|prior|above)\s+instructions/gi, ' ')
+    .replace(/olvida\s+(las\s+|todas\s+las\s+)?instrucciones(\s+anteriores)?/gi, ' ')
+    .replace(/[`{}]/g, ' ')
+    .replace(/[ \t]+/g, ' ')
+    .trim()
+    .slice(0, max)
+}
+
 /** Codifica el texto para un contexto HTML. `&` va primero. */
 export function escaparHtml(valor: string): string {
   return valor

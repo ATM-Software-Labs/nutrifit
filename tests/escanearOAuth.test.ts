@@ -6,6 +6,7 @@ import { aPlato, cascadaEscaneo, debeContinuarCascada, huellaImagen } from '../f
 import { destinoTrasGoogle, leerStateGoogle, prepararAutorizacion, redirectGoogle } from '../functions/utils/googleOAuth.ts'
 import { onRequestGet as inicioGoogle } from '../functions/api/auth/google/index.ts'
 import { firmar } from '../functions/utils/crypto.ts'
+import { firmarIpCliente } from '../functions/utils/ipPasarela.ts'
 import { resolverIdioma, traducir } from '../src/lib/i18n.ts'
 import type { ResultadoAnalisis } from '../functions/utils/iaParseo.ts'
 
@@ -124,13 +125,13 @@ test('redirect_uri usa el origen permitido y no un host ajeno', async () => {
     GOOGLE_CLIENT_SECRET: 'secreto',
   } as any
   for (const origen of ['http://localhost:8788', 'http://127.0.0.1:8788']) {
-    const uri = redirectGoogle(env, new Request(`${origen}/api/auth/google`))
+    const uri = await redirectGoogle(env, new Request(`${origen}/api/auth/google`))
     assert.equal(uri, `${origen}/api/auth/callback/google`)
     assert.equal(destinoTrasGoogle(env, new Request(`${origen}/api/auth/callback/google?code=1`)), `${origen}/?auth=error`)
   }
   const produccion = 'https://nutri.trujillomingorance.com/api/auth/callback/google'
   for (const origen of ['https://nutri.trujillomingorance.com', 'https://nutrifit.trujillomingorance.com', 'https://evil.example']) {
-    assert.equal(redirectGoogle(env, new Request(`${origen}/api/auth/google`)), produccion)
+    assert.equal(await redirectGoogle(env, new Request(`${origen}/api/auth/google`)), produccion)
     assert.equal(destinoTrasGoogle(env, new Request(`${origen}/api/auth/callback/google?code=1`)), 'https://nutri.trujillomingorance.com/?auth=error')
   }
 
@@ -146,6 +147,26 @@ test('redirect_uri usa el origen permitido y no un host ajeno', async () => {
   assert.equal(location.pathname, '/o/oauth2/v2/auth')
   assert.equal(location.searchParams.get('redirect_uri'), cuerpo.redirect_uri)
   assert.equal(cuerpo.location.includes('secreto'), false)
+})
+
+test('una petición firmada por la pasarela usa el callback /v1 y vuelve a la PWA', async () => {
+  const env = {
+    AUTH_SECRET: 's'.repeat(48),
+    ENVIRONMENT: 'production',
+    APP_URL: 'https://nutri.trujillomingorance.com',
+    GOOGLE_CLIENT_ID: 'cliente.apps.googleusercontent.com',
+    GOOGLE_CLIENT_SECRET: 'secreto',
+  } as any
+  const sig = await firmarIpCliente(env.AUTH_SECRET, '203.0.113.9')
+  const req = new Request('https://nutri.trujillomingorance.com/api/auth/google', {
+    headers: { 'x-nf-via': 'gateway', 'x-nf-client-sig': sig },
+  })
+  assert.equal(await redirectGoogle(env, req), 'https://api.trujillomingorance.com/v1/auth/callback/google')
+  assert.equal(destinoTrasGoogle(env, req), 'https://nutri.trujillomingorance.com/?auth=error')
+  const sinFirma = new Request('https://nutri.trujillomingorance.com/api/auth/google', {
+    headers: { 'x-nf-via': 'gateway' },
+  })
+  assert.equal(await redirectGoogle(env, sinFirma), 'https://nutri.trujillomingorance.com/api/auth/callback/google')
 })
 
 test('el idioma sale de nutrifit_lang y, si no hay, de navigator.language', () => {

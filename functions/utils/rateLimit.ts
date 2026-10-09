@@ -47,6 +47,8 @@ export interface OpcionesLimite {
   /** Duración del bloqueo por pico, en segundos. Por defecto 1 h. */
   bloqueoSeg?: number
   mensajeBloqueo?: string
+  /** Se mezcla en el JSON del 429 (código de error de la visión, por ejemplo). */
+  extra?: Record<string, unknown>
 }
 
 async function bloqueoActivo(env: Env, clave: string, ahora: number): Promise<number | null> {
@@ -79,7 +81,7 @@ export async function exigirLimite(env: Env, clave: string, max: number, ventana
       throw new HttpError(
         429,
         opciones.mensajeBloqueo ?? 'Actividad anómala. Inténtalo más tarde.',
-        { codigo: 'bloqueado', reintentarEn: espera },
+        { codigo: 'bloqueado', reintentarEn: espera, ...(opciones.extra ?? {}) },
         { 'Retry-After': String(espera) },
       )
     }
@@ -92,7 +94,7 @@ export async function exigirLimite(env: Env, clave: string, max: number, ventana
     throw new HttpError(
       429,
       mensaje ?? 'Demasiadas peticiones. Espera un momento y vuelve a intentarlo.',
-      { reintentarEn: r.reintentarEn },
+      { reintentarEn: r.reintentarEn, ...(opciones?.extra ?? {}) },
       { 'Retry-After': String(r.reintentarEn) },
     )
   }

@@ -21,6 +21,8 @@ const DIC: Record<Idioma, Record<string, string>> = {
     'ajustes.apariencia': 'Apariencia',
     'login.google': 'Continuar con Google',
     'scan.analizando': 'Analizando foto...',
+    'scan.comprimiendo': 'Comprimiendo imagen...',
+    'scan.macros': 'Analizando macros...',
   },
   ca: {
     'nav.hoy': 'Avui',
@@ -38,6 +40,8 @@ const DIC: Record<Idioma, Record<string, string>> = {
     'ajustes.apariencia': 'Aparença',
     'login.google': 'Continuar amb Google',
     'scan.analizando': 'Analitzant la foto...',
+    'scan.comprimiendo': 'Comprimint la imatge...',
+    'scan.macros': 'Analitzant els macros...',
   },
   en: {
     'nav.hoy': 'Today',
@@ -55,6 +59,8 @@ const DIC: Record<Idioma, Record<string, string>> = {
     'ajustes.apariencia': 'Appearance',
     'login.google': 'Continue with Google',
     'scan.analizando': 'Analyzing photo...',
+    'scan.comprimiendo': 'Compressing image...',
+    'scan.macros': 'Analyzing macros...',
   },
 }
 

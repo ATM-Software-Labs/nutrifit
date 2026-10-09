@@ -48,6 +48,14 @@ test('coma colgante reparada', () => {
   assert.equal(r.calorias, 100)
 })
 
+test('un promedio genérico del plato no tapa la suma de los ingredientes', () => {
+  const r = normalizarAnalisis({ ...BASE, calorias: 80, proteinas: 5, carbohidratos: 10, grasas: 1 })
+  assert.equal(r.calorias, 210)
+  assert.equal(r.proteinas, 38.3)
+  assert.equal(r.carbohidratos, 2.3)
+  assert.equal(r.grasas, 4.5)
+})
+
 test('totales ausentes → suma de ingredientes', () => {
   const { calorias, proteinas, carbohidratos, grasas, ...sinTotales } = BASE
   void calorias, proteinas, carbohidratos, grasas
@@ -94,7 +102,7 @@ test('quita etiquetas markdown y el razonamiento <think>', () => {
 })
 
 // ---------------------------------------------------------------- texto (Workers AI)
-import { CARRERA_VISION_MS, carreraVision, contenidoWorkersAI, cuentaFalloGateway, ErrorIA, ESQUEMA_FOTO, MODELOS_GROQ_VISION, PROMPT_SISTEMA, PROMPT_SISTEMA_TEXTO, REGLA_NOMBRE_OFICIAL, REGLA_TITULO_PLATO, RESPONSE_SCHEMA, TIMEOUT_GATEWAY_FOTO_MS } from '../functions/utils/ia.ts'
+import { CARRERA_VISION_MS, carreraVision, contenidoWorkersAI, cuentaFalloGateway, ErrorIA, ESQUEMA_FOTO, esperaReintentoMs, MODELOS_GROQ_VISION, PROMPT_SISTEMA, PROMPT_SISTEMA_TEXTO, REGLA_CLINICA, REGLA_NOMBRE_OFICIAL, REGLA_TITULO_PLATO, RESPONSE_SCHEMA, TIMEOUT_GATEWAY_FOTO_MS } from '../functions/utils/ia.ts'
 import { normalizarProducto } from '../functions/utils/off.ts'
 
 test('el prompt obliga al nombre oficial y el esquema pide input_query y display_name', () => {
@@ -116,6 +124,15 @@ test('el prompt obliga al nombre oficial y el esquema pide input_query y display
   assert.match(PROMPT_SISTEMA, /min_grams/)
   assert.match(PROMPT_SISTEMA, /No se distingue el alimento con claridad/)
   assert.match(PROMPT_SISTEMA, /cruasán casero/)
+  assert.match(PROMPT_SISTEMA, /chorizo, panceta, morcilla/)
+  assert.match(PROMPT_SISTEMA, /suma exacta/)
+  assert.match(PROMPT_SISTEMA, /promedio genérico/)
+  assert.match(PROMPT_SISTEMA, /aceite superficial/)
+  assert.match(PROMPT_SISTEMA, /plato de lentejas/)
+  assert.ok(PROMPT_SISTEMA.includes(REGLA_CLINICA))
+  assert.match(PROMPT_SISTEMA_TEXTO, /chorizo, panceta, morcilla/)
+  assert.match(PROMPT_SISTEMA_TEXTO, /suma exacta/)
+  assert.ok(PROMPT_SISTEMA_TEXTO.includes(REGLA_CLINICA))
   assert.match(PROMPT_SISTEMA, /alternatives/)
   assert.doesNotMatch(PROMPT_SISTEMA, /```/)
   assert.equal(RESPONSE_SCHEMA.required.includes('input_query'), true)
@@ -320,6 +337,46 @@ test('carreraVision: un fallo rápido no definitivo arranca el secundario al mom
   assert.ok(Date.now() - t0 < 500)
 })
 
+test('el contrato clínico se traduce al plato y la suma manda', () => {
+  const r = parsearRespuestaModelo({
+    dish_name: 'Lentejas estofadas con chorizo',
+    detected_ingredients: [
+      { name: 'Lentejas cocidas', weight_est_g: 200, source: 'base', calories_kcal: 230, protein_g: 18, carbs_g: 40, fats_g: 1 },
+      { name: 'Chorizo guisado', weight_est_g: 40, source: 'detected_inclusion', calories_kcal: 180, protein_g: 8, carbs_g: 1, fats_g: 16 },
+    ],
+    macros: { calories_kcal: 410, protein_g: 26, carbs_g: 41, fats_g: 17, fiber_g: 8 },
+    confidence_score: 0.8,
+    dietary_flags: ['contains_pork'],
+  })
+  assert.deepEqual(
+    r.ingredientes.map((i) => i.nombre),
+    ['Lentejas cocidas', 'Chorizo guisado'],
+  )
+  assert.equal(r.ingredientes[1]?.gramos, 40)
+  assert.equal(r.calorias, 410)
+  assert.equal(r.grasas, 17)
+  assert.ok(r.nombre_plato.length <= 40)
+  assert.equal(r.nombre_plato.toLowerCase().includes('plato de lentejas'), false)
+})
+
+test('unas calorías imposibles se rehacen con Atwater', () => {
+  const r = normalizarAnalisis({
+    nombre_plato: 'Costilla con patata',
+    ingredientes: [{ nombre: 'Costilla de cerdo', gramos: 150, calorias: 10, proteinas: 20, carbohidratos: 20, grasas: 20 }],
+    calorias: 10,
+    proteinas: 20,
+    carbohidratos: 20,
+    grasas: 20,
+  })
+  assert.equal(r.calorias, 340)
+})
+
+test('el reintento de cuota es 500 ms y 1000 ms más el jitter', () => {
+  assert.equal(esperaReintentoMs(0, 0), 500)
+  assert.equal(esperaReintentoMs(1, 0), 1000)
+  assert.equal(esperaReintentoMs(1, 0.5), 1125)
+})
+
 test('carreraVision: una foto ilegible no llama al secundario', async () => {
   let secundario = 0
   await assert.rejects(
@@ -371,6 +428,7 @@ test('Open Food Facts: normaliza por 100 g, kJ→kcal y descarta basura', () => 
     codigo: '8480000610553',
     nombre: 'Gazpacho b',
     marca: 'Hacendado',
+    traducido: false,
     por100: { calorias: 52, proteinas: 1.2, carbohidratos: 11, grasas: 0 },
     extra: { azucares: null, saturadas: null, fibra: null, sal: null },
     racion: null,

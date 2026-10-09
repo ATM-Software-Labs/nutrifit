@@ -7,6 +7,8 @@
 import type { Env } from './env.ts'
 import { authSecret, crearCookieSesion, leerCookie } from './session.ts'
 import { base64urlEncode, bytesAleatorios, firmar, timingSafeEqual, verificarFirma } from './crypto.ts'
+import { leerIpFirmada } from './ipPasarela.ts'
+import { origenLocalPages, URL_PASARELA } from './pasarela.ts'
 import { sanitizarTextoLibre } from './sanitizar.ts'
 import { asegurarUsuario } from './usuarios.ts'
 
@@ -14,30 +16,25 @@ export const COOKIE_GOOGLE = '__Host-nf_google'
 const MAX_EDAD = 300
 const PROPOSITO = 'google-oauth'
 
-/** Callback de producción. En Google Cloud tiene que estar este URI, tal cual. */
+/** Callback histórico, cuando el navegador entra directo a Pages. */
 export const REDIRECT_GOOGLE_PRODUCCION = 'https://nutri.trujillomingorance.com'
 
-/** Solo el dev de Pages usa el origen de la petición. El resto va al dominio nutri. */
-const ORIGENES_LOCAL = new Set(['http://localhost:8788', 'http://127.0.0.1:8788'])
-
-function origenLocal(valor: string | null | undefined): string | null {
-  if (!valor) return null
-  try {
-    const origen = new URL(valor).origin
-    return ORIGENES_LOCAL.has(origen) ? origen : null
-  } catch {
-    return null
-  }
-}
+/**
+ * Callback cuando la petición llega firmada por el gateway.
+ * En Google Cloud hay que registrar este URI, tal cual:
+ * https://api.trujillomingorance.com/v1/auth/callback/google
+ */
+export const REDIRECT_GOOGLE_PASARELA = `${URL_PASARELA}/v1/auth/callback/google`
 
 /**
- * Origen del callback. En local es el de la petición
- * (`http://localhost:8788` o `http://127.0.0.1:8788`).
- * En cualquier otro host es `https://nutri.trujillomingorance.com`.
+ * Origen del callback. En local es el de la petición.
+ * Si el gateway firmó la IP, el callback es el host del API.
+ * Si no, sigue siendo nutri para no romper un acceso directo a Pages.
  */
-export function origenOAuth(env: Env, request: Request): string {
-  const local = origenLocal(request.url)
+export async function origenOAuth(env: Env, request: Request): Promise<string> {
+  const local = origenLocalPages(request.url)
   if (local) return local
+  if (await leerIpFirmada(env.AUTH_SECRET, request)) return URL_PASARELA
   const app = env.APP_URL?.trim().replace(/\/$/, '')
   if (app === REDIRECT_GOOGLE_PRODUCCION) return app
   return REDIRECT_GOOGLE_PRODUCCION
@@ -49,9 +46,11 @@ interface StateGoogle {
   exp: number
 }
 
-export function redirectGoogle(env: Env, request: Request): string | null {
-  const origen = origenOAuth(env, request)
-  return origen ? `${origen}/api/auth/callback/google` : null
+export async function redirectGoogle(env: Env, request: Request): Promise<string | null> {
+  const origen = await origenOAuth(env, request)
+  if (!origen) return null
+  if (origen === URL_PASARELA) return REDIRECT_GOOGLE_PASARELA
+  return `${origen}/api/auth/callback/google`
 }
 
 function cookieState(token: string, maxAge: number): string {
@@ -67,7 +66,7 @@ async function retoS256(verifier: string): Promise<string> {
 
 export async function prepararAutorizacion(env: Env, request: Request): Promise<{ location: string; cookie: string } | null> {
   const clientId = env.GOOGLE_CLIENT_ID?.trim()
-  const redirect = redirectGoogle(env, request)
+  const redirect = await redirectGoogle(env, request)
   if (!clientId || !redirect || !env.GOOGLE_CLIENT_SECRET?.trim()) return null
   const nonce = base64urlEncode(bytesAleatorios(32))
   const verifier = base64urlEncode(bytesAleatorios(32))
@@ -131,7 +130,11 @@ function emailVerificado(u: GoogleUser): string | null {
 }
 
 export function destinoTrasGoogle(env: Env, request: Request, auth = 'error'): string {
-  return `${origenOAuth(env, request)}/?auth=${auth}`
+  const local = origenLocalPages(request.url)
+  if (local) return `${local}/?auth=${auth}`
+  const app = env.APP_URL?.trim().replace(/\/$/, '')
+  const pagina = app === REDIRECT_GOOGLE_PRODUCCION ? app : REDIRECT_GOOGLE_PRODUCCION
+  return `${pagina}/?auth=${auth}`
 }
 
 /** Canjea el código solo si el state de la cookie cuadra. No devuelve el error de Google. */
@@ -144,7 +147,7 @@ export async function completarGoogle(env: Env, request: Request): Promise<Respo
   const url = new URL(request.url)
   if (url.searchParams.get('error') || !url.searchParams.get('code')) return fallo()
   const state = await leerStateGoogle(env, request)
-  const redirect = redirectGoogle(env, request)
+  const redirect = await redirectGoogle(env, request)
   const code = url.searchParams.get('code')
   if (!state || !redirect || !code || !env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) return fallo()
 

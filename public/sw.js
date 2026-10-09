@@ -6,8 +6,8 @@
  *  · Navegación (HTML)              → network-first; sin red → shell /index.html precacheado.
  *  · /assets (hash), /fonts, /icons,
  *    logos y favicon                → cache-first (inmutables o casi).
- *  · /api/comidas/resumen (GET)     → network-first con copia para ver el día sin conexión.
- *  · Resto de /api                  → nunca se cachea (pasa directo a la red).
+ *  · /api/comidas/resumen y el mismo GET en el gateway → network-first, copia offline.
+ *  · Resto de la API                → nunca se cachea (pasa directo a la red).
  *
  * Actualización: cada versión se activa sola (skipWaiting + clients.claim) y
  * borra las cachés anteriores. Nunca se guarda en caché un recurso estático que
@@ -75,7 +75,10 @@ self.addEventListener('fetch', (event) => {
   const req = event.request
   if (req.method !== 'GET') return
   const url = new URL(req.url)
-  if (url.origin !== self.location.origin) return
+  if (url.origin !== self.location.origin) {
+    if (url.hostname === 'api.trujillomingorance.com' && url.pathname === '/v1/comidas/resumen') event.respondWith(redPrimero(req, C_API))
+    return
+  }
 
   if (url.pathname.startsWith('/api/')) {
     if (url.pathname === '/api/comidas/resumen') event.respondWith(redPrimero(req, C_API))

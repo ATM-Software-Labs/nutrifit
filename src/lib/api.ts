@@ -1,10 +1,11 @@
 /**
- * Cliente de la API (/api/*).
- *  · Web: mismo origen → la cookie __Host-nf_session viaja sola (HttpOnly, Secure, SameSite=Strict).
- *  · App Android: URL absoluta a producción + `Authorization: Bearer`, sin cookies.
+ * Cliente de la API. Todas las rutas salen por `urlApi` hacia el gateway `/v1`.
+ *  · Web: `credentials: include`. La cookie __Host-nf_session es del host del API.
+ *  · App Android: `Authorization: Bearer` y sin cookies (localhost es cross-site).
  * Los errores se normalizan en ApiError.
  */
-import { API_BASE, esNativa } from './plataforma.ts'
+import { esNativa } from './plataforma.ts'
+import { urlApi } from './config.ts'
 import { borrarTokenApp, obtenerTokenApp } from './tokenApp.ts'
 import { calcularMacros, type PlanMacros } from './macros.ts'
 import { camposPerfil, hashContenido } from '../../functions/utils/contenidoHash.ts'
@@ -13,6 +14,8 @@ import { debeVolcar } from './ventanaCliente.ts'
 import { guardarPesoLocal, olvidarPesoLocal } from './pesoLocal.ts'
 import { hoy } from '../../functions/utils/fechas.ts'
 import type { PlatoEscaneo } from './platoEscaneo.ts'
+import { urlVisionPermitida } from '../../functions/utils/ticketVision.ts'
+import { enviarVision, sha256Imagen, usarPasarelaVision, type PreparadoVision } from './visionGateway.ts'
 import type { Comida, DatosPerfil, Historial, InfoVinculo, NuevaComida, ProductoOFF, Resumen, ResultadoAnalisis, Usuario } from './tipos.ts'
 
 export class ApiError extends Error {
@@ -22,8 +25,10 @@ export class ApiError extends Error {
     public codigo?: string,
     public detalles?: { campo: string; mensaje: string }[],
     public reintentarEn?: number,
+    public errorCode?: string,
   ) {
     super(message)
+    this.name = 'ApiError'
   }
 }
 
@@ -56,15 +61,37 @@ async function pedir<T>(ruta: string, o: Opciones = {}): Promise<T> {
   return data as T
 }
 
+function leerCuerpoError(data: Record<string, unknown>): { code?: string; message?: string; retry?: number } {
+  const anidado = data.error
+  if (anidado && typeof anidado === 'object' && !Array.isArray(anidado)) {
+    const o = anidado as Record<string, unknown>
+    return {
+      code: typeof o.code === 'string' ? o.code : undefined,
+      message: typeof o.user_message === 'string' ? o.user_message : undefined,
+      retry: typeof o.retry_after_seconds === 'number' ? o.retry_after_seconds : undefined,
+    }
+  }
+  return {
+    code: typeof data.error_code === 'string' ? data.error_code : undefined,
+    message: typeof data.user_message === 'string' ? data.user_message : typeof data.error === 'string' ? data.error : undefined,
+    retry: typeof data.reintentarEn === 'number' ? data.reintentarEn : undefined,
+  }
+}
+
 async function lanzar(res: Response, data: Record<string, unknown>, o: Opciones): Promise<never> {
-  if (res.status === 401 && esNativa && (await obtenerTokenApp())) await borrarTokenApp() // revocado o caducado
-  if (res.status === 401 && !o.silencio401) alPerderSesion?.()
+  const leido = leerCuerpoError(data)
+  const errorCode = leido.code
+  if (res.status === 401 && esNativa && (await obtenerTokenApp()) && errorCode !== 'AUTH_FAILURE') await borrarTokenApp()
+  // Un 401 del proveedor de IA no es una sesión caducada. AUTH_FAILURE sale como 403.
+  if (res.status === 401 && errorCode !== 'AUTH_FAILURE' && !o.silencio401) alPerderSesion?.()
+  const reintentarEn = leido.retry ?? (typeof data.reintentarEn === 'number' ? data.reintentarEn : undefined)
   throw new ApiError(
     res.status,
-    (data.error as string) ?? 'Algo ha fallado. Inténtalo de nuevo.',
+    leido.message ?? 'Algo ha fallado. Inténtalo de nuevo.',
     data.codigo as string | undefined,
     data.detalles as ApiError['detalles'],
-    data.reintentarEn as number | undefined,
+    reintentarEn,
+    errorCode,
   )
 }
 
@@ -92,13 +119,14 @@ async function enviar(ruta: string, o: Opciones, accept: string): Promise<Respon
   if (token) headers.authorization = `Bearer ${token}`
 
   try {
-    return await fetch(API_BASE + ruta, {
+    return await fetch(urlApi(ruta), {
       method: o.method ?? 'GET',
       headers,
       body,
       signal: o.signal,
       keepalive: o.keepalive,
-      credentials: esNativa ? 'omit' : 'same-origin',
+      credentials: esNativa ? 'omit' : 'include',
+      mode: 'cors',
     })
   } catch (e) {
     if ((e as Error).name === 'AbortError') throw e
@@ -175,11 +203,35 @@ export const api = {
       turnstile,
     })
   },
-  /** Escáner unificado. La respuesta no dice qué modelo ha respondido. */
-  escanear: (imagen: Blob, turnstile: string) => {
-    const fd = new FormData()
-    fd.append('imagen', imagen, imagen.type === 'image/webp' ? 'plato.webp' : 'plato.jpg')
-    return pedir<PlatoEscaneo>('/api/alimentos/escanear', { method: 'POST', body: fd, turnstile })
+  /** Escáner unificado. En producción la foto sale hacia el API Gateway con un ticket de 60 s. */
+  escanear: async (imagen: Blob, turnstile: string) => {
+    if (!usarPasarelaVision()) {
+      const fd = new FormData()
+      fd.append('imagen', imagen, imagen.type === 'image/webp' ? 'plato.webp' : 'plato.jpg')
+      return pedir<PlatoEscaneo>('/api/alimentos/escanear', { method: 'POST', body: fd, turnstile })
+    }
+    const prep = await pedir<PreparadoVision>('/api/alimentos/vision-ticket', {
+      method: 'POST',
+      body: { sha256: await sha256Imagen(imagen) },
+      turnstile,
+    })
+    if (prep.modo === 'cache') return prep.plato
+    if (prep.modo !== 'gateway' || !prep.ticket || !urlVisionPermitida(prep.url)) {
+      throw new ApiError(504, 'La conexión tardó demasiado. Comprueba tu cobertura móvil y vuelve a pulsar.', 'upstream_timeout', undefined, 0, 'UPSTREAM_TIMEOUT')
+    }
+    let res: Response
+    try {
+      res = await enviarVision(prep.url, prep.ticket, imagen)
+    } catch (e) {
+      if ((e as Error).name === 'AbortError') throw e
+      if ((e as Error).message === 'pasarela') {
+        throw new ApiError(504, 'La conexión tardó demasiado. Comprueba tu cobertura móvil y vuelve a pulsar.', 'upstream_timeout', undefined, 0, 'UPSTREAM_TIMEOUT')
+      }
+      throw new ApiError(0, 'Sin conexión. Revisa tu red e inténtalo de nuevo.', 'red')
+    }
+    const data = (await res.json().catch(() => ({}))) as Record<string, unknown>
+    if (!res.ok) await lanzar(res, data, {})
+    return data as unknown as PlatoEscaneo
   },
 
   analizarTexto: (descripcion: string, turnstile: string) =>

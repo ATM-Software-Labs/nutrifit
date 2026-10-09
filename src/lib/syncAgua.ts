@@ -10,7 +10,8 @@
 import { api, ApiError } from './api.ts'
 import { hashContenido } from '../../functions/utils/contenidoHash.ts'
 import { leerHashSincronizado } from './hashSync.ts'
-import { API_BASE, esNativa } from './plataforma.ts'
+import { esNativa } from './plataforma.ts'
+import { apiMismoOrigen, urlApi } from './config.ts'
 import { idbDelete, idbLeerTodo, idbPut } from './localDb.ts'
 import { alAbrirVentana, debeVolcar, enVentanaCacheada, programarDespertador } from './ventanaCliente.ts'
 
@@ -139,9 +140,9 @@ function enviarAlSalir(fecha: string, ml: number): boolean {
     return false
   }
   const cuerpo = JSON.stringify({ fecha, ml, modo: 'fijar' })
-  if (!esNativa && typeof navigator.sendBeacon === 'function') {
+  if (!esNativa && apiMismoOrigen() && typeof navigator.sendBeacon === 'function') {
     const blob = new Blob([cuerpo], { type: 'application/json' })
-    if (navigator.sendBeacon(`${API_BASE}/api/agua`, blob)) return true
+    if (navigator.sendBeacon(urlApi('/api/agua'), blob)) return true
   }
   void enviar(fecha, true)
   return true

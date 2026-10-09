@@ -2,14 +2,15 @@
  * Cascada silenciosa del escáner. El cliente solo ve el plato unificado:
  * ni cabecera de proveedor ni el 429 crudo de una pasarela.
  *
- *  1. Gemini (GEMINI_MODEL o gemini-2.5-flash), abort a los 2 s.
+ *  1. Gemini (GEMINI_MODEL o gemini-2.5-flash), abort a los 8 s.
  *  2. Workers AI si Gemini agota el plazo, responde 429/5xx o falla.
  *  3. Groq y, si también falla, Trujillo AI.
  * Una foto ilegible no sigue.
  */
 import { z } from 'zod'
 import type { Env } from './env.ts'
-import { ErrorIA, pasoEscaneo, TIMEOUT_ESCANER_MS, TIMEOUT_GATEWAY_FOTO_MS, type Imagen } from './ia.ts'
+import { resumirFallos } from './errorVision.ts'
+import { ErrorIA, pasoEscaneo, TIMEOUT_ESCANER_GEMINI_MS, TIMEOUT_ESCANER_MS, TIMEOUT_GATEWAY_FOTO_MS, type Imagen } from './ia.ts'
 import { FotoIlegible, type ResultadoAnalisis } from './iaParseo.ts'
 import { CATEGORIAS_PLATO, categoriaDe, descripcionPlato, esCategoriaPlato, tituloGastronomico, type CategoriaPlato } from './tituloPlato.ts'
 
@@ -77,23 +78,28 @@ export function debeContinuarCascada(e: unknown): boolean {
 }
 
 export async function cascadaEscaneo(pasos: (() => Promise<ResultadoAnalisis>)[]): Promise<ResultadoAnalisis> {
-  let ultimo: unknown
+  const vistos: unknown[] = []
   for (const paso of pasos) {
     try {
       return await paso()
     } catch (e) {
       if (!debeContinuarCascada(e)) throw e
-      ultimo = e
+      vistos.push(e)
     }
   }
-  if (ultimo instanceof ErrorIA) throw ultimo
-  throw new ErrorIA('No se pudo analizar la imagen')
+  const resumen = resumirFallos(vistos)
+  const err = new ErrorIA(resumen.mensaje)
+  err.codigo = resumen.codigo
+  err.statusHttp = resumen.statusHttp
+  err.latenciaMs = resumen.latenciaMs
+  err.proveedor = resumen.proveedor
+  throw err
 }
 
-/** Gemini 2 s → Workers AI 2 s → Groq → Trujillo. El primero válido gana. */
+/** Gemini 8 s → Workers AI 2 s → Groq → Trujillo. El primero válido gana. */
 export function orquestarEscaneo(env: Env, img: Imagen): Promise<PlatoEscaneo> {
   const pasos = [
-    () => pasoEscaneo(env, img, 'gemini', TIMEOUT_ESCANER_MS),
+    () => pasoEscaneo(env, img, 'gemini', TIMEOUT_ESCANER_GEMINI_MS),
     () => pasoEscaneo(env, img, 'workers-ai', TIMEOUT_ESCANER_MS),
     () => pasoEscaneo(env, img, 'groq', TIMEOUT_GATEWAY_FOTO_MS),
     () => pasoEscaneo(env, img, 'trujillo', TIMEOUT_GATEWAY_FOTO_MS),

@@ -2,16 +2,18 @@ import { useId, useState } from 'react'
 import { ChevronDown, Copy, Plus, Trash2 } from 'lucide-react'
 import { cx } from './ui/cx.ts'
 import { entero } from '../lib/formato.ts'
+import { useSrcArchivo } from '../lib/archivoSrc.ts'
 import { emojiComida, esFotoReal } from '../lib/miniaturaComida.ts'
 import { NOMBRE_TIPO, type Comida, type TipoComida } from '../lib/tipos.ts'
 
 function Miniatura({ c }: { c: Comida }) {
   const [rota, setRota] = useState(false)
-  const foto = esFotoReal(c.imagen_url) && !rota ? c.imagen_url : null
+  const candidata = esFotoReal(c.imagen_url) && !rota ? c.imagen_url : null
+  const foto = useSrcArchivo(candidata)
   if (foto) {
     return (
       <span className="block h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-neutral-100 dark:bg-neutral-800">
-        <img src={foto} alt="" width={36} height={36} className="h-full w-full object-cover" onError={() => setRota(true)} />
+        <img src={foto} alt="" width={36} height={36} referrerPolicy="no-referrer" className="h-full w-full object-cover" onError={() => setRota(true)} />
       </span>
     )
   }

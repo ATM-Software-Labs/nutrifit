@@ -7,6 +7,7 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import { ChartColumn, House, Plus, Settings, User } from 'lucide-react'
 import { Logo } from './Logo.tsx'
+import { BarreraEscanner } from './BarreraEscanner.tsx'
 import { AnilloCalorias } from './AnilloCalorias.tsx'
 import { BarraMacro } from './BarrasMacros.tsx'
 import { SelectorSemana } from './SelectorSemana.tsx'
@@ -340,12 +341,15 @@ export default function Dashboard({
 
       <Suspense fallback={null}>
         {hoja?.tipo === 'scanner' && (
-          <ScannerComida
-            archivo={hoja.archivo}
-            onClose={cerrar}
-            onResultado={(resultado, imagenUrl) => setHoja({ tipo: 'revision', comida: hoja.comida, resultado, imagenUrl })}
-            onManual={(imagenUrl) => setHoja({ tipo: 'revision', comida: hoja.comida, resultado: null, imagenUrl })}
-          />
+          <BarreraEscanner onVolver={cerrar}>
+            <ScannerComida
+              archivo={hoja.archivo}
+              onClose={cerrar}
+              onResultado={(resultado, imagenUrl) => setHoja({ tipo: 'revision', comida: hoja.comida, resultado, imagenUrl })}
+              onManual={(imagenUrl) => setHoja({ tipo: 'revision', comida: hoja.comida, resultado: null, imagenUrl })}
+              onElegirOtra={() => setHoja({ tipo: 'anadir', comida: hoja.comida })}
+            />
+          </BarreraEscanner>
         )}
         {hoja?.tipo === 'texto' && (
           <DescribirComida

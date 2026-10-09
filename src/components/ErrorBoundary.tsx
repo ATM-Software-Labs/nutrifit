@@ -59,19 +59,34 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, Estado> {
           <p style={{ margin: '8px 0 0', fontSize: 15, lineHeight: 1.5, color: c.suave }}>
             {recargando
               ? 'Hay una versión nueva. Un momento, estamos recargando.'
-              : 'Se ha producido un error inesperado. Tus datos están a salvo: recarga la página para seguir.'}
+              : 'Se ha producido un error inesperado. La sesión y los datos de este dispositivo se conservan.'}
           </p>
           {!recargando && (
-            <button
-              type="button"
-              onClick={recargarLimpio}
-              style={{
-                marginTop: 24, width: '100%', height: 48, border: 0, borderRadius: 16, cursor: 'pointer',
-                background: '#047857', color: '#FFFFFF', fontSize: 15, fontWeight: 500, fontFamily: 'inherit',
-              }}
-            >
-              Recargar
-            </button>
+            <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <button
+                type="button"
+                onClick={() => {
+                  window.location.assign('/')
+                }}
+                style={{
+                  width: '100%', height: 48, border: 0, borderRadius: 16, cursor: 'pointer',
+                  background: '#047857', color: '#FFFFFF', fontSize: 15, fontWeight: 500, fontFamily: 'inherit',
+                }}
+              >
+                Volver al diario
+              </button>
+              <button
+                type="button"
+                onClick={recargarLimpio}
+                style={{
+                  width: '100%', height: 48, borderRadius: 16, cursor: 'pointer',
+                  background: 'transparent', color: c.texto, fontSize: 15, fontWeight: 500, fontFamily: 'inherit',
+                  border: `1px solid ${c.borde}`,
+                }}
+              >
+                Recargar
+              </button>
+            </div>
           )}
         </div>
       </main>

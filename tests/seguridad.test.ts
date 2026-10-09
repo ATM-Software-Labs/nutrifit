@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { firmar, timingSafeEqual, verificarFirma, base64urlEncode, base64urlDecodeText } from '../functions/utils/crypto.ts'
 import { comidaGuardarSchema, calcularSchema, solicitarSchema } from '../functions/utils/schemas.ts'
-import { detectarMime } from '../functions/utils/ia.ts'
+import { contieneScriptPoliglota, detectarMime } from '../functions/utils/ia.ts'
 import { crearCookieSesion, leerSesion, resolverSesion, ROTACION_SESION } from '../functions/utils/session.ts'
 import { exigirLimite } from '../functions/utils/rateLimit.ts'
 import { capturar, entornoTest, SECRETO_TEST } from './d1Sqlite.ts'
@@ -105,4 +105,6 @@ test('detección de imagen por bytes mágicos', () => {
   assert.equal(detectarMime(new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])), 'image/png')
   assert.equal(detectarMime(new TextEncoder().encode('RIFF\0\0\0\0WEBPVP8 ')), 'image/webp')
   assert.equal(detectarMime(new TextEncoder().encode('<svg onload=alert(1)>')), null)
+  assert.equal(contieneScriptPoliglota(new TextEncoder().encode('<script>alert(1)</script>')), true)
+  assert.equal(contieneScriptPoliglota(new Uint8Array([0xff, 0xd8, 0xff, 0x00, 0x11])), false)
 })

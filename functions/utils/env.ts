@@ -21,6 +21,11 @@ export interface Env {
   TRUJILLO_MODEL?: string
   /** URL completa del chat de Trujillo. Si falta, se usa el gateway público. */
   TRUJILLO_AI_URL?: string
+  /**
+   * Origen del API Gateway de visión. Vacío o localhost: el escáner sigue en Pages.
+   * El secreto de cliente no vive aquí. Solo esta URL pública.
+   */
+  VISION_GATEWAY_URL?: string
 
   // Secretos
   AUTH_SECRET?: string

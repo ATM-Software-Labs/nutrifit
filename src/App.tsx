@@ -223,8 +223,17 @@ export default function App() {
       pantalla = (
         <main className="mx-auto flex min-h-dvh max-w-sm flex-col items-center justify-center gap-4 px-6 text-center">
           <Logo size={40} className="text-graphite dark:text-neutral-100" />
-          <p className="text-neutral-500">{estado.mensaje}</p>
+          <h1 className="text-xl font-semibold tracking-tight text-graphite dark:text-neutral-100">No hemos podido abrir NutriFit</h1>
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">Problemas de conexión. La sesión y los datos de este dispositivo se conservan.</p>
           <Button onClick={comprobar}>Reintentar</Button>
+          <Button
+            variant="outline"
+            onClick={() => {
+              window.location.assign('/')
+            }}
+          >
+            Volver al diario
+          </Button>
         </main>
       )
       break

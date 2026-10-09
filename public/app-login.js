@@ -22,7 +22,8 @@
   app.href = android
     ? 'intent://login?token=' + t + '#Intent;scheme=' + PAQUETE + ';package=' + PAQUETE + ';S.browser_fallback_url=' + respaldo + ';end'
     : PAQUETE + '://login?token=' + t
-  web.href = '/api/auth/verificar?token=' + t
+  var local = location.hostname === 'localhost' || location.hostname === '127.0.0.1'
+  web.href = (local ? location.origin + '/api/auth/verificar?token=' : 'https://api.trujillomingorance.com/v1/auth/verificar?token=') + t
 
   if (android) {
     app.hidden = false

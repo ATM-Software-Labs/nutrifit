@@ -6,6 +6,7 @@ import { claveLimite, exigirLimite } from '../../utils/rateLimit.ts'
 import { crearMagicToken } from '../../utils/magicLink.ts'
 import { enviarMagicLink } from '../../utils/email.ts'
 import { crearCodigoLogin } from '../../utils/codigoLogin.ts'
+import { origenLocalPages, URL_PASARELA } from '../../utils/pasarela.ts'
 
 const MENSAJE_ENVIADO = 'Enlace y código enviados. Revisa tu bandeja de entrada o spam.'
 const MENSAJE_RECIENTE = 'Ya te enviamos un código recientemente. Revisa tu correo o espera unos minutos.'
@@ -35,11 +36,17 @@ export const onRequestPost: Handler = async (ctx) => {
   }
 
   // 2. Generar tokens con 4 horas de validez
-  const base = env.APP_URL?.startsWith('http') ? env.APP_URL : esProduccion(env) ? 'https://nutri.trujillomingorance.com' : new URL(request.url).origin
+  const local = origenLocalPages(request.url)
+  const base = local ?? (env.APP_URL?.startsWith('http') ? env.APP_URL : esProduccion(env) ? 'https://nutri.trujillomingorance.com' : new URL(request.url).origin)
   const token = await crearMagicToken(env, email)
   const raiz = base.replace(/\/$/, '')
+  // La web entra por el gateway para que la cookie __Host- quede en el host del API.
   const enlace =
-    cliente === 'app' ? `${raiz}/app-login?token=${encodeURIComponent(token)}` : `${raiz}/api/auth/verificar?token=${encodeURIComponent(token)}`
+    cliente === 'app'
+      ? `${raiz}/app-login?token=${encodeURIComponent(token)}`
+      : local
+        ? `${raiz}/api/auth/verificar?token=${encodeURIComponent(token)}`
+        : `${URL_PASARELA}/v1/auth/verificar?token=${encodeURIComponent(token)}`
 
   const codigo = await crearCodigoLogin(env, email)
 

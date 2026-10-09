@@ -5,7 +5,7 @@
  */
 import type { Env } from './env.ts'
 import { HttpError } from './response.ts'
-import { detectarMime, type Imagen } from './ia.ts'
+import { contieneScriptPoliglota, detectarMime, type Imagen } from './ia.ts'
 
 export const MAX_SUBIDA_BYTES = 1_900_000
 export const MIME_IMAGEN = ['image/jpeg', 'image/png', 'image/webp'] as const
@@ -28,7 +28,7 @@ export function validarImagenSubida(bytes: Uint8Array, mimeDeclarado?: string | 
   if (bytes.byteLength === 0) throw new HttpError(400, 'La imagen está vacía.')
   if (bytes.byteLength > MAX_SUBIDA_BYTES) throw new HttpError(413, 'La imagen supera el máximo de 2 MB.')
   const mime = detectarMime(bytes)
-  if (!mime || !MIME_OK.has(mime)) throw new HttpError(415, 'Formato no soportado. Usa JPEG, PNG o WebP.')
+  if (!mime || !MIME_OK.has(mime) || contieneScriptPoliglota(bytes)) throw new HttpError(415, 'Formato no soportado. Usa JPEG, PNG o WebP.')
   const declarado = normalizarMime(mimeDeclarado)
   if (estricto && declarado && !MIME_OK.has(declarado)) {
     throw new HttpError(415, 'Formato no soportado. Usa JPEG, PNG o WebP.')

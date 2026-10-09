@@ -29,6 +29,7 @@
 import type { Datos, Env, Handler } from './utils/env.ts'
 import { error, HttpError } from './utils/response.ts'
 import { ipCliente, leerJson } from './utils/http.ts'
+import { leerIpFirmada } from './utils/ipPasarela.ts'
 import { COOKIE_SESION, resolverSesion } from './utils/session.ts'
 import { verificarTurnstile } from './utils/turnstile.ts'
 import { puntuacionBot, scoreAnomalo } from './utils/bot.ts'
@@ -36,6 +37,7 @@ import { esErrorSql, formatearLog, hashIp, tiposDeEvento, type EventoLog } from 
 import { guardarEventos } from './utils/turso.ts'
 import { claveLimite, exigirLimite, limpiezaOportunista } from './utils/rateLimit.ts'
 import { aplicarCabecerasAsvs, CSP_API, CSP_DOCUMENTO } from './utils/cabeceras.ts'
+import { camposLimite, MENSAJE_LIMITE } from './utils/errorVision.ts'
 
 const ESCRITURA = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 
@@ -48,9 +50,10 @@ export const RUTAS_TURNSTILE = new Set([
   '/api/comidas/analizar-texto',
   '/api/alimentos/etiqueta',
   '/api/alimentos/escanear',
+  '/api/alimentos/vision-ticket',
 ])
 /** Rutas con Turnstile que además requieren sesión: se comprueba ANTES de gastar el token. */
-const RUTAS_SESION_PREVIA = new Set(['/api/usuarios/perfil', '/api/comidas/analizar', '/api/comidas/analizar-texto', '/api/alimentos/etiqueta', '/api/alimentos/escanear'])
+const RUTAS_SESION_PREVIA = new Set(['/api/usuarios/perfil', '/api/comidas/analizar', '/api/comidas/analizar-texto', '/api/alimentos/etiqueta', '/api/alimentos/escanear', '/api/alimentos/vision-ticket'])
 /** Foto y texto de una comida: 20 / hora por usuario (el tope diario sigue en el handler). */
 const RUTAS_ANALISIS_COMIDA = new Set(['/api/comidas/analizar', '/api/comidas/analizar-texto'])
 /** La etiqueta no es el análisis de comidas: se queda el tope corto por IP. */
@@ -68,8 +71,9 @@ const RUTAS_LOGIN = new Set([
 
 const MENSAJE_LOGIN = 'Demasiados intentos de acceso. Espera unos minutos antes de volver a intentarlo.'
 const MENSAJE_BLOQUEO = 'Demasiados intentos seguidos. El acceso queda bloqueado un rato.'
-const MENSAJE_ANALISIS = 'Has pedido demasiados análisis esta hora. Prueba más tarde o añade la comida a mano.'
+const MENSAJE_ANALISIS = MENSAJE_LIMITE
 const OPCIONES_PICO = { factorPico: 3, bloqueoSeg: 3600, mensajeBloqueo: MENSAJE_BLOQUEO }
+const OPCIONES_ANALISIS = { ...OPCIONES_PICO, mensajeBloqueo: MENSAJE_LIMITE, extra: camposLimite(MENSAJE_LIMITE) }
 
 /** Orígenes del WebView de Capacitor (APK). */
 export const ORIGENES_APP = new Set(['https://localhost', 'capacitor://localhost'])
@@ -179,7 +183,14 @@ function respuestaBorraSesion(h: Headers): boolean {
 }
 
 function manejarError(e: unknown): Response {
-  if (e instanceof HttpError) return error(e.status, e.message, e.extra, e.headers)
+  if (e instanceof HttpError) {
+    const extra = { ...e.extra }
+    const anidado = extra.error
+    if (anidado && typeof anidado === 'object' && !Array.isArray(anidado) && typeof extra.reintentarEn === 'number') {
+      extra.error = { ...(anidado as Record<string, unknown>), retry_after_seconds: extra.reintentarEn }
+    }
+    return error(e.status, e.message, extra, e.headers)
+  }
   // Sin mensaje ni pila: un error de D1 puede repetir el SQL y, con él, un email.
   console.error('[api] error no controlado')
   return error(500, 'Error interno. Inténtalo de nuevo más tarde.')
@@ -236,7 +247,7 @@ export const onRequest: Handler = async (ctx) => {
   datos.cookiesRotacion = []
   const inicio = Date.now()
   try {
-    datos.ip = ipCliente(request)
+    datos.ip = (await leerIpFirmada(env.AUTH_SECRET, request)) ?? ipCliente(request)
     const resuelta = await resolverSesion(env, request)
     datos.sesion = resuelta.sesion
     datos.cookiesRotacion = resuelta.cookies
@@ -264,7 +275,7 @@ export const onRequest: Handler = async (ctx) => {
       }
       if (RUTAS_ANALISIS_COMIDA.has(url.pathname)) {
         if (!datos.sesion) throw new HttpError(401, 'Necesitas iniciar sesión.')
-        await exigirLimite(env, `comida:hora:u:${datos.sesion.usuarioId}`, 20, 3600, MENSAJE_ANALISIS, OPCIONES_PICO)
+        await exigirLimite(env, `comida:hora:u:${datos.sesion.usuarioId}`, 20, 3600, MENSAJE_ANALISIS, OPCIONES_ANALISIS)
       }
       if (RUTAS_TURNSTILE.has(url.pathname)) {
         if (RUTAS_SESION_PREVIA.has(url.pathname) && !datos.sesion) {

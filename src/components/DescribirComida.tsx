@@ -9,7 +9,9 @@ import { Sheet } from './ui/Sheet.tsx'
 import { Button } from './ui/Button.tsx'
 import { useTurnstile } from '../hooks/useTurnstile.ts'
 import { recordarAliasDelAnalisis, resolverAlias, resultadoDesdeAlias } from '../lib/aliasAlimentos.ts'
-import { api, ApiError } from '../lib/api.ts'
+import { api } from '../lib/api.ts'
+import { falloDeAnalisis, type FalloAnalisisUi } from '../lib/falloAnalisis.ts'
+import { FalloAnalisis } from './FalloAnalisis.tsx'
 import type { ResultadoAnalisis } from '../lib/tipos.ts'
 
 const EJEMPLOS = ['Dos huevos revueltos y una tostada con aceite', 'Un plato de lentejas con chorizo', 'Ensalada de pasta con atún y tomate', 'Café con leche y un croissant']
@@ -18,14 +20,14 @@ const MAX = 300
 export default function DescribirComida({ onClose, onResultado, onManual }: { onClose: () => void; onResultado: (r: ResultadoAnalisis) => void; onManual: () => void }) {
   const [texto, setTexto] = useState('')
   const [cargando, setCargando] = useState(false)
-  const [error, setError] = useState<{ mensaje: string; manual: boolean } | null>(null)
+  const [error, setError] = useState<FalloAnalisisUi | null>(null)
   const { contenedorRef, obtenerToken } = useTurnstile('analizar-texto')
 
   async function enviar(e?: FormEvent) {
     e?.preventDefault()
     const limpio = texto.trim()
     if (limpio.length < 3) {
-      setError({ mensaje: 'Describe un poco más lo que has comido.', manual: false })
+      setError({ codigo: 'OTRO', mensaje: 'Describe un poco más lo que has comido.', reintentar: false, auto: false, manual: false, elegirOtra: false })
       return
     }
     const alias = resolverAlias(limpio)
@@ -40,14 +42,13 @@ export default function DescribirComida({ onClose, onResultado, onManual }: { on
       const token = await obtenerToken()
       const r = await api.analizarTexto(limpio, token)
       if (!r.resultado.ingredientes.length && r.resultado.calorias === 0) {
-        setError({ mensaje: 'No hemos reconocido ninguna comida en el texto. Prueba a describirla de otra forma.', manual: false })
+        setError({ codigo: 'FOTO', mensaje: 'No hemos reconocido ninguna comida en el texto. Prueba a describirla de otra forma.', reintentar: false, auto: false, manual: false, elegirOtra: false })
         return
       }
       recordarAliasDelAnalisis(limpio, r.resultado)
       onResultado(r.resultado)
     } catch (err) {
-      const manual = err instanceof ApiError && (err.status === 429 || err.status === 503)
-      setError({ mensaje: err instanceof Error ? err.message : 'No se pudo estimar la comida.', manual })
+      setError(falloDeAnalisis(err))
     } finally {
       setCargando(false)
     }
@@ -71,7 +72,7 @@ export default function DescribirComida({ onClose, onResultado, onManual }: { on
               if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) void enviar()
             }}
             placeholder="Por ejemplo: 200 g de pollo a la plancha con arroz y ensalada"
-            aria-invalid={error && !error.manual ? true : undefined}
+            aria-invalid={error && !error.manual && !error.reintentar ? true : undefined}
             aria-describedby="nf-describir-ayuda"
             className="w-full resize-none rounded-2xl border border-neutral-200 bg-card px-4 py-3 text-[15px] placeholder:text-neutral-400 focus:border-mint focus:outline-none focus:ring-4 focus:ring-mint/15 dark:border-neutral-800 dark:bg-card-dark dark:placeholder:text-neutral-500"
           />
@@ -92,14 +93,12 @@ export default function DescribirComida({ onClose, onResultado, onManual }: { on
           ))}
         </div>
         {error && (
-          <div role="alert" className="rounded-2xl border border-neutral-200 p-3 text-sm dark:border-neutral-800">
-            <p className="text-neutral-600 dark:text-neutral-300">{error.mensaje}</p>
-            {error.manual && (
-              <Button size="sm" variant="outline" className="mt-3" onClick={onManual}>
-                Añadir a mano
-              </Button>
-            )}
-          </div>
+          <FalloAnalisis
+            fallo={error}
+            cuentaAtras={0}
+            onReintentar={() => void enviar()}
+            onManual={error.manual ? onManual : undefined}
+          />
         )}
         <div ref={contenedorRef} className="flex justify-center empty:hidden" />
         <Button type="submit" size="lg" block loading={cargando} icon={cargando ? undefined : <Sparkles size={18} strokeWidth={1.75} />}>

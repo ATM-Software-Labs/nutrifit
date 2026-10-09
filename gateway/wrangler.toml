@@ -1,0 +1,38 @@
+# Worker del API Gateway. No es el proyecto Pages (ese sigue en /wrangler.toml).
+# Secretos, fuera de este archivo:
+#   npx wrangler secret put AUTH_SECRET --config gateway/wrangler.toml
+#   el mismo valor que el AUTH_SECRET de Pages, si no los tickets no validan
+#   GEMINI_API_KEY, GROQ_API_KEY, TRUJILLO_API_KEY, APP_CLIENT_TOKEN
+# namespace_id es un entero que eliges. No es un id de KV y no hay que crearlo.
+# Si otro Worker del mismo account usa "748210", comparten contador.
+name = "nutrifit-api-gateway"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = false
+
+[[routes]]
+pattern = "api.trujillomingorance.com/*"
+zone_name = "trujillomingorance.com"
+
+[vars]
+ENVIRONMENT = "production"
+GEMINI_MODEL = "gemini-2.5-flash"
+# Diario, sesión, archivos y el ticket de visión. La foto en sí no se reenvía.
+PAGES_ORIGIN = "https://nutri.trujillomingorance.com"
+
+[[ratelimits]]
+name = "VISION_LIMITE"
+namespace_id = "748210"
+
+  [ratelimits.simple]
+  limit = 5
+  period = 60
+
+[[d1_databases]]
+binding = "DB"
+database_name = "nutrifit-db"
+database_id = "c7f77ed4-a5d0-4c3a-a686-ecc1fb77d1f1"
+
+[ai]
+binding = "AI"
