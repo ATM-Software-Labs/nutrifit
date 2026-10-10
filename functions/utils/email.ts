@@ -128,21 +128,48 @@ export function mensajeMagicLink(enlace: string, codigo?: string): MensajeCorreo
   const aviso = AVISO_SEGURIDAD(caduca)
   const cifras = codigo && /^\d{6}$/.test(codigo) ? codigo : ''
 
-  const jsonLd = cifras ? `
+  const schemaScripts = cifras ? `
 <script type="application/ld+json">
 {
-  "@context": "http://schema.org",
+  "@context": "https://schema.org",
   "@type": "EmailMessage",
   "potentialAction": {
     "@type": "ConfirmAction",
-    "name": "Iniciar sesión",
+    "name": "Acceder a NutriFit",
     "target": "${enlace}"
   },
-  "description": "Código de acceso para NutriFit",
+  "description": "Iniciar sesión en NutriFit",
   "about": {
     "@type": "Thing",
+    "name": "OneTimeCode",
     "identifier": "${cifras}"
   }
+}
+</script>
+<script type="application/adaptivecard+json">
+{
+  "type": "AdaptiveCard",
+  "version": "1.0",
+  "body": [
+    {
+      "type": "TextBlock",
+      "text": "Acceso rápido a NutriFit",
+      "weight": "Bolder",
+      "size": "Medium"
+    },
+    {
+      "type": "TextBlock",
+      "text": "Tu código de acceso es **${cifras}**. Válido durante 15 minutos.",
+      "wrap": true
+    }
+  ],
+  "actions": [
+    {
+      "type": "Action.OpenUrl",
+      "title": "Entrar directamente",
+      "url": "${enlace}"
+    }
+  ]
 }
 </script>` : ''
 
@@ -163,14 +190,14 @@ ${bloqueCodigo}
 <tr><td class="nf-suave" align="center" style="padding:12px 32px 0;font-family:${FUENTE};font-size:12px;line-height:1.5;color:#6b7280;">Si el botón no funciona, copia este enlace:<br /><a href="${hrefSeguro(enlace)}" style="color:#6b7280;text-decoration:underline;word-break:break-all;">${escaparHtml(enlace)}</a></td></tr>
 ${pieHtml(PIE_ACCESO)}`,
     cifras ? `Tu código de acceso a NutriFit es ${cifras}. Válido durante ${caduca}.` : `Tu enlace de acceso caduca en ${caduca}`,
-    jsonLd
+    schemaScripts
   )
 
   // Ojo: reemplazar el logo.png introducido antes a logo.svg para no romper nada
   const htmlCorregido = html.replace('logo.png', 'logo.svg')
 
   const texto = cifras
-    ? `Tu código de verificación de NutriFit es: ${cifras}\n\nEste código es de un solo uso y caduca en 15 minutos.\n\nO accede directamente pulsando aquí:\n${enlace}\n\nNutriFit · Seguridad transaccional\nhttps://nutri.trujillomingorance.com`
+    ? `Tu código de NutriFit es: ${cifras}\n\nO pulsa este enlace para entrar:\n${enlace}`
     : `Has solicitado iniciar sesión en NutriFit.\n\nAcceder a mi cuenta:\n${enlace}\n\n${aviso}\n\nNutriFit · Seguridad transaccional\nhttps://nutri.trujillomingorance.com`;
 
   return {

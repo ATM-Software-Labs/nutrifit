@@ -41,7 +41,7 @@ test('el pie legal y el texto plano llevan los enlaces completos', () => {
   assert.match(m.html, /https:\/\/nutri\.trujillomingorance\.com\/privacidad/)
   assert.match(m.html, /soporte@trujillomingorance\.com/)
   assert.match(m.html, /font-size:12px;line-height:1\.5/)
-  assert.ok(m.texto.includes('Tu código de verificación de NutriFit es:'))
+  assert.ok(m.texto.includes('Tu código de NutriFit es:'))
   assert.ok(m.texto.includes(ENLACE))
   assert.ok(m.texto.includes(CODIGO))
 })

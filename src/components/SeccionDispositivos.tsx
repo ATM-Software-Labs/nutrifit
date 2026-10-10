@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { api } from '../lib/api'
+import { api } from '../lib/api.ts'
 
 interface Dispositivo {
   id: string
@@ -16,10 +16,6 @@ export function SeccionDispositivos({ sesiones: _sesiones }: any) {
   const [pushPermitido, setPushPermitido] = useState(false)
   const [ubicacionActiva, setUbicacionActiva] = useState(() => localStorage.getItem('nf:ubicacionActiva') === 'true')
   
-  // ignore ts error for unused variables temporarily
-  // @ts-ignore
-  console.log(pushPermitido, solicitarPush)
-
   const cargar = async () => {
     try {
       const data = await api.dispositivos()
@@ -161,6 +157,26 @@ export function SeccionDispositivos({ sesiones: _sesiones }: any) {
                 ubicacionActiva ? 'left-[23px]' : 'left-[3px]'
               }`}
             />
+          </button>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-neutral-200 bg-card p-5 dark:border-neutral-800 dark:bg-card-dark">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-semibold text-graphite dark:text-neutral-100">Notificaciones Push</h3>
+            <p className="mt-1 text-sm text-neutral-500">Recibe recordatorios de comidas, ayuno y agua.</p>
+          </div>
+          <button
+            onClick={solicitarPush}
+            disabled={pushPermitido}
+            className={`shrink-0 ml-3 px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${
+              pushPermitido 
+                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 cursor-default' 
+                : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700'
+            }`}
+          >
+            {pushPermitido ? 'Activadas' : 'Activar'}
           </button>
         </div>
       </div>
