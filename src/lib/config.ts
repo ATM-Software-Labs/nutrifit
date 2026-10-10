@@ -19,7 +19,11 @@ export const URL_SITIO = 'https://nutri.trujillomingorance.com'
  * Por defecto el gateway. En local, `VITE_API_URL=http://localhost:5173`
  * para que Vite reenvíe `/api` al Pages de 8788.
  */
-export const API_URL: string = (env.VITE_API_URL || 'https://api.trujillomingorance.com/v1').replace(/\/$/, '')
+let apiUrl = (env.VITE_API_URL || 'https://api.trujillomingorance.com/v1').replace(/\/$/, '')
+if (typeof location !== 'undefined' && location.origin === URL_SITIO) {
+  apiUrl = ''
+}
+export const API_URL: string = apiUrl
 
 /** Alias histórico. Los enlaces de la app usan `URL_SITIO`, no esta base. */
 export const URL_API_NATIVA: string = API_URL
@@ -32,7 +36,7 @@ export const urlDeArchivo = (valor: string): string => mapearArchivo(API_URL, va
 export function apiMismoOrigen(): boolean {
   if (typeof location === 'undefined') return false
   try {
-    return new URL(API_URL).origin === location.origin
+    return new URL(API_URL || '/', location.href).origin === location.origin
   } catch {
     return false
   }

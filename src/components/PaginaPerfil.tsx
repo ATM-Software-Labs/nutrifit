@@ -478,7 +478,7 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
               </button>
               <button
                 type="button"
-                onClick={() => { import('../lib/rutas.ts').then(m => m.navegar('/ajustes')) }}
+                onClick={() => navegar('/ajustes')}
                 className="rounded-full border border-neutral-200 bg-card px-4 py-2 text-sm font-semibold text-graphite shadow-sm transition duration-200 hover:-translate-y-0.5 hover:bg-neutral-100 dark:border-neutral-700 dark:bg-card-dark dark:text-neutral-100 dark:hover:bg-neutral-800"
               >
                 Ajustes (Meta & Físico)

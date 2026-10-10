@@ -1,7 +1,7 @@
 /**
  * Sesiones:
  *  · Web: cookie `__Host-nf_session` (HMAC-SHA256, propósito "sesion").
- *    HttpOnly · Secure · SameSite=Strict · Path=/ · sin Domain (prefijo __Host-,
+ *    HttpOnly · Secure · SameSite=Lax · Path=/ · sin Domain (prefijo __Host-,
  *    anti-fijación / cookie tossing). El sid vive en D1 solo como hash: cada
  *    login crea una familia nueva (no se reutiliza un id del cliente) y el
  *    token se rota solo a las 12 h. Reusar un sid ya rotado, fuera de la gracia,
@@ -45,7 +45,7 @@ interface FilaSesion {
   visto_en: number | null
 }
 
-const ATRIBUTOS = 'HttpOnly; Secure; SameSite=Strict; Path=/'
+const ATRIBUTOS = 'HttpOnly; Secure; SameSite=Lax; Path=/'
 
 function cookieCon(token: string, maxAge: number): string {
   return `${COOKIE_SESION}=${token}; ${ATRIBUTOS}; Max-Age=${maxAge}`

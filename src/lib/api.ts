@@ -205,10 +205,14 @@ export const api = {
   },
   /** Escáner unificado. En producción la foto sale hacia el API Gateway con un ticket de 60 s. */
   escanear: async (imagen: Blob, turnstile: string) => {
-    if (!usarPasarelaVision()) {
+    const subirFicha = () => {
       const fd = new FormData()
       fd.append('imagen', imagen, imagen.type === 'image/webp' ? 'plato.webp' : 'plato.jpg')
       return pedir<PlatoEscaneo>('/api/alimentos/escanear', { method: 'POST', body: fd, turnstile })
+    }
+
+    if (!usarPasarelaVision()) {
+      return subirFicha()
     }
     const prep = await pedir<PreparadoVision>('/api/alimentos/vision-ticket', {
       method: 'POST',
@@ -216,6 +220,7 @@ export const api = {
       turnstile,
     })
     if (prep.modo === 'cache') return prep.plato
+    if (prep.modo === 'local') return subirFicha()
     if (prep.modo !== 'gateway' || !prep.ticket || !urlVisionPermitida(prep.url)) {
       throw new ApiError(504, 'La conexión tardó demasiado. Comprueba tu cobertura móvil y vuelve a pulsar.', 'upstream_timeout', undefined, 0, 'UPSTREAM_TIMEOUT')
     }

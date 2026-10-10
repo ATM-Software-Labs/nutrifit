@@ -6,7 +6,7 @@
  */
 import { firmar } from '../../utils/crypto.ts'
 import type { Handler } from '../../utils/env.ts'
-import { MENSAJE_LIMITE, MENSAJE_RED, TITULO_RED, camposLimite } from '../../utils/errorVision.ts'
+import { camposLimite, MENSAJE_LIMITE } from '../../utils/errorVision.ts'
 import { leerJson } from '../../utils/http.ts'
 import { leerPlatoCache } from '../../utils/orquestadorVision.ts'
 import { claveLimite, exigirLimite } from '../../utils/rateLimit.ts'
@@ -15,20 +15,6 @@ import { exigirSesion } from '../../utils/session.ts'
 import { CUPOS_ESCANEO, PROPOSITO_VISION, TTL_TICKET_VISION_S, URL_VISION, pasarelaVisionActiva, type PayloadTicketVision } from '../../utils/ticketVision.ts'
 
 const OPCIONES_LIMITE = { extra: camposLimite(MENSAJE_LIMITE) }
-
-function falloPasarela(): HttpError {
-  return new HttpError(504, MENSAJE_RED, {
-    success: false,
-    codigo: 'upstream_timeout',
-    error: {
-      code: 'UPSTREAM_TIMEOUT',
-      status: 504,
-      user_title: TITULO_RED,
-      user_message: MENSAJE_RED,
-      retry_after_seconds: 0,
-    },
-  })
-}
 
 export const onRequestPost: Handler = async ({ request, env, data }) => {
   const sesion = exigirSesion(data.sesion)
@@ -41,8 +27,7 @@ export const onRequestPost: Handler = async ({ request, env, data }) => {
 
   const host = new URL(request.url).hostname
   if (!pasarelaVisionActiva(env.VISION_GATEWAY_URL, host)) {
-    if (host === 'localhost' || host === '127.0.0.1') return json({ ok: true, modo: 'local' })
-    throw falloPasarela()
+    return json({ ok: true, modo: 'local' })
   }
   if (!env.AUTH_SECRET || !/^[A-Za-z0-9_-]{1,80}$/.test(sesion.usuarioId)) {
     console.error('[vision-ticket] sin firma')

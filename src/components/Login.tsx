@@ -6,7 +6,7 @@ import { Input } from './ui/Input.tsx'
 import { useTurnstile } from '../hooks/useTurnstile.ts'
 import { api, ApiError } from '../lib/api.ts'
 import { esNativa } from '../lib/plataforma.ts'
-import { urlApi, URL_REPO, URL_SITIO } from '../lib/config.ts'
+import { urlApi, URL_REPO } from '../lib/config.ts'
 import { clicPrivacidad } from '../lib/rutas.ts'
 import { guardarTokenApp } from '../lib/tokenApp.ts'
 import { ESCRITORIO, useMedia } from '../hooks/useMedia.ts'
@@ -60,35 +60,10 @@ function IconoGoogle() {
   )
 }
 
-/**
- * Pide la URL de Google al mismo host que recibirá el callback.
- * La cookie `__Host-nf_google` no puede viajar de api. a nutri.
- * En localhost sigue el proxy de Vite.
- */
-function urlInicioGoogle(): string {
-  if (!esNativa && typeof location !== 'undefined' && location.origin === URL_SITIO) {
-    return `${URL_SITIO}/api/auth/google?formato=json`
-  }
-  return urlApi('/api/auth/google?formato=json')
-}
-
 async function iniciarSesionGoogle(e: MouseEvent<HTMLButtonElement>) {
   e.preventDefault()
-  const res = await fetch(urlInicioGoogle(), {
-    headers: { Accept: 'application/json' },
-    credentials: esNativa ? 'omit' : 'include',
-    mode: 'cors',
-  })
-  if (!res.ok) throw new Error('Google no está disponible.')
-  const datos = (await res.json()) as { location?: string }
-  const destino = new URL(datos.location ?? '')
-  if (destino.origin !== 'https://accounts.google.com' || destino.pathname !== '/o/oauth2/v2/auth') {
-    throw new Error('La respuesta de acceso no es de Google.')
-  }
-  const redirectUri = destino.searchParams.get('redirect_uri') ?? ''
-  console.log('Google Auth redirect_uri:', redirectUri)
-  if (!redirectUri) throw new Error('Falta redirect_uri.')
-  window.location.assign(destino.toString())
+  const destino = esNativa ? urlApi('/api/auth/google') : '/api/auth/google'
+  window.location.assign(destino)
 }
 
 export default function Login({ onEntrar, vinculando = false }: { onEntrar: (u: Usuario, perfilCompleto: boolean) => void; vinculando?: boolean }) {

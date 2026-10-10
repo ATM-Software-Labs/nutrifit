@@ -21,7 +21,7 @@
  *        · Content-Type JSON o multipart (bloquea CSRF por formularios "simples");
  *        · bot score 1–29 en /api/auth y en la IA → 403 (si Cloudflare lo envía);
  *        · Turnstile (siteverify: secret, token, remoteip) obligatorio en RUTAS_TURNSTILE.
- *      El resto de escrituras autenticadas se apoyan en sesión + SameSite=Strict
+ *      El resto de escrituras autenticadas se apoyan en sesión + SameSite=Lax
  *      + comprobación de Origin (Turnstile sería impracticable en cada guardado).
  *   4. Manejo de errores genérico (sin filtrar detalles internos) y cabeceras
  *      OWASP ASVS en TODAS las respuestas de Functions (_headers no les aplica).

@@ -198,8 +198,17 @@ export default function SeccionDescargas() {
             <p className="mt-2 text-[15px] leading-relaxed text-neutral-500 dark:text-neutral-400">
               Apunta con la cámara de tu móvil para instalar la app, o pulsa el botón de abajo para instalarla directamente en este ordenador (Windows/Mac).
             </p>
-            <div className="mt-5 w-full max-w-xs">
-              <BotonInstalar />
+            <div className="mt-5 flex w-full max-w-sm flex-col gap-3 sm:flex-row">
+              <div className="flex-1">
+                <BotonInstalar />
+              </div>
+              <a
+                href="/NutriFit.apk"
+                download="NutriFit.apk"
+                className="flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-neutral-800 text-[15px] font-semibold text-white transition hover:bg-neutral-700 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
+              >
+                <Download size={18} /> Descargar APK
+              </a>
             </div>
           </div>
         </section>
