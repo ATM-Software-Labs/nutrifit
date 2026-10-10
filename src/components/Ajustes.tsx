@@ -139,8 +139,8 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
   )
 
   return (
-    <main className="mx-auto max-w-5xl px-5 pt-6 lg:px-8 lg:pt-10 flex flex-col lg:flex-row gap-8 lg:gap-16">
-      <aside className="w-full lg:w-56 shrink-0 lg:sticky lg:top-10 h-max z-10">
+    <main className="mx-auto max-w-5xl px-5 pt-6 lg:px-8 lg:pt-4 flex flex-col lg:flex-row gap-8 lg:gap-8">
+      <aside className="w-full lg:w-56 shrink-0 lg:sticky lg:top-4 h-max z-10">
         <h1 className="mb-6 text-2xl lg:text-3xl font-semibold tracking-tight text-graphite dark:text-neutral-100 hidden lg:block">{t('ajustes.titulo')}</h1>
         {/* Mobile back button logic can be handled if needed, for now just show pills on mobile */}
         <nav className="flex lg:flex-col gap-1 text-sm font-medium overflow-x-auto pb-2 lg:pb-0 scrollbar-hide snap-x" aria-label="Ajustes">

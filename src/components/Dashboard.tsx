@@ -195,9 +195,9 @@ export default function Dashboard({
   }
 
   const hoyVista = (
-    <main className="px-5 md:max-w-2xl md:mx-auto lg:max-w-none lg:px-10 lg:pt-8">
+    <main className="px-5 md:max-w-2xl md:mx-auto lg:max-w-none lg:px-10 lg:pt-3">
       <div className="lg:mx-auto lg:max-w-[88rem]">
-        <div className="lg:flex lg:items-end lg:justify-between lg:gap-8 lg:pb-6">
+        <div className="lg:flex lg:items-end lg:justify-between lg:gap-4 lg:pb-3">
           <div className="pb-5 pt-3 lg:p-0">
             <p className="text-sm text-neutral-500 first-letter:uppercase dark:text-neutral-400">{fechaLarga(fecha)}</p>
             <h1 className="text-2xl font-semibold tracking-tight">
@@ -221,11 +221,11 @@ export default function Dashboard({
 
         {/*  Un único árbol: en móvil va en orden (anillo, comidas, agua, peso); en
             escritorio, 2 columnas (lg) o 3 (xl) con las comidas en el centro. */}
-        <div className="mt-5 flex flex-col gap-4 lg:mt-0 lg:grid lg:grid-cols-12 lg:items-start lg:gap-6 xl:gap-8">
-          <div className="flex flex-col gap-4 lg:col-span-5 xl:col-span-4 lg:sticky lg:top-8">
+        <div className="mt-5 flex flex-col gap-4 lg:mt-0 lg:grid lg:grid-cols-12 lg:items-start lg:gap-4 xl:gap-8">
+          <div className="flex flex-col gap-4 lg:col-span-5 xl:col-span-4 lg:sticky lg:top-4">
             <section className="tarjeta px-6 pb-6 pt-7" aria-label="Resumen de caloras y macros">
               <AnilloCalorias consumidas={totales.calorias} meta={metas.calorias} quemadas={sumarQuemadas ? quemadas : 0} />
-              <div className="mt-7 space-y-4">
+              <div className="mt-4 space-y-4">
                 <BarraMacro macro="proteinas" valor={totales.proteinas} meta={metas.proteinas} />
                 <BarraMacro macro="carbohidratos" valor={totales.carbohidratos} meta={metas.carbohidratos} />
                 <BarraMacro macro="grasas" valor={totales.grasas} meta={metas.grasas} />
@@ -256,7 +256,7 @@ export default function Dashboard({
                 ))}
           </div>
 
-          <div className="hidden xl:flex xl:col-span-3 flex-col gap-6 lg:sticky lg:top-8">
+          <div className="hidden xl:flex xl:col-span-3 flex-col gap-6 lg:sticky lg:top-4">
             <WidgetPeso usuario={usuario} />
             <WidgetAgua fecha={fecha} inicial={resumen?.agua_ml ?? 0} pesoKg={usuario.peso_kg} onActividad={onActividad} onCambio={(ml) => actualizar((r) => ({ ...r, agua_ml: ml }))} />
             <WidgetAyuno />

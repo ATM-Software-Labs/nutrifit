@@ -85,7 +85,7 @@ export default function Historial({ usuario, onVerDia }: { usuario: Usuario; onV
   const diasPasados = datos?.dias.filter((d) => d.fecha <= hoy) ?? []
 
   return (
-    <main className="px-5 pb-8 lg:px-10 lg:pt-8">
+    <main className="px-5 pb-8 lg:px-10 lg:pt-4">
       <div className="flex flex-col gap-4 pb-5 pt-3 lg:flex-row lg:items-end lg:justify-between lg:pt-0">
         <div>
           <p className="text-sm text-neutral-500 dark:text-neutral-400">Tu progreso</p>

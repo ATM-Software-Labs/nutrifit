@@ -33,6 +33,11 @@
   body,
   #root {
     min-height: 100%;
+    scrollbar-width: none;
+  }
+  html::-webkit-scrollbar, body::-webkit-scrollbar, #root::-webkit-scrollbar {
+    display: none;
+  
   }
   body {
     @apply bg-bg font-sans text-graphite antialiased dark:bg-bg-dark dark:text-neutral-100;
