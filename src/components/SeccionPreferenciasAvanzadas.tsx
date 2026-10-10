@@ -1,10 +1,16 @@
-﻿import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 export function SeccionPreferenciasAvanzadas() {
-  const [ayunoActivo, setAyunoActivo] = useState(false)
-  const [tipoAyuno, setTipoAyuno] = useState('16/8')
+  const [ayunoActivo, setAyunoActivo] = useState(() => localStorage.getItem('nf:ayunoActivo') === 'true')
+  const [tipoAyuno, setTipoAyuno] = useState(() => localStorage.getItem('nf:tipoAyuno') || '16/8')
   const [modoMacros] = useState<'porcentaje' | 'gramos_kg'>('gramos_kg'); void modoMacros
-  const [protPorKg, setProtPorKg] = useState(1.8)
+  const [protPorKg, setProtPorKg] = useState(() => Number(localStorage.getItem('nf:protPorKg')) || 1.8)
+
+  useEffect(() => {
+    localStorage.setItem('nf:ayunoActivo', String(ayunoActivo))
+    localStorage.setItem('nf:tipoAyuno', tipoAyuno)
+    localStorage.setItem('nf:protPorKg', String(protPorKg))
+  }, [ayunoActivo, tipoAyuno, protPorKg])
 
   return (
     <div style={{

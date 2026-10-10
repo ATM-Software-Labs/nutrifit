@@ -26,19 +26,21 @@ export function SeccionIntegraciones() {
   }, [])
 
   return (
-    <div style={{ background: '#141416', border: '1px solid #23262F', borderRadius: '20px', padding: '24px', marginTop: '24px' }}>
-      <div style={{ marginBottom: '16px' }}>
-        <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#FCFCFD' }}>Integraciones y Wearables</h3>
-        <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#777E90' }}>Servicios conectados a tu cuenta.</p>
+    <div className="mt-6 rounded-2xl border border-neutral-200 bg-card p-5 dark:border-neutral-800 dark:bg-card-dark">
+      <div className="mb-4">
+        <h3 className="text-lg font-semibold text-graphite dark:text-neutral-100">Integraciones y Wearables</h3>
+        <p className="mt-1 text-sm text-neutral-500">Servicios conectados a tu cuenta.</p>
       </div>
       {integraciones.length === 0 ? (
-        <div style={{ background: '#1A1D1F', borderRadius: '12px', padding: '16px', color: '#777E90', fontSize: '14px' }}>No hay otros servicios conectados.</div>
+        <div className="rounded-xl bg-neutral-100 p-4 text-sm text-neutral-500 dark:bg-neutral-900">
+          No hay servicios conectados.
+        </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div className="flex flex-col gap-3">
           {integraciones.map((i) => (
-            <div key={i.proveedor} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: '#1A1D1F', borderRadius: '14px', border: '1px solid #23262F' }}>
-              <div style={{ fontSize: '14px', fontWeight: 600, color: '#FCFCFD' }}>{i.proveedor}</div>
-              <span style={{ fontSize: '12px', color: '#777E90' }}>{i.estado ?? 'conectado'}</span>
+            <div key={i.proveedor} className="flex items-center justify-between rounded-xl border border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-800 dark:bg-neutral-900">
+              <div className="text-sm font-semibold text-graphite dark:text-neutral-100">{i.proveedor}</div>
+              <span className="text-xs text-neutral-500 capitalize">{i.estado ?? 'Conectado'}</span>
             </div>
           ))}
         </div>

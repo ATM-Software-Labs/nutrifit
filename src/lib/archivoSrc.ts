@@ -44,7 +44,7 @@ export function useSrcArchivo(url: string | null | undefined): string | null {
 
 export function useEstadoArchivo(url: string | null | undefined): EstadoArchivo {
   const directo = srcMostrable(url)
-  const pedir = esNativa && !!directo && esArchivoGateway(directo)
+  const pedir = !!directo && esArchivoGateway(directo)
   const [blob, setBlob] = useState<string | null>(null)
   const [fase, setFase] = useState<'idle' | 'carga' | 'listo' | 'fallo'>('idle')
 
@@ -63,7 +63,7 @@ export function useEstadoArchivo(url: string | null | undefined): EstadoArchivo 
         const token = await obtenerTokenApp()
         const headers: Record<string, string> = {}
         if (token) headers.authorization = `Bearer ${token}`
-        const res = await fetch(directo, { credentials: 'omit', mode: 'cors', headers })
+        const res = await fetch(directo, { credentials: esNativa ? 'omit' : 'include', mode: 'cors', headers })
         if (!res.ok || !vivo) {
           if (vivo) setFase('fallo')
           return

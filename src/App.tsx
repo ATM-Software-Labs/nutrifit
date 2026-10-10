@@ -1,4 +1,4 @@
-﻿import { lazy, Suspense, useCallback, useEffect, useState, type ComponentType } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useState, type ComponentType } from 'react'
 import { Logo } from './components/Logo.tsx'
 import { Button } from './components/ui/Button.tsx'
 import { useToast } from './components/ui/Toast.tsx'
@@ -29,8 +29,6 @@ const Vincular = lazy(() => import('./components/Vincular.tsx'))
 const ruta = rutaActual()
 /** La política no pasa por el panel. Se mira el pathname real, no una ruta normalizada a Hoy. */
 const entraEnPrivacidad = window.location.pathname === '/privacidad' || esRutaPrivacidad(window.location.pathname)
-/** Página suelta (no necesita saber si hay sesión). */
-const paginaSuelta = (ruta === '/descargar' && !esNativa) || entraEnPrivacidad
 
 // /vincular#<id>: el id del QR viaja en el fragmento (no llega a ningún servidor
 // ni a los logs). Lo sacamos de la URL nada más arrancar.
@@ -42,12 +40,12 @@ if (ruta === '/vincular') {
     guardarVinculoPendiente(id) // por si hay que entrar antes (enlace mágico en otra pestaña)
   }
   history.replaceState(null, '', '/vincular')
-} else if (!entraEnPrivacidad && !paginaSuelta && ruta !== '/' && ruta !== '/historial' && ruta !== '/profile') {
+} else if (!entraEnPrivacidad && ruta !== '/descargar' && ruta !== '/' && ruta !== '/historial' && ruta !== '/profile' && ruta !== '/ajustes' && ruta !== '/peso') {
   history.replaceState(null, '', '/') // ruta desconocida → Hoy
 }
 
 const PISTA = 'nf:sesion'
-if (!paginaSuelta) {
+if (!entraEnPrivacidad && ruta !== '/descargar') {
   if (localStorage.getItem(PISTA)) void (ruta === '/vincular' ? import('./components/Vincular.tsx') : cargarDashboard())
   else void cargarLogin()
 }
@@ -172,7 +170,7 @@ export default function App() {
   }, [canjear])
 
   useEffect(() => {
-    if (paginaSuelta) return
+    if (rutaApp === '/descargar' || entraEnPrivacidad) return
     comprobar()
     onSesionPerdida(() => {
       localStorage.removeItem(PISTA)
@@ -212,7 +210,7 @@ export default function App() {
       </Suspense>
     )
   }
-  if (paginaSuelta && ruta === '/descargar') return <Suspense fallback={<Cargando />}><SeccionDescargas /></Suspense>
+  if (rutaApp === '/descargar' && !esNativa) return <Suspense fallback={<Cargando />}><SeccionDescargas /></Suspense>
 
   let pantalla
   switch (estado.fase) {
@@ -255,7 +253,8 @@ export default function App() {
         break
       }
       if (estado.fase === 'app') {
-        pantalla = <Dashboard usuario={estado.usuario} vista={rutaApp === '/historial' ? 'historial' : rutaApp === '/profile' ? 'profile' : 'hoy'} onUsuario={(usuario: any) => setEstado({ fase: 'app', usuario })} onSalir={salir} />
+        const vistaDashboard = rutaApp === '/historial' ? 'historial' : rutaApp === '/profile' ? 'profile' : rutaApp === '/ajustes' ? 'ajustes' : rutaApp === '/peso' ? 'peso' : 'hoy'
+        pantalla = <Dashboard usuario={estado.usuario} vista={vistaDashboard} onUsuario={(usuario: any) => setEstado({ fase: 'app', usuario })} onSalir={salir} />
         break
       }
       pantalla = <Onboarding usuario={estado.usuario} onCompletado={(usuario) => setEstado({ fase: 'app', usuario })} />

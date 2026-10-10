@@ -78,5 +78,6 @@ export function aBytes(valor: unknown): Uint8Array | null {
   if (valor instanceof Uint8Array) return valor
   if (valor instanceof ArrayBuffer) return new Uint8Array(valor)
   if (ArrayBuffer.isView(valor)) return new Uint8Array(valor.buffer, valor.byteOffset, valor.byteLength)
+  if (Array.isArray(valor)) return new Uint8Array(valor)
   return null
 }

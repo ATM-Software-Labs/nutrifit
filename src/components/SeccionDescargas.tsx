@@ -189,18 +189,18 @@ export default function SeccionDescargas() {
 
       <h1 className="mt-6 text-[2rem] font-semibold leading-tight tracking-tight">Instala NutriFit</h1>
       {plataforma === 'escritorio' ? (
-        <section aria-label="Descargar en el móvil" className="tarjeta mt-6 flex flex-col items-center gap-6 p-6 sm:flex-row">
+                  <section aria-label="Descargar en el móvil" className="tarjeta mt-6 flex flex-col items-center gap-6 p-6 sm:flex-row">
           <div className="shrink-0 rounded-2xl border border-neutral-200 p-2 dark:border-neutral-800">
             <QrDescarga tamano={168} />
           </div>
-          <div>
-            <p className="text-lg font-semibold tracking-tight">Escanéalo con tu móvil</p>
+          <div className="flex-1">
+            <p className="text-lg font-semibold tracking-tight">Escanea el código o instala en tu PC</p>
             <p className="mt-2 text-[15px] leading-relaxed text-neutral-500 dark:text-neutral-400">
-              Abre la cámara y apunta al código: en el móvil verás el botón Instalar o los pasos de Safari.
+              Apunta con la cámara de tu móvil para instalar la app, o pulsa el botón de abajo para instalarla directamente en este ordenador (Windows/Mac).
             </p>
-            <p className="mt-3 text-sm text-neutral-500 dark:text-neutral-400">
-              O escribe <strong className="font-medium text-graphite dark:text-neutral-100">nutri.trujillomingorance.com/descargar</strong>
-            </p>
+            <div className="mt-5 w-full max-w-xs">
+              <BotonInstalar />
+            </div>
           </div>
         </section>
       ) : (

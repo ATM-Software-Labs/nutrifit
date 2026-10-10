@@ -24,7 +24,7 @@ import { ErrorParseo, extraerJson, FotoIlegible, parsearRespuestaModelo, type Re
 import { aplicarRaciones } from './raciones.ts'
 import { sanitizarContextoModelo } from './sanitizar.ts'
 
-export const GEMINI_MODELO_POR_DEFECTO = 'gemini-2.5-flash'
+export const GEMINI_MODELO_POR_DEFECTO = 'gemini-2.0-flash'
 const TIMEOUT_GEMINI_MS = 25_000
 /** Cada gateway de la foto del plato. Texto y etiqueta siguen con TIMEOUT_GEMINI_MS. */
 export const TIMEOUT_GATEWAY_FOTO_MS = 5_000
@@ -401,8 +401,9 @@ async function visionWorkersAI<T>(env: Env, modelo: string, img: Imagen, t: Tare
       return t.parsear(contenidoWorkersAI(out))
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
-      if (modelo.includes('meta') && /agree|licen[cs]e|5016/i.test(msg)) {
-        console.error(`[ia] ${modelo} exige aceptar la licencia de Meta (ver docs/BACKEND.md). Se usan los otros modelos.`)
+      if (modelo.includes('meta') && /agree|licen[cs]e|5016|feature flag/i.test(msg)) {
+        console.error(`[ia] ${modelo} exige aceptar la licencia de Meta o habilitarlo en Cloudflare. Se pasa al siguiente modelo.`)
+        throw anotarFallo('Workers AI', 501, inicio, 'Meta model license/feature flag disabled')
       }
       if (e instanceof ErrorParseo || e instanceof FotoIlegible || esDefinitivo(e)) throw e
       const status = statusWorkers(msg)
@@ -425,7 +426,7 @@ export async function cadenaVision<T>(env: Env, img: Imagen, t: TareaVision<T>):
     if (esDefinitivo(e)) throw errorDefinitivo(e)
     vistos.push(e)
     const motivo = e instanceof ErrorParseo ? `parseo: ${e.message}` : e instanceof Error ? e.message : String(e)
-    if (env.GEMINI_API_KEY) console.warn(`[ia] Gemini falló (${motivo}) → Workers AI`)
+    console.warn(`[ia] Gemini falló (${motivo}) → Workers AI`)
   }
   for (const modelo of MODELOS_VISION_WORKERS_AI) {
     try {
@@ -606,7 +607,7 @@ function modeloTrujillo(env: Env): string {
 }
 
 /** El escáner nuevo usa Gemini 2.5 Flash salvo que GEMINI_MODEL diga otra cosa. */
-export const MODELO_ESCANER_GEMINI = 'gemini-2.5-flash'
+export const MODELO_ESCANER_GEMINI = 'gemini-2.0-flash'
 /** Workers AI del escáner sigue en 2 s. Gemini tiene margen para el JSON del guiso. */
 export const TIMEOUT_ESCANER_MS = 2_000
 export const TIMEOUT_ESCANER_GEMINI_MS = 8_000

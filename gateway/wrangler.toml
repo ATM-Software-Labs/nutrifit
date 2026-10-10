@@ -17,7 +17,7 @@ zone_name = "trujillomingorance.com"
 
 [vars]
 ENVIRONMENT = "production"
-GEMINI_MODEL = "gemini-2.5-flash"
+GEMINI_MODEL = "gemini-2.0-flash"
 # Diario, sesión, archivos y el ticket de visión. La foto en sí no se reenvía.
 PAGES_ORIGIN = "https://nutri.trujillomingorance.com"
 

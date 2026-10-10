@@ -8,7 +8,7 @@ ENVIRONMENT = "production"
 APP_URL = "https://nutri.trujillomingorance.com"
 ALLOWED_ORIGINS = "https://nutri.trujillomingorance.com,https://nutrifit-ac9.pages.dev"
 TURNSTILE_SITE_KEY = "0x4AAAAAAFPhRCuPz21TsJR5"
-GEMINI_MODEL = "gemini-2.5-flash"
+GEMINI_MODEL = "gemini-2.0-flash"
 # El escáner de producción pide el ticket y sube la foto a este host.
 # En localhost el handler no usa la pasarela.
 VISION_GATEWAY_URL = "https://api.trujillomingorance.com"

@@ -2,7 +2,7 @@
  * Cascada silenciosa del escáner. El cliente solo ve el plato unificado:
  * ni cabecera de proveedor ni el 429 crudo de una pasarela.
  *
- *  1. Gemini (GEMINI_MODEL o gemini-2.5-flash), abort a los 8 s.
+ *  1. Gemini (GEMINI_MODEL o gemini-2.0-flash), abort a los 8 s.
  *  2. Workers AI si Gemini agota el plazo, responde 429/5xx o falla.
  *  3. Groq y, si también falla, Trujillo AI.
  * Una foto ilegible no sigue.

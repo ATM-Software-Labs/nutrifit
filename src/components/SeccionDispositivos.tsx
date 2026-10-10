@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { api } from '../lib/api'
 
 interface Dispositivo {
@@ -30,42 +30,59 @@ export function SeccionDispositivos() {
   const revocar = async (id: string) => {
     try {
       await api.cerrarDispositivo(id)
-      setDispositivos((prev) => prev.filter((d) => d.id !== id))
+      if (id === 'ALL_OTHER') {
+        setDispositivos((prev) => prev.filter((d) => d.es_actual))
+      } else {
+        setDispositivos((prev) => prev.filter((d) => d.id !== id))
+      }
     } catch {
       /* 404 si la sesión no es de esta cuenta */
     }
   }
 
   return (
-    <div style={{ background: '#141416', border: '1px solid #23262F', borderRadius: '20px', padding: '24px', marginTop: '24px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+    <div className="mt-6 rounded-2xl border border-neutral-200 bg-card p-5 dark:border-neutral-800 dark:bg-card-dark">
+      <div className="mb-4 flex items-center justify-between">
         <div>
-          <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#FCFCFD' }}>Dispositivos y sesiones</h3>
-          <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#777E90' }}>Sesiones activas en tu cuenta.</p>
+          <h3 className="text-lg font-semibold text-graphite dark:text-neutral-100">Dispositivos y sesiones</h3>
+          <p className="mt-1 text-sm text-neutral-500">Sesiones activas en tu cuenta.</p>
         </div>
-        <span style={{ fontSize: '12px', fontWeight: 600, background: 'rgba(16, 185, 129, 0.1)', color: '#10B981', padding: '4px 10px', borderRadius: '999px' }}>
+        <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
           {dispositivos.length} activos
         </span>
       </div>
       {cargando ? (
-        <div style={{ color: '#777E90', fontSize: '14px' }}>Cargando sesiones...</div>
+        <div className="text-sm text-neutral-500">Cargando sesiones...</div>
       ) : dispositivos.length === 0 ? (
-        <div style={{ background: '#1A1D1F', borderRadius: '12px', padding: '16px', color: '#777E90', fontSize: '14px', textAlign: 'center' }}>
-          Solo esta sesión activa.
+        <div className="rounded-xl bg-neutral-100 p-4 text-center text-sm text-neutral-500 dark:bg-neutral-900">
+          No hay sesiones activas.
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div className="flex flex-col gap-3">
           {dispositivos.map((d) => (
-            <div key={d.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: '#1A1D1F', borderRadius: '14px', border: '1px solid #23262F' }}>
+            <div key={d.id} className={`flex items-center justify-between rounded-xl border p-4 ${d.es_actual ? 'border-emerald-500 bg-emerald-500/5 dark:bg-emerald-500/10' : 'border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900'}`}>
               <div>
-                <span style={{ fontSize: '14px', fontWeight: 600, color: '#FCFCFD' }}>{d.dispositivo || 'Navegador Web'}</span>
-                <div style={{ fontSize: '12px', color: '#777E90', marginTop: '2px' }}>{d.navegador} {d.ip ? `· ${d.ip}` : ''}</div>
+                <span className="flex items-center gap-2 text-sm font-semibold text-graphite dark:text-neutral-100">
+                  {d.dispositivo || 'Navegador Web'}
+                  {d.es_actual && <span className="rounded bg-emerald-500/10 px-1.5 py-0.5 text-[10px] uppercase text-emerald-600 dark:text-emerald-400">Actual</span>}
+                </span>
+                <div className="mt-1 text-xs text-neutral-500">
+                  {d.navegador || 'Web'} {d.ip ? `· IP: ${d.ip}` : ''}
+                  {d.ultimo_acceso && ` · ${new Date(d.ultimo_acceso * 1000).toLocaleString()}`}
+                </div>
               </div>
-              <button onClick={() => revocar(d.id)} style={{ background: 'transparent', border: '1px solid #353945', color: '#EF4444', padding: '6px 12px', borderRadius: '8px', fontSize: '13px', cursor: 'pointer' }}>
-                Cerrar sesión
-              </button>
+              {!d.es_actual && (
+                <button onClick={() => revocar(d.id)} className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-500 transition hover:bg-red-50 dark:border-red-900/50 dark:hover:bg-red-900/20">
+                  Cerrar
+                </button>
+              )}
             </div>
           ))}
+          {dispositivos.length > 1 && (
+            <button onClick={() => revocar('ALL_OTHER')} className="mt-2 w-full rounded-xl bg-red-50 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-100 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20">
+              Cerrar en todos los demás dispositivos
+            </button>
+          )}
         </div>
       )}
     </div>

@@ -207,7 +207,7 @@ export async function completarGoogle(env: Env, request: Request): Promise<Respo
     return fallo('error_email')
   }
   const u = await asegurarUsuario(env, email)
-  if (!u) return fallo()
+  if (!u) return fallo('error_bd')
   if (nombre) {
     await env.DB.prepare('UPDATE usuarios SET nombre = ?1 WHERE id = ?2 AND (nombre IS NULL OR nombre = \'\')').bind(nombre, u.id).run()
   }

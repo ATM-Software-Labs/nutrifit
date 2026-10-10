@@ -5,7 +5,7 @@
  * panel en 2–3 columnas con «Añadir comida» siempre visible.
  */
 import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
-import { ChartColumn, House, Plus, Settings, User } from 'lucide-react'
+import { ChartColumn, Plus, Settings, User } from 'lucide-react'
 import { Logo } from './Logo.tsx'
 import { BarreraEscanner } from './BarreraEscanner.tsx'
 import { AnilloCalorias } from './AnilloCalorias.tsx'
@@ -14,6 +14,7 @@ import { SelectorSemana } from './SelectorSemana.tsx'
 import { SeccionComida } from './SeccionComida.tsx'
 import { HojaAnadir } from './HojaAnadir.tsx'
 import { WidgetAgua } from './WidgetAgua.tsx'
+import { WidgetAyuno } from './WidgetAyuno.tsx'
 import { BannerInstalarPWA } from './BannerInstalarPWA.tsx'
 import { BarraLateral } from './BarraLateral.tsx'
 import { AnadirRapido } from './AnadirRapido.tsx'
@@ -31,7 +32,6 @@ import { TIPOS_COMIDA, type Comida, type NuevaComida, type ResultadoAnalisis, ty
 
 const ScannerComida = lazy(() => import('./ScannerComida.tsx'))
 const ModalRevisionPlato = lazy(() => import('./ModalRevisionPlato.tsx'))
-const GraficaPeso = lazy(() => import('./GraficaPeso.tsx'))
 const Ajustes = lazy(() => import('./Ajustes.tsx'))
 const Historial = lazy(() => import('./Historial.tsx'))
 const PaginaPerfil = lazy(async () => {
@@ -40,6 +40,7 @@ const PaginaPerfil = lazy(async () => {
 })
 const DescribirComida = lazy(() => import('./DescribirComida.tsx'))
 const BuscarAlimento = lazy(() => import('./BuscarAlimento.tsx'))
+const PaginaPeso = lazy(() => import('./PaginaPeso.tsx'))
 
 type Hoja =
   | null
@@ -76,7 +77,7 @@ export default function Dashboard({
   onSalir,
 }: {
   usuario: Usuario
-  vista?: 'hoy' | 'historial' | 'profile'
+  vista?: 'hoy' | 'historial' | 'profile' | 'ajustes' | 'peso'
   onUsuario: (u: Usuario) => void
   onSalir: () => void
 }) {
@@ -208,20 +209,35 @@ export default function Dashboard({
           </div>
         )}
 
-        {/* Un único árbol: en móvil va en orden (anillo, comidas, agua, peso); en
-            escritorio, 2 columnas (lg) o 3 (xl) con las comidas en el centro. La
-            última fila 1fr absorbe la altura de la columna de comidas. */}
-        <div className="mt-5 grid grid-cols-1 gap-4 lg:mt-0 lg:grid-cols-2 lg:grid-rows-[auto_auto_auto_1fr] lg:items-start lg:gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1fr)] xl:grid-rows-[auto_auto_1fr]">
-          <section className="tarjeta px-6 pb-6 pt-7 lg:col-start-1 lg:row-start-1" aria-label="Resumen de calorías y macros">
-            <AnilloCalorias consumidas={totales.calorias} meta={metas.calorias} quemadas={sumarQuemadas ? quemadas : 0} />
-            <div className="mt-7 space-y-4">
-              <BarraMacro macro="proteinas" valor={totales.proteinas} meta={metas.proteinas} />
-              <BarraMacro macro="carbohidratos" valor={totales.carbohidratos} meta={metas.carbohidratos} />
-              <BarraMacro macro="grasas" valor={totales.grasas} meta={metas.grasas} />
-            </div>
-          </section>
+        {/*  Un único árbol: en móvil va en orden (anillo, comidas, agua, peso); en
+            escritorio, 2 columnas (lg) o 3 (xl) con las comidas en el centro. */}
+        <div className="mt-5 flex flex-col gap-4 lg:mt-0 lg:grid lg:grid-cols-12 lg:items-start lg:gap-6 xl:gap-8">
+          <div className="flex flex-col gap-4 lg:col-span-5 xl:col-span-4 lg:sticky lg:top-8">
+            <section className="tarjeta px-6 pb-6 pt-7" aria-label="Resumen de caloras y macros">
+              <AnilloCalorias consumidas={totales.calorias} meta={metas.calorias} quemadas={sumarQuemadas ? quemadas : 0} />
+              <div className="mt-7 space-y-4">
+                <BarraMacro macro="proteinas" valor={totales.proteinas} meta={metas.proteinas} />
+                <BarraMacro macro="carbohidratos" valor={totales.carbohidratos} meta={metas.carbohidratos} />
+                <BarraMacro macro="grasas" valor={totales.grasas} meta={metas.grasas} />
+              </div>
+            </section>
 
-          <div className="space-y-3 lg:col-start-2 lg:row-span-4 lg:row-start-1 xl:row-span-3">
+            <div className="hidden lg:block">
+              <AnadirRapido
+                onTexto={(comida) => setHoja({ tipo: 'texto', comida })}
+                onBuscar={(comida) => setHoja({ tipo: 'buscar', comida })}
+                onArchivo={(comida, archivo) => setHoja({ tipo: 'scanner', comida, archivo })}
+                onManual={(comida) => setHoja({ tipo: 'revision', comida, resultado: null, imagenUrl: null })}
+              />
+            </div>
+
+            <div className="space-y-4 lg:space-y-6 xl:hidden">
+              <WidgetAyuno />
+              <WidgetAgua fecha={fecha} inicial={resumen?.agua_ml ?? 0} pesoKg={usuario.peso_kg} onActividad={onActividad} onCambio={(ml) => actualizar((r) => ({ ...r, agua_ml: ml }))} />
+            </div>
+          </div>
+
+          <div className="space-y-3 lg:col-span-7 xl:col-span-5">
             {resumen === null && !error
               ? TIPOS_COMIDA.map((t) => <Esqueleto key={t} alto="h-[68px]" />)
               : TIPOS_COMIDA.map((t) => (
@@ -229,21 +245,9 @@ export default function Dashboard({
                 ))}
           </div>
 
-          <div className="hidden lg:col-start-1 lg:row-start-2 lg:block">
-            <AnadirRapido
-              onTexto={(comida) => setHoja({ tipo: 'texto', comida })}
-              onBuscar={(comida) => setHoja({ tipo: 'buscar', comida })}
-              onArchivo={(comida, archivo) => setHoja({ tipo: 'scanner', comida, archivo })}
-              onManual={(comida) => setHoja({ tipo: 'revision', comida, resultado: null, imagenUrl: null })}
-            />
-          </div>
-
-          {/* Agua y peso van juntos (también en móvil, uno tras otro). */}
-          <div className="space-y-4 lg:col-start-1 lg:row-start-3 lg:space-y-6 xl:col-start-3 xl:row-span-3 xl:row-start-1">
+          <div className="hidden xl:flex xl:col-span-3 flex-col gap-6 lg:sticky lg:top-8">
+            <WidgetAyuno />
             <WidgetAgua fecha={fecha} inicial={resumen?.agua_ml ?? 0} pesoKg={usuario.peso_kg} onActividad={onActividad} onCambio={(ml) => actualizar((r) => ({ ...r, agua_ml: ml }))} />
-            <Suspense fallback={<Esqueleto alto="h-64" />}>
-              <GraficaPeso usuario={usuario} />
-            </Suspense>
           </div>
         </div>
       </div>
@@ -258,39 +262,44 @@ export default function Dashboard({
         onHoy={() => verHoy()}
         onHistorial={() => navegar('/historial')}
         onAnadir={() => setHoja({ tipo: 'anadir', comida: tipoPorHora() })}
-        onPeso={() => verHoy('peso')}
-        onAgua={() => verHoy('agua')}
-        onAjustes={() => setHoja({ tipo: 'ajustes' })}
+        onPeso={() => navegar('/peso')}
+          onAgua={() => verHoy('agua')}
+        onAjustes={() => navegar('/ajustes')}
         onPerfil={() => navegar('/profile')}
         onSalir={onSalir}
       />
       <div className="mx-auto min-h-dvh w-full max-w-md pb-32 lg:mx-0 lg:min-w-0 lg:max-w-none lg:flex-1 lg:pb-12">
       <header className="sticky top-0 z-30 border-b border-transparent bg-bg/80 px-5 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-md dark:bg-bg-dark/80 lg:hidden">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <Logo size={30} className="text-graphite dark:text-neutral-100" />
-            <span className="text-lg font-semibold tracking-tight">
-              Nutri<span className="text-mint-700 dark:text-mint-400">Fit</span>
-            </span>
-          </div>
-          <div className="flex items-center gap-1">
-            {vista === 'hoy' ? (
+        {vista === 'hoy' ? (
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <Logo size={30} className="text-graphite dark:text-neutral-100" />
+              <span className="text-lg font-semibold tracking-tight">
+                Nutri<span className="text-mint-700 dark:text-mint-400">Fit</span>
+              </span>
+            </div>
+            <div className="flex items-center gap-1">
               <Button variant="ghost" size="icon" aria-label="Historial" onClick={() => navegar('/historial')}>
                 <ChartColumn size={20} strokeWidth={1.75} />
               </Button>
-            ) : (
-              <Button variant="ghost" size="icon" aria-label="Volver a hoy" onClick={() => navegar('/')}>
-                <House size={20} strokeWidth={1.75} />
+              <Button variant="ghost" size="icon" aria-label="Mi perfil" onClick={() => navegar('/profile')}>
+                <User size={20} strokeWidth={1.75} />
               </Button>
-            )}
-            <Button variant="ghost" size="icon" aria-label="Mi perfil" aria-current={vista === 'profile' ? 'page' : undefined} onClick={() => navegar('/profile')}>
-              <User size={20} strokeWidth={1.75} />
-            </Button>
-            <Button variant="ghost" size="icon" aria-label="Ajustes" onClick={() => setHoja({ tipo: 'ajustes' })}>
-              <Settings size={20} strokeWidth={1.75} />
-            </Button>
+              <Button variant="ghost" size="icon" aria-label="Ajustes" onClick={() => navegar('/ajustes')}>
+                <Settings size={20} strokeWidth={1.75} />
+              </Button>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="flex items-center gap-3">
+            <button type="button" onClick={() => navegar('/')} className="rounded-full p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition -ml-2">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-graphite dark:text-neutral-100"><path d="m15 18-6-6 6-6"/></svg>
+            </button>
+            <span className="text-lg font-semibold tracking-tight text-graphite dark:text-neutral-100">
+              {vista === 'ajustes' ? 'Ajustes' : vista === 'profile' ? 'Mi Perfil' : vista === 'peso' ? 'Control de Peso' : 'Historial'}
+            </span>
+          </div>
+        )}
       </header>
 
       {vista === 'hoy' ? (
@@ -298,6 +307,14 @@ export default function Dashboard({
       ) : vista === 'profile' ? (
         <Suspense fallback={<div className="p-10"><Esqueleto alto="h-64" /></div>}>
           <PaginaPerfil usuario={usuario} onUsuario={onUsuario} />
+        </Suspense>
+      ) : vista === 'ajustes' ? (
+        <Suspense fallback={<div className="p-10"><Esqueleto alto="h-64" /></div>}>
+          <Ajustes usuario={usuario} onClose={() => navegar('/')} onUsuario={(u) => { onUsuario(u); recargar() }} onSalir={onSalir} enPagina={true} />
+        </Suspense>
+      ) : vista === 'peso' ? (
+        <Suspense fallback={<div className="p-10"><Esqueleto alto="h-64" /></div>}>
+          <PaginaPeso usuario={usuario} />
         </Suspense>
       ) : (
         <Suspense fallback={<div className="p-10"><Esqueleto alto="h-64" /></div>}>
@@ -362,7 +379,6 @@ export default function Dashboard({
         {hoja?.tipo === 'revision' && (
           <ModalRevisionPlato resultado={hoja.resultado} imagenUrl={hoja.imagenUrl} tipoInicial={hoja.comida} fecha={fecha} onClose={cerrar} onConfirmar={(c) => void guardar(c)} />
         )}
-        {hoja?.tipo === 'ajustes' && <Ajustes usuario={usuario} onClose={cerrar} onUsuario={(u) => { onUsuario(u); recargar() }} onSalir={onSalir} />}
       </Suspense>
 
       <BannerInstalarPWA />

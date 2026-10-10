@@ -52,7 +52,7 @@ export function BarraLateral({
   onSalir,
 }: {
   usuario: Usuario
-  vista: 'hoy' | 'historial' | 'profile'
+  vista: 'hoy' | 'historial' | 'profile' | 'ajustes' | 'peso'
   onHoy: () => void
   onHistorial: () => void
   onAnadir: () => void
@@ -64,7 +64,6 @@ export function BarraLateral({
 }) {
   const { t } = useIdioma()
   const i = { size: 18, strokeWidth: 1.75 }
-  const inicial = (usuario.nombre ?? usuario.email).trim().charAt(0).toUpperCase()
   const [qr, setQr] = useState(false)
   const conQr = ofrecerDescarga()
   return (
@@ -124,9 +123,11 @@ export function BarraLateral({
           onClick={onPerfil}
           className="flex w-full items-center gap-3 rounded-xl px-1 py-1 text-left transition-colors hover:bg-neutral-100/70 dark:hover:bg-white/10"
         >
-          <span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-mint-50 text-sm font-semibold text-mint-800 dark:bg-mint-950 dark:text-mint-300">
-            {inicial}
-          </span>
+          <img
+            src={usuario.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent((usuario.nombre || usuario.email || '').trim())}&background=064e3b&color=34d399&bold=true`}
+            alt=""
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-mint-50 object-cover text-sm font-semibold text-mint-800 dark:bg-mint-950 dark:text-mint-300"
+          />
           <span className="min-w-0 flex-1">
             {usuario.nombre && <span className="block truncate text-sm font-medium">{usuario.nombre}</span>}
             <span className="block truncate text-xs text-neutral-500 dark:text-neutral-400" title={usuario.email}>

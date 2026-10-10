@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent, type MouseEvent } from 'react'
-import { BadgeCheck, Flame, User } from 'lucide-react'
-import { useEstadoArchivo, useSrcArchivo } from '../lib/archivoSrc.ts'
-import { avatarGenerado } from '../lib/avatar.ts'
+import { ArrowLeft, BadgeCheck, Flame, User, Trophy, Target, Droplets, Dumbbell, Zap, Users, Rocket, Scale } from 'lucide-react'
+import { navegar } from '../lib/rutas.ts'
+import { useSrcArchivo } from '../lib/archivoSrc.ts'
 import { api, ApiError } from '../lib/api.ts'
 import { comprimirImagen, ErrorImagen } from '../lib/imagen.ts'
 import { hoyISO, sumarDias } from '../lib/fechas.ts'
@@ -13,6 +13,7 @@ import { useToast } from './ui/Toast.tsx'
 import { BarraMacro } from './BarrasMacros.tsx'
 import type { Usuario } from '../lib/tipos.ts'
 import { CropperModal } from './CropperModal.tsx'
+import { useIdioma } from '../hooks/useIdioma.ts'
 
 type Pestana = 'feed' | 'amigos'
 
@@ -47,14 +48,7 @@ function texto(v: string | null | undefined): string {
   return v ? desescaparHtml(v) : ''
 }
 
-function Silueta() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-1/2 w-1/2">
-      <circle cx="12" cy="8" r="3.2" fill="currentColor" />
-      <path fill="currentColor" d="M5.2 19.4c.7-3.3 3.2-5 6.8-5s6.1 1.7 6.8 5H5.2z" />
-    </svg>
-  )
-}
+import { FotoAvatar } from './ui/Avatar.tsx'
 
 function BotonAmistad({
   relacion,
@@ -118,46 +112,6 @@ function AnilloMeta({ valor, meta }: { valor: number; meta: number }) {
   )
 }
 
-function FotoAvatar({ url, nombre, grande = false }: { url: string | null; nombre: string; grande?: boolean }) {
-  const { src: remoto, pendiente } = useEstadoArchivo(url)
-  const [fotoRota, setFotoRota] = useState(false)
-  const [generadoRoto, setGeneradoRoto] = useState(false)
-  useEffect(() => {
-    setFotoRota(false)
-    setGeneradoRoto(false)
-  }, [url])
-
-  const caja = grande ? 'h-full w-full text-2xl' : 'h-9 w-9 shrink-0 text-sm'
-  const lado = grande ? 96 : 36
-  const letra = nombre.replace(/^@/, '').trim().charAt(0).toUpperCase()
-  const inicial = (
-    <span aria-hidden="true" className={`flex items-center justify-center rounded-full bg-[#064e3b] font-semibold text-[#34d399] ${caja}`}>
-      {letra || <Silueta />}
-    </span>
-  )
-  if (pendiente) return inicial
-
-  const usarFoto = Boolean(remoto) && !fotoRota
-  const src = usarFoto ? remoto : generadoRoto ? null : avatarGenerado(nombre)
-  if (!src) return inicial
-  return (
-    <img
-      src={src}
-      alt=""
-      width={lado}
-      height={lado}
-      referrerPolicy="no-referrer"
-      loading={grande ? 'eager' : 'lazy'}
-      onError={(evento) => {
-        evento.currentTarget.onerror = null
-        if (usarFoto) setFotoRota(true)
-        else setGeneradoRoto(true)
-      }}
-      className={`rounded-full object-cover ${caja}`}
-    />
-  )
-}
-
 function Cara({ nombre, avatar }: { nombre: string; avatar: string | null }) {
   return <FotoAvatar key={avatar || nombre} url={avatar} nombre={nombre} />
 }
@@ -184,6 +138,7 @@ function BannerFoto({ url }: { url: string }) {
 
 export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuario: (u: Usuario) => void }) {
   const toast = useToast()
+  const { t } = useIdioma()
   const hoy = hoyISO()
   const { resumen } = useResumen(hoy)
   const [pestana, setPestana] = useState<Pestana>('feed')
@@ -386,20 +341,34 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
   const kcalMacro = totales.proteinas * 4 + totales.carbohidratos * 4 + totales.grasas * 9
   const reparto = (kcal: number) => (kcalMacro > 0 ? Math.round((kcal / kcalMacro) * 100) : 0)
   const pctCalorias = metas.calorias > 0 ? Math.round((totales.calorias / metas.calorias) * 100) : 0
+  const agua = resumen?.agua_ml ?? 0
+  const caloriasOk = metas.calorias > 0 && totales.calorias >= metas.calorias - 200 && totales.calorias <= metas.calorias + 200
+  const macrosOk = metas.proteinas > 0 && totales.proteinas >= metas.proteinas * 0.9 && totales.carbohidratos >= metas.carbohidratos * 0.9 && totales.grasas >= metas.grasas * 0.9
   const logros = [
-    { id: 'racha7', titulo: '7 días seguidos', detalle: 'Una semana registrando', ok: racha >= 7 },
-    { id: 'racha30', titulo: '30 días seguidos', detalle: 'Un mes de constancia', ok: racha >= 30 },
-    { id: 'racha100', titulo: '100 días seguidos', detalle: 'Una dedicación increíble', ok: racha >= 100 },
-    { id: 'prote', titulo: 'Meta de proteína alcanzada', detalle: 'El objetivo de hoy', ok: metas.proteinas > 0 && totales.proteinas >= metas.proteinas },
-    { id: 'deportista', titulo: 'Deportista activo', detalle: 'Has registrado al menos 5 entrenamientos', ok: sesiones.length >= 5 },
-    { id: 'intenso', titulo: 'Entrenamiento intenso', detalle: 'Registraste una sesión de alta intensidad', ok: sesiones.some(s => s.intensidad === 'alta') },
-    { id: 'social', titulo: 'Amigable', detalle: 'Tienes al menos 1 amigo', ok: amigos >= 1 },
-    { id: 'pionero', titulo: 'Pionero', detalle: 'Cuenta creada en NutriFit', ok: Boolean(usuario.creado_en) },
+    { id: 'racha7', icono: <Flame size={24} className="text-orange-500" />, titulo: '7 días seguidos', detalle: 'Una semana registrando', ok: racha >= 7 },
+    { id: 'racha30', icono: <Flame size={24} className="text-orange-500" />, titulo: '30 días seguidos', detalle: 'Un mes de constancia', ok: racha >= 30 },
+    { id: 'racha100', icono: <Flame size={24} className="text-orange-500" />, titulo: '100 días seguidos', detalle: 'Una dedicación increíble', ok: racha >= 100 },
+    { id: 'prote', icono: <Dumbbell size={24} className="text-blue-500" />, titulo: 'Meta de proteína', detalle: 'El objetivo de hoy', ok: metas.proteinas > 0 && totales.proteinas >= metas.proteinas },
+    { id: 'equilibrio', icono: <Scale size={24} className="text-emerald-500" />, titulo: 'Equilibrio perfecto', detalle: 'Cumpliste tus macros', ok: macrosOk },
+    { id: 'calorias', icono: <Target size={24} className="text-purple-500" />, titulo: 'Diana de calorías', detalle: 'Acierto exacto en calorías', ok: caloriasOk },
+    { id: 'agua', icono: <Droplets size={24} className="text-cyan-500" />, titulo: 'Hidratación óptima', detalle: 'Más de 2 litros de agua', ok: agua >= 2000 },
+    { id: 'deportista', icono: <Trophy size={24} className="text-yellow-500" />, titulo: 'Deportista activo', detalle: 'Has registrado al menos 5 entrenamientos', ok: sesiones.length >= 5 },
+    { id: 'intenso', icono: <Zap size={24} className="text-red-500" />, titulo: 'Entrenamiento intenso', detalle: 'Registraste una sesión de alta intensidad', ok: sesiones.some(s => s.intensidad === 'alta') },
+    { id: 'social', icono: <Users size={24} className="text-indigo-500" />, titulo: 'Amigable', detalle: 'Tienes al menos 1 amigo', ok: amigos >= 1 },
+    { id: 'pionero', icono: <Rocket size={24} className="text-pink-500" />, titulo: 'Pionero', detalle: 'Cuenta creada en NutriFit', ok: Boolean(usuario.creado_en) },
   ]
 
   return (
-    <main className="px-5 pb-28 lg:px-10 lg:pb-12 lg:pt-8">
-      <div className="mx-auto max-w-5xl">
+    <main className="px-5 pb-28 lg:px-10 lg:pb-12 lg:pt-8 flex flex-col gap-6 lg:gap-8">
+      <div className="mx-auto max-w-5xl w-full">
+        <header className="flex items-center gap-4 hidden lg:flex mb-6">
+          <button onClick={() => navegar('/')} className="rounded-full p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition" aria-label="Volver">
+            <ArrowLeft size={24} className="text-graphite dark:text-neutral-100" />
+          </button>
+          <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-graphite dark:text-neutral-100">
+            Mi Perfil
+          </h1>
+        </header>
         <div className="relative">
           <div className="bannerContainer relative h-[132px] overflow-hidden rounded-3xl bg-[#022c22]">
             <div className="absolute inset-0" style={{ background: BANNER_VACIO }} />
@@ -456,28 +425,37 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
             {bio && <p className="mt-2 max-w-prose text-sm text-neutral-600 dark:text-neutral-300">{bio}</p>}
           </div>
           {!editando && (
-            <button
-              type="button"
-              onClick={() => setEditando(true)}
-              className="shrink-0 rounded-full border border-neutral-200 bg-card px-4 py-2 text-sm font-semibold text-graphite shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-emerald-500 hover:bg-emerald-500 hover:text-black hover:shadow-md hover:shadow-emerald-500/25 dark:border-neutral-700 dark:bg-card-dark dark:text-neutral-100"
-            >
-              Editar perfil
-            </button>
+            <div className="flex flex-col gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setEditando(true)}
+                className="rounded-full border border-neutral-200 bg-card px-4 py-2 text-sm font-semibold text-graphite shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-emerald-500 hover:bg-emerald-500 hover:text-black hover:shadow-md hover:shadow-emerald-500/25 dark:border-neutral-700 dark:bg-card-dark dark:text-neutral-100"
+              >
+                Editar perfil
+              </button>
+              <button
+                type="button"
+                onClick={() => { import('../lib/rutas.ts').then(m => m.navegar('/ajustes')) }}
+                className="rounded-full border border-neutral-200 bg-card px-4 py-2 text-sm font-semibold text-graphite shadow-sm transition duration-200 hover:-translate-y-0.5 hover:bg-neutral-100 dark:border-neutral-700 dark:bg-card-dark dark:text-neutral-100 dark:hover:bg-neutral-800"
+              >
+                Ajustes (Meta & Físico)
+              </button>
+            </div>
           )}
         </div>
 
         <ul className="mt-4 grid grid-cols-3 gap-2">
           <li className="rounded-2xl border border-neutral-200 bg-card px-3 py-3 dark:border-neutral-800 dark:bg-card-dark">
             <p className="cifra text-lg font-semibold leading-none">{racha}</p>
-            <p className="mt-1 flex items-center gap-1 text-xs text-neutral-500"><Flame size={12} className="text-emerald-500" aria-hidden="true" /> Días en racha</p>
+            <p className="mt-1 flex items-center gap-1 text-xs text-neutral-500"><Flame size={12} className="text-emerald-500" aria-hidden="true" /> {t('perfil.racha')}</p>
           </li>
           <li className="rounded-2xl border border-neutral-200 bg-card px-3 py-3 dark:border-neutral-800 dark:bg-card-dark">
             <p className="cifra text-lg font-semibold leading-none">{entrenosMes}</p>
-            <p className="mt-1 text-xs text-neutral-500">Sesiones este mes</p>
+            <p className="mt-1 text-xs text-neutral-500">{t('perfil.sesiones')}</p>
           </li>
           <li className="rounded-2xl border border-neutral-200 bg-card px-3 py-3 dark:border-neutral-800 dark:bg-card-dark">
             <p className="cifra text-lg font-semibold leading-none">{amigos}</p>
-            <p className="mt-1 text-xs text-neutral-500">Amigos</p>
+            <p className="mt-1 text-xs text-neutral-500">{t('perfil.amigos')}</p>
           </li>
         </ul>
 
@@ -515,7 +493,7 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
               onClick={() => setPestana(id)}
               className={`h-10 rounded-xl text-sm font-medium ${pestana === id ? 'bg-mint text-white' : 'border border-neutral-200 dark:border-neutral-800'}`}
             >
-              {id === 'feed' ? 'Feed' : 'Amigos'}
+              {id === 'feed' ? 'Feed' : t('perfil.amigos')}
             </button>
           ))}
         </div>
@@ -558,7 +536,7 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
             </section>
             <div className="grid gap-4">
             <section className="tarjeta p-4" aria-labelledby="titulo-logros">
-              <h2 id="titulo-logros" className="text-sm font-semibold">Logros</h2>
+              <h2 id="titulo-logros" className="text-sm font-semibold">{t('perfil.logros')}</h2>
               <ul className="mt-3 flex flex-wrap gap-3">
                 {logros.map((logro) => (
                   <li key={logro.id}>
@@ -567,7 +545,7 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
                       className={`group relative flex h-[52px] w-[52px] items-center justify-center rounded-full border text-xl ${logro.ok ? 'border-emerald-500/50 bg-emerald-500/15' : 'border-neutral-300 bg-neutral-100 grayscale dark:border-neutral-700 dark:bg-neutral-900'}`}
                       aria-label={`${logro.titulo}. ${logro.ok ? 'Desbloqueado' : 'Bloqueado'}. ${logro.detalle}`}
                     >
-                      <span aria-hidden="true">{logro.ok ? '🏅' : '🔒'}</span>
+                      <span aria-hidden="true">{logro.ok ? logro.icono : <Trophy size={24} className="text-neutral-400" />}</span>
                       <span role="tooltip" className="pointer-events-none absolute bottom-[calc(100%+8px)] left-1/2 z-20 hidden w-max max-w-[14rem] -translate-x-1/2 rounded-md bg-neutral-900 px-2 py-1 text-left text-xs font-medium text-white shadow-lg group-hover:block group-focus-visible:block">
                         {logro.titulo}
                         <span className="mt-0.5 block font-normal text-neutral-300">{logro.ok ? 'Desbloqueado' : 'Bloqueado'} · {logro.detalle}</span>
@@ -651,14 +629,14 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
                         </div>
                       </div>
                       {siguiendo ? (
-                        <span className="shrink-0 text-xs text-neutral-500">Siguiendo</span>
+                        <span className="shrink-0 text-xs text-neutral-500">{t('perfil.siguiendo')}</span>
                       ) : enviada ? (
                         <span className="shrink-0 text-xs text-neutral-500">Solicitud enviada</span>
                       ) : recibida ? (
                         <button type="button" onClick={() => void responder(vinculo.id, 'aceptada')} className="h-9 shrink-0 rounded-xl bg-mint px-3 text-sm font-medium text-white">Aceptar</button>
                       ) : (
                         <button type="button" className="btn-add-friend h-9 shrink-0 rounded-full bg-emerald-500 px-3.5 text-sm font-semibold text-black transition hover:-translate-y-0.5 hover:bg-emerald-400" data-user-id={s.id}>
-                          Seguir
+                          {t('perfil.seguir')}
                         </button>
                       )}
                     </li>
@@ -678,7 +656,7 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
                     </span>
                   ) : (
                     <span className="text-xs text-neutral-500">
-                      {a.estado === 'aceptada' ? 'Amigos' : a.estado === 'pendiente' ? (a.direccion === 'enviada' ? 'Solicitud enviada' : 'Pendiente') : 'Rechazada'}
+                      {a.estado === 'aceptada' ? t('perfil.amigos') : a.estado === 'pendiente' ? (a.direccion === 'enviada' ? 'Solicitud enviada' : 'Pendiente') : 'Rechazada'}
                     </span>
                   )}
                 </li>

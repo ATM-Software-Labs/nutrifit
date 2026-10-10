@@ -4,7 +4,6 @@ import { ChevronRight, Download, ExternalLink, LogOut, Monitor, Moon, Shield, Su
 import { URL_REPO } from '../lib/config.ts'
 import { clicPrivacidad } from '../lib/rutas.ts'
 import { esNativa } from '../lib/plataforma.ts'
-import { Sheet } from './ui/Sheet.tsx'
 import { Button } from './ui/Button.tsx'
 import { Input } from './ui/Input.tsx'
 import { Segmented } from './ui/Segmented.tsx'
@@ -29,16 +28,16 @@ import type { Idioma } from '../lib/i18n.ts'
 const SELECT =
   'h-12 w-full appearance-none rounded-2xl border border-neutral-200 bg-card px-4 text-[15px] focus:border-mint focus:outline-none focus:ring-4 focus:ring-mint/15 dark:border-neutral-800 dark:bg-card-dark'
 
-function Seccion({ titulo, children }: { titulo: string; children: React.ReactNode }) {
+function Seccion({ id, titulo, children }: { id?: string; titulo: string; children: React.ReactNode }) {
   return (
-    <section className="space-y-4">
+    <section id={id} className="space-y-4 scroll-mt-8">
       <h3 className="etiqueta">{titulo}</h3>
       {children}
     </section>
   )
 }
 
-export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usuario: Usuario; onClose: () => void; onUsuario: (u: Usuario) => void; onSalir: () => void }) {
+export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usuario: Usuario; onClose: () => void; onUsuario: (u: Usuario) => void; onSalir: () => void; enPagina?: boolean }) {
   const [nombre, setNombre] = useState(usuario.nombre ?? '')
   const [sexo, setSexo] = useState<Sexo>(usuario.sexo ?? 'hombre')
   const [edad, setEdad] = useState(String(usuario.edad ?? 30))
@@ -129,9 +128,18 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
   }
 
   return (
-    <Sheet abierto onClose={onClose} titulo={t('ajustes.titulo')} ancho="lg">
-      <div className="space-y-9 pb-2">
-        <Seccion titulo={t('ajustes.perfil')}>
+    <main className="mx-auto max-w-5xl px-5 pb-12 pt-6 lg:px-8 lg:pt-10 flex flex-col lg:flex-row gap-8 lg:gap-16">
+      <aside className="w-full lg:w-56 shrink-0 lg:sticky lg:top-10 h-max z-10">
+        <h1 className="mb-6 text-2xl lg:text-3xl font-semibold tracking-tight text-graphite dark:text-neutral-100 hidden lg:block">{t('ajustes.titulo')}</h1>
+        <nav className="hidden lg:flex flex-col gap-1 text-sm font-medium" aria-label="Ajustes">
+          <a href="#perfil" className="px-3 py-2 rounded-xl text-graphite dark:text-neutral-100 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition">Perfil y Objetivos</a>
+          <a href="#preferencias" className="px-3 py-2 rounded-xl text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition">Preferencias</a>
+          <a href="#dispositivos" className="px-3 py-2 rounded-xl text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition">Conexiones y Dispositivos</a>
+          <a href="#cuenta" className="px-3 py-2 rounded-xl text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition">Cuenta</a>
+        </nav>
+      </aside>
+      <div className="flex-1 space-y-12 pb-2 min-w-0">
+        <Seccion id="perfil" titulo={t('ajustes.perfil')}>
           <Input label={t('ajustes.nombre')} value={nombre} maxLength={60} onChange={(e) => setNombre(e.target.value)} />
           <Segmented label={t('ajustes.sexo')} valor={sexo} onChange={setSexo} opciones={[{ valor: 'hombre', etiqueta: t('ajustes.hombre') }, { valor: 'mujer', etiqueta: t('ajustes.mujer') }]} />
           <div className="grid grid-cols-3 gap-3">
@@ -196,7 +204,7 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
           </Button>
         </Seccion>
 
-        <Seccion titulo={t('ajustes.idioma')}>
+        <Seccion id="preferencias" titulo={t('ajustes.idioma')}>
           <Segmented
             label={t('ajustes.idioma')}
             valor={idioma}
@@ -222,7 +230,7 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
           />
         </Seccion>
 
-        <Seccion titulo={t('ajustes.dispositivos')}>
+        <Seccion id="dispositivos" titulo={t('ajustes.dispositivos')}>
           <SeccionDispositivos />
         </Seccion>
 
@@ -263,7 +271,7 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
           </div>
         </Seccion>
 
-        <Seccion titulo={t('ajustes.cuenta')}>
+        <Seccion id="cuenta" titulo={t('ajustes.cuenta')}>
           <p className="text-sm text-neutral-500 dark:text-neutral-400">
             {t('ajustes.sesion')} <span className="font-medium text-graphite dark:text-neutral-200">{usuario.email}</span>
           </p>
@@ -279,6 +287,6 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
           <p className="text-center text-2xs text-neutral-500 dark:text-neutral-400">NutriFit v{__APP_VERSION__} · {t('ajustes.dudas')} soporte@trujillomingorance.com</p>
         </Seccion>
       </div>
-    </Sheet>
+    </main>
   )
 }

@@ -8,8 +8,8 @@
  */
 import { useEffect, useState } from 'react'
 
-export type RutaApp = '/' | '/historial' | '/profile' | '/vincular'
-const RUTAS: RutaApp[] = ['/', '/historial', '/profile', '/vincular']
+export type RutaApp = '/' | '/historial' | '/profile' | '/vincular' | '/ajustes' | '/peso' | '/descargar'
+const RUTAS: RutaApp[] = ['/', '/historial', '/profile', '/vincular', '/ajustes', '/peso', '/descargar']
 
 export const rutaActual = () => location.pathname.replace(/\/+$/, '') || '/'
 

@@ -1,39 +1,32 @@
-/**
- * GET    /api/dispositivos — sesiones de ESTE usuario, si la tabla existe.
- * DELETE /api/dispositivos { sesionId } — solo una fila suya.
- * No basta con mandar una cabecera Authorization vacía de significado: la
- * sesión se contrasta con sesiones_web o tokens_app. Si la tabla no está,
- * se responde vacío o 404, sin devolver el SQL.
- */
 import type { Handler } from '../../utils/env.ts'
 import { error, json } from '../../utils/response.ts'
 import { leerBody } from '../../utils/http.ts'
 import { dispositivoSchema } from '../../utils/schemas.ts'
 import { exigirIdentidad } from '../../utils/identidad.ts'
 
-const COL = /^[A-Za-z_][A-Za-z0-9_]{0,40}$/
-
-async function columnas(env: { DB: import('../../utils/env.ts').Env['DB'] }): Promise<string[] | null> {
-  const tabla = await env.DB.prepare("SELECT 1 AS ok FROM sqlite_master WHERE type = 'table' AND name = 'sesiones_dispositivos'").first<{ ok: number }>()
-  if (!tabla) return null
-  const info = await env.DB.prepare('PRAGMA table_info(sesiones_dispositivos)').all<{ name: string }>()
-  return (info.results ?? []).map((c) => c.name).filter((c) => COL.test(c))
-}
-
 export const onRequestGet: Handler = async ({ env, data }) => {
   const sesion = await exigirIdentidad(env, data.sesion)
+  const idActual = sesion.via === 'cookie' ? sesion.sidHash : sesion.jtiHash;
   try {
-    const cols = await columnas(env)
-    if (!cols?.includes('usuario_id') || !cols.includes('id')) return json({ ok: true, dispositivos: [] })
-    const quiere = ['id', 'dispositivo', 'navegador', 'ip', 'ultimo_acceso'].filter((c) => cols.includes(c))
     const { results } = await env.DB.prepare(
-      `SELECT ${quiere.join(', ')} FROM sesiones_dispositivos
-       WHERE usuario_id = ?1 AND (revocado IS NULL OR revocado = 0)
-       ORDER BY ultimo_acceso DESC LIMIT 50`,
+      `SELECT sid_hash as id, 'Web' as dispositivo, 'Navegador' as navegador, null as ip, COALESCE(visto_en, creado_en) as ultimo_acceso
+       FROM sesiones_web
+       WHERE usuario_id = ?1 AND (revocado_en IS NULL)
+       UNION ALL
+       SELECT jti_hash as id, 'Móvil' as dispositivo, 'App Android' as navegador, null as ip, creado_en as ultimo_acceso
+       FROM tokens_app
+       WHERE usuario_id = ?1 AND (revocado_en IS NULL)
+       ORDER BY ultimo_acceso DESC LIMIT 50`
     )
       .bind(sesion.usuarioId)
       .all()
-    return json({ ok: true, dispositivos: results ?? [] })
+      
+    const dispositivos = (results ?? []).map((row: any) => ({
+      ...row,
+      es_actual: row.id === idActual
+    }))
+    
+    return json({ ok: true, dispositivos })
   } catch {
     return json({ ok: true, dispositivos: [] })
   }
@@ -43,12 +36,29 @@ export const onRequestDelete: Handler = async ({ request, env, data }) => {
   const sesion = await exigirIdentidad(env, data.sesion)
   const { sesionId } = await leerBody(request, dispositivoSchema)
   try {
-    const cols = await columnas(env)
-    if (!cols?.includes('usuario_id') || !cols.includes('id') || !cols.includes('revocado')) return error(404, 'Sesión no encontrada.')
-    const r = await env.DB.prepare('UPDATE sesiones_dispositivos SET revocado = 1 WHERE id = ?1 AND usuario_id = ?2')
-      .bind(sesionId, sesion.usuarioId)
+    const ahora = Math.floor(Date.now() / 1000)
+    
+    if (sesionId === 'ALL_OTHER') {
+        const idActual = sesion.via === 'cookie' ? sesion.sidHash : sesion.jtiHash;
+        await env.DB.prepare('UPDATE sesiones_web SET revocado_en = ?1 WHERE usuario_id = ?2 AND sid_hash != ?3').bind(ahora, sesion.usuarioId, idActual).run();
+        await env.DB.prepare('UPDATE tokens_app SET revocado_en = ?1 WHERE usuario_id = ?2 AND jti_hash != ?3').bind(ahora, sesion.usuarioId, idActual).run();
+        return json({ ok: true })
+    }
+    
+    const rWeb = await env.DB.prepare('UPDATE sesiones_web SET revocado_en = ?1 WHERE sid_hash = ?2 AND usuario_id = ?3')
+      .bind(ahora, sesionId, sesion.usuarioId)
       .run()
-    if (!r.meta.changes) return error(404, 'Sesión no encontrada.')
+    
+    let changes = rWeb.meta.changes
+
+    if (!changes) {
+      const rApp = await env.DB.prepare('UPDATE tokens_app SET revocado_en = ?1 WHERE jti_hash = ?2 AND usuario_id = ?3')
+        .bind(ahora, sesionId, sesion.usuarioId)
+        .run()
+      changes = rApp.meta.changes
+    }
+
+    if (!changes) return error(404, 'Sesión no encontrada.')
     return json({ ok: true })
   } catch {
     return error(404, 'Sesión no encontrada.')

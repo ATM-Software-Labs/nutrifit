@@ -4,10 +4,20 @@
  * permitiendo al usuario escanear el QR y bajar el APK.
  */
 import type { ReactNode } from 'react'
+import { navegar } from '../lib/rutas.ts'
+import { instalarPWA } from '../lib/instalacion.ts'
 
 export function ControlInstalar({ className, children }: { className?: string; children: ReactNode }) {
-  function pulsar() {
-    window.location.assign('/descargar')
+  async function pulsar() {
+    try {
+      const posible = await instalarPWA()
+      if (!posible) {
+        navegar('/descargar')
+      }
+    } catch (err) {
+      console.warn('Error al instalar PWA:', err)
+      navegar('/descargar')
+    }
   }
 
   return (
