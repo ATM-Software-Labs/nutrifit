@@ -55,8 +55,9 @@ test('Brevo recibe remitente, reply-to, textContent y cabeceras RFC 8058', () =>
   assert.equal(RESPONDER_A.name, 'NutriFit Soporte')
   assert.equal(cuerpo.htmlContent, m.html)
   assert.equal(cuerpo.textContent, m.texto)
-  assert.equal(typeof cuerpo.headers?.['X-Entity-Ref-ID'], 'string')
-  assert.equal(cuerpo.headers?.['Content-Language'], 'es')
+  const headers = cuerpo.headers as Record<string, string>
+  assert.equal(typeof headers['X-Entity-Ref-ID'], 'string')
+  assert.equal(headers['Content-Language'], 'es')
   assert.equal(CABECERAS_CORREO['X-Auto-Response-Suppress'], 'All')
   assert.equal(CABECERAS_CORREO['List-Unsubscribe'], '<https://nutri.trujillomingorance.com/ajustes>')
   assert.equal(CABECERAS_CORREO['List-Unsubscribe-Post'], 'List-Unsubscribe=One-Click')
