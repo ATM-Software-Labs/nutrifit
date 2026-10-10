@@ -18,7 +18,7 @@ export default function PaginaPeso({ usuario }: { usuario: Usuario }) {
   }
 
   return (
-    <main className="mx-auto max-w-3xl px-5 pb-12 pt-6 lg:px-8 lg:pt-10 flex flex-col gap-6 lg:gap-8">
+    <main className="mx-auto max-w-3xl px-5 pt-6 lg:px-8 lg:pt-10 flex flex-col gap-6 lg:gap-8">
       <header className="flex items-center gap-4 hidden lg:flex">
         <button onClick={() => navegar('/')} className="rounded-full p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition">
           <ArrowLeft size={24} className="text-graphite dark:text-neutral-100" />

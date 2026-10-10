@@ -185,7 +185,7 @@ export default function Dashboard({
   }
 
   const hoyVista = (
-    <main className="px-5 lg:px-10 lg:pt-8">
+    <main className="px-5 md:max-w-2xl md:mx-auto lg:max-w-none lg:px-10 lg:pt-8">
       <div className="lg:mx-auto lg:max-w-[88rem]">
         <div className="lg:flex lg:items-end lg:justify-between lg:gap-8 lg:pb-6">
           <div className="pb-5 pt-3 lg:p-0">
@@ -268,7 +268,7 @@ export default function Dashboard({
         onPerfil={() => navegar('/profile')}
         onSalir={onSalir}
       />
-      <div className="mx-auto min-h-dvh w-full max-w-md pb-32 lg:mx-0 lg:min-w-0 lg:max-w-none lg:flex-1 lg:pb-12">
+      <div className="mx-auto min-h-dvh w-full pb-24 lg:mx-0 lg:min-w-0 lg:flex-1 lg:pb-12">
       <header className="sticky top-0 z-30 border-b border-transparent bg-bg/80 px-5 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-md dark:bg-bg-dark/80 lg:hidden">
         {vista === 'hoy' ? (
           <div className="flex items-center justify-between">

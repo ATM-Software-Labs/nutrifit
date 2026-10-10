@@ -359,7 +359,7 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
   ]
 
   return (
-    <main className="px-5 pb-28 lg:px-10 lg:pb-12 lg:pt-8 flex flex-col gap-6 lg:gap-8">
+    <main className="px-5 pt-4 lg:px-10 lg:pt-8 flex flex-col gap-6 lg:gap-8">
       <div className="mx-auto max-w-5xl w-full">
         <header className="flex items-center gap-4 hidden lg:flex mb-6">
           <button onClick={() => navegar('/')} className="rounded-full p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition" aria-label="Volver">
