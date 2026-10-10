@@ -365,6 +365,12 @@ export const api = {
     fd.append('imagen', imagen, `plato.${ext}`)
     return pedir<{ ok: true; id: string; imagen_url: string }>('/api/comidas/foto', { method: 'POST', body: fd })
   },
+  estimarGrasa: async (_foto: Blob) => {
+    // Si no existe el endpoint en el backend, simulamos un tiempo de espera
+    // y devolvemos nulo para que el componente UI haga el cálculo local fallback.
+    await new Promise(r => setTimeout(r, 1500))
+    return { bf: null }
+  },
 
   integraciones: () => pedir<{ ok: true; integraciones: { proveedor: string; estado: string | null }[] }>('/api/integraciones', { silencio401: true }),
   dispositivos: () =>

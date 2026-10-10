@@ -5,37 +5,33 @@ export function SeccionPreferenciasAvanzadas() {
   const [tipoAyuno, setTipoAyuno] = useState(() => localStorage.getItem('nf:tipoAyuno') || '16/8')
   const [horaInicio, setHoraInicio] = useState(() => localStorage.getItem('nf:horaInicioAyuno') || '20:00')
   const [protPorKg, setProtPorKg] = useState(() => Number(localStorage.getItem('nf:protPorKg')) || 1.8)
-  const [notifAyuno, setNotifAyuno] = useState(() => localStorage.getItem('nf:notifAyuno') === 'true')
+  const [nivelNotificaciones, setNivelNotificaciones] = useState(() => localStorage.getItem('nf:nivelNotificaciones') || 'medio') // 'bajo', 'medio', 'alto'
 
   useEffect(() => {
     localStorage.setItem('nf:ayunoActivo', String(ayunoActivo))
     localStorage.setItem('nf:tipoAyuno', tipoAyuno)
     localStorage.setItem('nf:horaInicioAyuno', horaInicio)
     localStorage.setItem('nf:protPorKg', String(protPorKg))
-    localStorage.setItem('nf:notifAyuno', String(notifAyuno))
+    localStorage.setItem('nf:nivelNotificaciones', nivelNotificaciones)
     window.dispatchEvent(new Event('nf:preferencias_actualizadas'))
-  }, [ayunoActivo, tipoAyuno, horaInicio, protPorKg, notifAyuno])
+  }, [ayunoActivo, tipoAyuno, horaInicio, protPorKg, nivelNotificaciones])
 
-  const toggleNotif = async () => {
-    if (!notifAyuno) {
-      if (typeof Notification !== 'undefined') {
-        const perm = await Notification.requestPermission();
-        if (perm === 'granted') {
-          setNotifAyuno(true);
-        } else {
-          alert('Permiso denegado. Habilítalo en tu navegador.');
-        }
+  const solicitarPermiso = async (nivel: string) => {
+    if (typeof Notification !== 'undefined') {
+      const perm = await Notification.requestPermission()
+      if (perm === 'granted') {
+        setNivelNotificaciones(nivel)
       } else {
-        alert('Tu navegador no soporta notificaciones.');
+        alert('Permiso de notificaciones denegado. Habilítalo en tu navegador/dispositivo.')
       }
     } else {
-      setNotifAyuno(false);
+      alert('Tu navegador no soporta notificaciones push.')
     }
   }
 
   return (
-    <div className="mt-6 rounded-2xl border border-neutral-200 bg-card p-5 dark:border-neutral-800 dark:bg-card-dark">
-      <div className="mb-4">
+    <div className="mt-6 rounded-2xl border border-neutral-200 bg-card p-5 dark:border-neutral-800 dark:bg-card-dark flex flex-col gap-6">
+      <div>
         <h3 className="text-lg font-semibold text-graphite dark:text-neutral-100">
           Estrategia Nutricional y Ayuno
         </h3>
@@ -45,7 +41,7 @@ export function SeccionPreferenciasAvanzadas() {
       </div>
 
       {/* Ajuste de Proteínas por Peso */}
-      <div className="mb-3 rounded-xl border border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-800 dark:bg-neutral-900">
+      <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-800 dark:bg-neutral-900">
         <div className="mb-3 flex items-center justify-between">
           <div>
             <div className="text-sm font-semibold text-graphite dark:text-neutral-100">Cálculo de Proteína</div>
@@ -116,28 +112,38 @@ export function SeccionPreferenciasAvanzadas() {
                 className="rounded-md border border-neutral-300 bg-white px-2 py-1 text-sm font-medium text-graphite dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
               />
             </div>
-            
-            <div className="flex items-center justify-between rounded-lg bg-neutral-100 px-3 py-2 mt-2 dark:bg-neutral-800/50">
-              <div className="flex flex-col">
-                <span className="text-sm text-neutral-600 dark:text-neutral-300">Notificaciones Push</span>
-                <span className="text-[10px] text-neutral-500">Avisa cuando termine la ventana de ayuno</span>
-              </div>
-              <button
-                onClick={toggleNotif}
-                className={`relative h-[22px] w-[40px] rounded-full transition-colors ${
-                  notifAyuno ? 'bg-mint-500' : 'bg-neutral-300 dark:bg-neutral-700'
-                }`}
-              >
-                <div
-                  className={`absolute top-[3px] h-[16px] w-[16px] rounded-full bg-white transition-all ${
-                    notifAyuno ? 'left-[21px]' : 'left-[3px]'
-                  }`}
-                />
-              </button>
-            </div>
           </div>
         )}
       </div>
+
+      {/* Notificaciones */}
+      <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-800 dark:bg-neutral-900">
+        <div className="mb-3">
+          <div className="text-sm font-semibold text-graphite dark:text-neutral-100">Nivel de Notificaciones</div>
+          <div className="text-xs text-neutral-500">Ajusta cuántos avisos de comidas y agua recibirás.</div>
+        </div>
+        <div className="flex gap-2">
+          {['bajo', 'medio', 'alto'].map((nivel) => (
+            <button
+              key={nivel}
+              onClick={() => solicitarPermiso(nivel)}
+              className={`flex-1 rounded-lg border py-2 text-xs font-semibold capitalize transition-colors ${
+                nivelNotificaciones === nivel
+                  ? 'border-mint-500 bg-mint-50 text-mint-600 dark:border-mint-500/50 dark:bg-mint-500/10 dark:text-mint-400'
+                  : 'border-transparent bg-neutral-100 text-neutral-500 hover:bg-neutral-200 dark:bg-neutral-800/50 dark:hover:bg-neutral-800'
+              }`}
+            >
+              {nivel}
+            </button>
+          ))}
+        </div>
+        <div className="mt-2 text-xs text-neutral-500">
+          {nivelNotificaciones === 'bajo' && 'Solo avisos críticos (ej. fin de ayuno).'}
+          {nivelNotificaciones === 'medio' && 'Avisos de comidas principales y ayuno.'}
+          {nivelNotificaciones === 'alto' && 'Avisos de agua (cada 1h-2h), comidas, y progreso.'}
+        </div>
+      </div>
+
     </div>
   )
 }

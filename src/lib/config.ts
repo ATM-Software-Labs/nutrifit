@@ -19,7 +19,7 @@ export const URL_SITIO = 'https://nutri.trujillomingorance.com'
  * Por defecto el gateway. En local, `VITE_API_URL=http://localhost:5173`
  * para que Vite reenvíe `/api` al Pages de 8788.
  */
-let apiUrl = (env.VITE_API_URL || 'https://api.trujillomingorance.com/v1').replace(/\/$/, '')
+let apiUrl = (env.VITE_API_URL || 'https://api.trujillomingorance.com/nutrifit').replace(/\/$/, '')
 if (typeof location !== 'undefined' && location.origin === URL_SITIO) {
   apiUrl = ''
 }

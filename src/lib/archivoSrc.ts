@@ -13,7 +13,7 @@ export function srcMostrable(url: string | null | undefined): string | null {
   const valor = url?.trim() ?? ''
   if (!valor) return null
   if (archivoRechazado(valor)) return null
-  if (valor.startsWith('data:image/') || valor.startsWith('blob:')) return valor
+  if (valor.startsWith('data:image/') || valor.startsWith('blob:') || valor.startsWith('local-img-')) return valor
   if (valor.startsWith('/api/archivos/')) return urlDeArchivo(valor)
   if (!valor.startsWith('https://')) return null
   try {
@@ -26,7 +26,7 @@ export function srcMostrable(url: string | null | undefined): string | null {
 function esArchivoGateway(url: string): boolean {
   try {
     const u = new URL(url)
-    return u.protocol === 'https:' && u.hostname === 'api.trujillomingorance.com' && u.pathname.startsWith('/v1/archivos/')
+    return u.protocol === 'https:' && u.hostname === 'api.trujillomingorance.com' && u.pathname.startsWith('/nutrifit/archivos/')
   } catch {
     return false
   }
@@ -44,7 +44,8 @@ export function useSrcArchivo(url: string | null | undefined): string | null {
 
 export function useEstadoArchivo(url: string | null | undefined): EstadoArchivo {
   const directo = srcMostrable(url)
-  const pedir = !!directo && esArchivoGateway(directo)
+  const esLocal = !!directo && directo.startsWith('local-img-')
+  const pedir = !!directo && (esArchivoGateway(directo) || esLocal)
   const [blob, setBlob] = useState<string | null>(null)
   const [fase, setFase] = useState<'idle' | 'carga' | 'listo' | 'fallo'>('idle')
 
@@ -60,6 +61,19 @@ export function useEstadoArchivo(url: string | null | undefined): EstadoArchivo 
     setBlob(null)
     void (async () => {
       try {
+        if (esLocal) {
+          const { idbLeerImagen } = await import('./localDb.ts')
+          const dataUrl = await idbLeerImagen(directo)
+          if (!vivo) return
+          if (dataUrl) {
+            setBlob(dataUrl)
+            setFase('listo')
+          } else {
+            setFase('fallo')
+          }
+          return
+        }
+
         const token = await obtenerTokenApp()
         const headers: Record<string, string> = {}
         if (token) headers.authorization = `Bearer ${token}`
@@ -80,7 +94,7 @@ export function useEstadoArchivo(url: string | null | undefined): EstadoArchivo 
       vivo = false
       if (creado.url) URL.revokeObjectURL(creado.url)
     }
-  }, [directo, pedir])
+  }, [directo, pedir, esLocal])
 
   if (!directo) return { src: null, pendiente: false }
   if (!pedir) return { src: directo, pendiente: false }

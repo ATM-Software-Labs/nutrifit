@@ -1,4 +1,4 @@
-﻿import { esProduccion, type Handler } from '../../utils/env.ts'
+import { esProduccion, type Handler } from '../../utils/env.ts'
 import { json } from '../../utils/response.ts'
 import { leerBody } from '../../utils/http.ts'
 import { solicitarSchema } from '../../utils/schemas.ts'
@@ -46,7 +46,7 @@ export const onRequestPost: Handler = async (ctx) => {
       ? `${raiz}/app-login?token=${encodeURIComponent(token)}`
       : local
         ? `${raiz}/api/auth/verificar?token=${encodeURIComponent(token)}`
-        : `${URL_PASARELA}/v1/auth/verificar?token=${encodeURIComponent(token)}`
+        : `${URL_PASARELA}/nutrifit/auth/verificar?token=${encodeURIComponent(token)}`
 
   const codigo = await crearCodigoLogin(env, email)
 

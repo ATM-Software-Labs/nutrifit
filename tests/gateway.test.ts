@@ -12,7 +12,7 @@ import { esRastreador, origenPermitido, origenRechazado, secFetchValido } from '
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/129.0.0.0 Safari/537.36'
 const SECRETO = 'secreto-de-prueba'
 const APP = 'token-interno-de-prueba'
-const VISION = 'https://api.trujillomingorance.com/v1/nutrifit/vision'
+const VISION = 'https://api.trujillomingorance.com/nutrifit/vision'
 const ctx = { waitUntil() {} }
 
 function limite(max = 5) {
@@ -69,9 +69,9 @@ test('el ticket caduca y la URL de la foto está clavada al host del gateway', (
   assert.equal(payloadTicketValido({ sub: 'abc', exp: ahora + 60, img: 'ab'.repeat(32) }, ahora), true)
   assert.equal(payloadTicketValido({ sub: 'abc', exp: ahora - 30, img: 'ab'.repeat(32) }, ahora), false)
   assert.equal(payloadTicketValido({ sub: '../x', exp: ahora + 10, img: 'ab'.repeat(32) }, ahora), false)
-  assert.equal(urlVisionPermitida('https://api.trujillomingorance.com/v1/nutrifit/vision'), true)
-  assert.equal(urlVisionPermitida('https://evil.example/v1/nutrifit/vision'), false)
-  assert.equal(urlVisionPermitida('https://api.trujillomingorance.com/v1/auth'), false)
+  assert.equal(urlVisionPermitida('https://api.trujillomingorance.com/nutrifit/vision'), true)
+  assert.equal(urlVisionPermitida('https://evil.example/nutrifit/vision'), false)
+  assert.equal(urlVisionPermitida('https://api.trujillomingorance.com/nutrifit/auth'), false)
   assert.equal(pasarelaVisionActiva('https://api.trujillomingorance.com', 'nutri.trujillomingorance.com'), true)
   assert.equal(pasarelaVisionActiva('https://api.trujillomingorance.com', 'localhost'), false)
   assert.equal(pasarelaVisionActiva('https://evil.example', 'nutri.trujillomingorance.com'), false)
@@ -227,18 +227,18 @@ test('más de 300 KB es 413 y sin el binding de límite la visión se cierra', a
 })
 
 test('el proxy reescribe /v1, firma la IP y deja la cookie en la respuesta', async () => {
-  assert.equal(destinoDeProxy('/v1/comidas/resumen', '?fecha=2026-10-09', 'https://nutri.trujillomingorance.com'), 'https://nutri.trujillomingorance.com/api/comidas/resumen?fecha=2026-10-09')
-  assert.equal(destinoDeProxy('/v1/nutrifit/vision', '', 'https://nutri.trujillomingorance.com'), null)
-  assert.equal(destinoDeProxy('/v1/auth', '', 'https://evil.example'), null)
+  assert.equal(destinoDeProxy('/nutrifit/comidas/resumen', '?fecha=2026-10-09', 'https://nutri.trujillomingorance.com'), 'https://nutri.trujillomingorance.com/api/comidas/resumen?fecha=2026-10-09')
+  assert.equal(destinoDeProxy('/nutrifit/vision', '', 'https://nutri.trujillomingorance.com'), null)
+  assert.equal(destinoDeProxy('/nutrifit/auth', '', 'https://evil.example'), null)
   assert.equal(reescribirLocation('/?auth=ok'), 'https://nutri.trujillomingorance.com/?auth=ok')
   assert.equal(
     reescribirLocation('https://nutri.trujillomingorance.com/api/auth/callback/google?code=1'),
-    'https://api.trujillomingorance.com/v1/auth/callback/google?code=1',
+    'https://api.trujillomingorance.com/nutrifit/auth/callback/google?code=1',
   )
 
   let vistoUrl = ''
   let vistos = new Headers()
-  const res = await atender(new Request('https://api.trujillomingorance.com/v1/auth/codigo', {
+  const res = await atender(new Request('https://api.trujillomingorance.com/nutrifit/auth/codigo', {
     method: 'POST',
     body: '{"email":"a@b.co"}',
     headers: {
@@ -314,9 +314,9 @@ test('GET / es el portal estático y no nombra servicios', async () => {
   assert.equal(otro.status, 404)
 })
 
-test('GET /v1/auth/google vuelve a la PWA y no reenvía el canje', async () => {
+test('GET /nutrifit/auth/google vuelve a la PWA y no reenvía el canje', async () => {
   let llamadas = 0
-  const res = await atender(new Request('https://api.trujillomingorance.com/v1/auth/google?formato=json', {
+  const res = await atender(new Request('https://api.trujillomingorance.com/nutrifit/auth/google?formato=json', {
     headers: { origin: 'https://nutri.trujillomingorance.com' },
   }), env(), ctx, async () => {
     llamadas += 1
@@ -328,15 +328,15 @@ test('GET /v1/auth/google vuelve a la PWA y no reenvía el canje', async () => {
   assert.equal(res.headers.get('cache-control'), 'no-store')
   assert.equal(res.headers.get('access-control-allow-origin'), 'https://nutri.trujillomingorance.com')
   assert.equal(res.headers.get('access-control-allow-credentials'), 'true')
-  const barra = await atender(new Request('https://api.trujillomingorance.com/v1/auth/google/'), env(), ctx)
+  const barra = await atender(new Request('https://api.trujillomingorance.com/nutrifit/auth/google/'), env(), ctx)
   assert.equal(barra.headers.get('location'), 'https://nutri.trujillomingorance.com/api/auth/google')
 })
 
-test('sin PAGES_ORIGIN /v1 no sale a la red y una ruta fuera de /v1 es 404', async () => {
-  const auth = await atender(new Request('https://api.trujillomingorance.com/v1/auth'), env(), ctx)
+test('sin PAGES_ORIGIN /nutrifit no sale a la red y una ruta fuera de /nutrifit es 404', async () => {
+  const auth = await atender(new Request('https://api.trujillomingorance.com/nutrifit/auth'), env(), ctx)
   assert.equal(auth.status, 502)
   assert.equal(((await auth.json()) as { error: { code: string } }).error.code, 'UPSTREAM_TIMEOUT')
-  const mail = await atender(new Request('https://api.trujillomingorance.com/v1/mail'), env(), ctx)
+  const mail = await atender(new Request('https://api.trujillomingorance.com/nutrifit/mail'), env(), ctx)
   assert.equal(mail.status, 502)
   const no = await atender(new Request('https://api.trujillomingorance.com/v9/otro'), env(), ctx)
   assert.equal(no.status, 404)

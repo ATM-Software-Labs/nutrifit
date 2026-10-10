@@ -4,6 +4,7 @@ import { Button } from './components/ui/Button.tsx'
 import { useToast } from './components/ui/Toast.tsx'
 import { api, ApiError, onSesionPerdida } from './lib/api.ts'
 import type { Usuario } from './lib/tipos.ts'
+import { CookieBanner } from './components/CookieBanner.tsx'
 import { activarActualizacion } from './lib/sw.ts'
 import { esNativa } from './lib/plataforma.ts'
 import { borrarTokenApp, guardarTokenApp } from './lib/tokenApp.ts'
@@ -261,5 +262,10 @@ export default function App() {
       break
   }
 
-  return <Suspense fallback={<Cargando />}>{pantalla}</Suspense>
+  return (
+    <Suspense fallback={<Cargando />}>
+      {pantalla}
+      <CookieBanner />
+    </Suspense>
+  )
 }

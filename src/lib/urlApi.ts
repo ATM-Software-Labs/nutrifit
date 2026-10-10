@@ -9,7 +9,7 @@ export function unirApi(base: string, ruta: string): string {
   const path = corte === -1 ? ruta : ruta.slice(0, corte)
   const search = corte === -1 ? '' : ruta.slice(corte)
   const normal = path.startsWith('/') ? path : `/${path}`
-  const sinApi = /\/v1$/i.test(limpia) ? normal.replace(/^\/api(?=\/|$)/, '') : normal
+  const sinApi = /\/nutrifit$/i.test(limpia) ? normal.replace(/^\/api(?=\/|$)/, '') : normal
   const final = sinApi.startsWith('/') ? sinApi : `/${sinApi}`
   return `${limpia}${final}${search}`
 }

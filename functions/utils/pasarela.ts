@@ -38,9 +38,9 @@ export function destinoDeProxy(ruta: string, search: string, origenPagina: strin
     return null
   }
   if (!PAGINAS.has(origen)) return null
-  if (ruta !== '/v1' && !ruta.startsWith('/v1/')) return null
-  if (ruta === '/v1/nutrifit/vision') return null
-  const resto = ruta === '/v1' ? '' : ruta.slice(3)
+  if (ruta !== '/nutrifit' && !ruta.startsWith('/nutrifit/')) return null
+  if (ruta === '/nutrifit/vision') return null
+  const resto = ruta === '/nutrifit' ? '' : ruta.slice(9)
   if (resto !== '' && !resto.startsWith('/')) return null
   return `${origen}/api${resto}${search}`
 }
@@ -52,7 +52,7 @@ export function reescribirLocation(location: string): string {
     const u = new URL(location)
     if (u.origin === URL_PAGINA && (u.pathname === '/api' || u.pathname.startsWith('/api/'))) {
       const resto = u.pathname.slice(4)
-      return `${URL_PASARELA}/v1${resto}${u.search}${u.hash}`
+      return `${URL_PASARELA}/nutrifit${resto}${u.search}${u.hash}`
     }
   } catch {
     /* la URL no se toca */

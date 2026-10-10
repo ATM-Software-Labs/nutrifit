@@ -73,4 +73,7 @@ export async function iniciarNativo(onToken: (token: string) => void, onVinculo?
   }
   barra()
   new MutationObserver(barra).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+
+  // Configurar notificaciones al iniciar la app
+  void import('./notificaciones.ts').then(m => m.programarNotificacionesDiarias())
 }

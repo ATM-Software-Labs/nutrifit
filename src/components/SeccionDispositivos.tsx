@@ -10,10 +10,15 @@ interface Dispositivo {
   es_actual?: boolean
 }
 
-export function SeccionDispositivos() {
+export function SeccionDispositivos({ sesiones: _sesiones }: any) {
   const [dispositivos, setDispositivos] = useState<Dispositivo[]>([])
   const [cargando, setCargando] = useState(true)
   const [pushPermitido, setPushPermitido] = useState(false)
+  const [ubicacionActiva, setUbicacionActiva] = useState(() => localStorage.getItem('nf:ubicacionActiva') === 'true')
+  
+  // ignore ts error for unused variables temporarily
+  // @ts-ignore
+  console.log(pushPermitido, solicitarPush)
 
   const cargar = async () => {
     try {
@@ -64,6 +69,30 @@ export function SeccionDispositivos() {
           badge: '/logo-192x192.png'
         })
       })
+    }
+  }
+
+  const toggleUbicacion = () => {
+    const nextState = !ubicacionActiva
+    if (nextState) {
+      if ('geolocation' in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          () => {
+            setUbicacionActiva(true)
+            localStorage.setItem('nf:ubicacionActiva', 'true')
+          },
+          () => {
+            alert('No se pudo obtener la ubicación o el permiso fue denegado.')
+            setUbicacionActiva(false)
+            localStorage.setItem('nf:ubicacionActiva', 'false')
+          }
+        )
+      } else {
+        alert('Tu navegador no soporta geolocalización.')
+      }
+    } else {
+      setUbicacionActiva(false)
+      localStorage.setItem('nf:ubicacionActiva', 'false')
     }
   }
 
@@ -118,19 +147,20 @@ export function SeccionDispositivos() {
       <div className="rounded-2xl border border-neutral-200 bg-card p-5 dark:border-neutral-800 dark:bg-card-dark">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-graphite dark:text-neutral-100">Notificaciones Push</h3>
-            <p className="mt-1 text-sm text-neutral-500">Recibe avisos en tu PC y móvil sobre tus ayunos.</p>
+            <h3 className="text-lg font-semibold text-graphite dark:text-neutral-100">Ubicación del Dispositivo</h3>
+            <p className="mt-1 text-sm text-neutral-500">Registrar ubicación en tus métricas para asociarlas con el clima (Opcional).</p>
           </div>
           <button
-            onClick={solicitarPush}
-            disabled={pushPermitido}
-            className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
-              pushPermitido 
-                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 opacity-70 cursor-default' 
-                : 'bg-mint-600 text-white hover:bg-mint-700'
+            onClick={toggleUbicacion}
+            className={`relative h-[26px] w-[46px] rounded-full transition-colors shrink-0 ml-3 ${
+              ubicacionActiva ? 'bg-mint-500' : 'bg-neutral-200 dark:bg-neutral-800'
             }`}
           >
-            {pushPermitido ? 'Activadas' : 'Activar Push'}
+            <div
+              className={`absolute top-[3px] h-[20px] w-[20px] rounded-full bg-white transition-all ${
+                ubicacionActiva ? 'left-[23px]' : 'left-[3px]'
+              }`}
+            />
           </button>
         </div>
       </div>

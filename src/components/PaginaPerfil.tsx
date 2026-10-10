@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent, type MouseEvent } from 'react'
-import { ArrowLeft, BadgeCheck, Flame, User, Trophy, Target, Droplets, Dumbbell, Zap, Users, Rocket, Scale, X } from 'lucide-react'
+import { ArrowLeft, BadgeCheck, Flame, User, Trophy, Target, Droplets, Dumbbell, Zap, Users, Rocket, Scale } from 'lucide-react'
 import { navegar } from '../lib/rutas.ts'
 import { useSrcArchivo } from '../lib/archivoSrc.ts'
 import { api, ApiError } from '../lib/api.ts'
@@ -362,21 +362,23 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
   const caloriasOk = metas.calorias > 0 && totales.calorias >= metas.calorias - 200 && totales.calorias <= metas.calorias + 200
   const macrosOk = metas.proteinas > 0 && totales.proteinas >= metas.proteinas * 0.9 && totales.carbohidratos >= metas.carbohidratos * 0.9 && totales.grasas >= metas.grasas * 0.9
   const logros = [
-    { id: 'racha7', icono: <Flame size={24} className="text-orange-500" />, titulo: '7 días seguidos', detalle: 'Una semana registrando', ok: racha >= 7 },
-    { id: 'racha30', icono: <Flame size={24} className="text-orange-500" />, titulo: '30 días seguidos', detalle: 'Un mes de constancia', ok: racha >= 30 },
-    { id: 'racha100', icono: <Flame size={24} className="text-orange-500" />, titulo: '100 días seguidos', detalle: 'Una dedicación increíble', ok: racha >= 100 },
-    { id: 'prote', icono: <Dumbbell size={24} className="text-blue-500" />, titulo: 'Meta de proteína', detalle: 'El objetivo de hoy', ok: metas.proteinas > 0 && totales.proteinas >= metas.proteinas },
-    { id: 'equilibrio', icono: <Scale size={24} className="text-emerald-500" />, titulo: 'Equilibrio perfecto', detalle: 'Cumpliste tus macros', ok: macrosOk },
-    { id: 'calorias', icono: <Target size={24} className="text-purple-500" />, titulo: 'Diana de calorías', detalle: 'Acierto exacto en calorías', ok: caloriasOk },
-    { id: 'agua', icono: <Droplets size={24} className="text-cyan-500" />, titulo: 'Hidratación óptima', detalle: 'Más de 2 litros de agua', ok: agua >= 2000 },
-    { id: 'deportista', icono: <Trophy size={24} className="text-yellow-500" />, titulo: 'Deportista activo', detalle: 'Has registrado al menos 5 entrenamientos', ok: sesiones.length >= 5 },
-    { id: 'intenso', icono: <Zap size={24} className="text-red-500" />, titulo: 'Entrenamiento intenso', detalle: 'Registraste una sesión de alta intensidad', ok: sesiones.some(s => s.intensidad === 'alta') },
-    { id: 'social', icono: <Users size={24} className="text-indigo-500" />, titulo: 'Amigable', detalle: 'Tienes al menos 1 amigo', ok: amigos >= 1 },
-    { id: 'pionero', icono: <Rocket size={24} className="text-pink-500" />, titulo: 'Pionero', detalle: 'Cuenta creada en NutriFit', ok: Boolean(usuario.creado_en) },
+    { id: 'racha7', icono: <Flame size={24} className="text-orange-500" />, titulo: '7 días seguidos', detalle: 'Una semana registrando', ok: racha >= 7, nivel: 'bronce', porcentaje: 45, ventajas: ['Mejora el hábito y la constancia', 'Disminuye el estrés por no saber qué comer'] },
+    { id: 'racha30', icono: <Flame size={24} className="text-orange-500" />, titulo: '30 días seguidos', detalle: 'Un mes de constancia', ok: racha >= 30, nivel: 'plata', porcentaje: 20, ventajas: ['Cambio de estilo de vida', 'Aumento de la energía diaria'] },
+    { id: 'racha100', icono: <Flame size={24} className="text-orange-500" />, titulo: '100 días seguidos', detalle: 'Una dedicación increíble', ok: racha >= 100, nivel: 'diamante', porcentaje: 2, ventajas: ['Transformación física total', 'Liderazgo en salud corporativa', 'Reducción de riesgos cardiovasculares'] },
+    { id: 'prote', icono: <Dumbbell size={24} className="text-blue-500" />, titulo: 'Meta de proteína', detalle: 'El objetivo de hoy', ok: metas.proteinas > 0 && totales.proteinas >= metas.proteinas, nivel: 'bronce', porcentaje: 60, ventajas: ['Mantenimiento muscular', 'Mayor saciedad'] },
+    { id: 'equilibrio', icono: <Scale size={24} className="text-emerald-500" />, titulo: 'Equilibrio perfecto', detalle: 'Cumpliste tus macros', ok: macrosOk, nivel: 'oro', porcentaje: 15, ventajas: ['Nutrición integral', 'Prevención de enfermedades metabólicas'] },
+    { id: 'calorias', icono: <Target size={24} className="text-purple-500" />, titulo: 'Diana de calorías', detalle: 'Acierto exacto en calorías', ok: caloriasOk, nivel: 'plata', porcentaje: 35, ventajas: ['Control de peso corporal', 'Optimización del sueño'] },
+    { id: 'agua', icono: <Droplets size={24} className="text-cyan-500" />, titulo: 'Hidratación óptima', detalle: 'Más de 2 litros de agua', ok: agua >= 2000, nivel: 'plata', porcentaje: 40, ventajas: ['Piel más sana', 'Mejor función cognitiva', 'Menor fatiga en el trabajo'] },
+    { id: 'deportista', icono: <Trophy size={24} className="text-yellow-500" />, titulo: 'Deportista activo', detalle: 'Has registrado al menos 5 entrenamientos', ok: sesiones.length >= 5, nivel: 'oro', porcentaje: 12, ventajas: ['Fuerza y movilidad', 'Aumento de endorfinas', 'Reducción de bajas por enfermedad'] },
+    { id: 'intenso', icono: <Zap size={24} className="text-red-500" />, titulo: 'Entrenamiento intenso', detalle: 'Registraste una sesión de alta intensidad', ok: sesiones.some(s => s.intensidad === 'alta'), nivel: 'diamante', porcentaje: 5, ventajas: ['Salud cardiovascular máxima', 'Mayor sensibilidad a la insulina'] },
+    { id: 'social', icono: <Users size={24} className="text-indigo-500" />, titulo: 'Amigable', detalle: 'Tienes al menos 1 amigo', ok: amigos >= 1, nivel: 'bronce', porcentaje: 70, ventajas: ['Apoyo moral', 'Mayor adherencia al plan'] },
+    { id: 'pionero', icono: <Rocket size={24} className="text-pink-500" />, titulo: 'Pionero', detalle: 'Cuenta creada en NutriFit', ok: Boolean(usuario.creado_en), nivel: 'oro', porcentaje: 10, ventajas: ['Innovación tecnológica en salud', 'Adoptador temprano de IA nutritiva'] },
   ]
 
+  const [logroSeleccionado, setLogroSeleccionado] = useState<typeof logros[0] | null>(null)
+
   return (
-    <main className="px-4 pt-3 lg:px-8 lg:pt-6 flex flex-col gap-4 lg:gap-6 min-h-[calc(100vh-80px)]">
+    <main className="px-4 pt-3 pb-6 lg:px-8 lg:pt-6 flex flex-col gap-4 lg:gap-6 min-h-0">
       <div className="mx-auto max-w-5xl w-full">
         <header className="flex items-center gap-3 hidden lg:flex mb-4">
           <button onClick={() => navegar('/')} className="rounded-full p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition" aria-label="Volver">
@@ -455,7 +457,7 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
           />
         )}
 
-        <div className="mt-10 flex items-start justify-between gap-3">
+        <div className="mt-14 flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h1 className="flex items-center gap-1.5 truncate text-2xl font-semibold tracking-tight">
               {usuario.nombre || 'Tu perfil'}
@@ -579,11 +581,21 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
             <section className="tarjeta p-4" aria-labelledby="titulo-logros">
               <h2 id="titulo-logros" className="text-sm font-semibold">{t('perfil.logros')}</h2>
               <ul className="mt-3 flex flex-wrap gap-3">
-                {logros.map((logro) => (
+                {logros.map((logro) => {
+                  const coloresPorNivel = {
+                    diamante: 'border-cyan-400 bg-cyan-500/20 shadow-[0_0_15px_rgba(34,211,238,0.5)]',
+                    oro: 'border-yellow-400 bg-yellow-500/20 shadow-[0_0_10px_rgba(250,204,21,0.4)]',
+                    plata: 'border-neutral-400 bg-neutral-500/20',
+                    bronce: 'border-orange-400 bg-orange-500/20'
+                  }
+                  const rarityStyle = logro.ok ? coloresPorNivel[logro.nivel as keyof typeof coloresPorNivel] : 'border-neutral-300 bg-neutral-100 grayscale dark:border-neutral-700 dark:bg-neutral-900'
+                  
+                  return (
                   <li key={logro.id}>
                     <button
                       type="button"
-                      className={`group relative flex h-[52px] w-[52px] items-center justify-center rounded-full border text-xl ${logro.ok ? 'border-emerald-500/50 bg-emerald-500/15' : 'border-neutral-300 bg-neutral-100 grayscale dark:border-neutral-700 dark:bg-neutral-900'}`}
+                      onClick={() => setLogroSeleccionado(logro)}
+                      className={`group relative flex h-[52px] w-[52px] items-center justify-center rounded-full border text-xl transition-transform hover:scale-110 ${rarityStyle}`}
                       aria-label={`${logro.titulo}. ${logro.ok ? 'Desbloqueado' : 'Bloqueado'}. ${logro.detalle}`}
                     >
                       <span aria-hidden="true">{logro.ok ? logro.icono : <Trophy size={24} className="text-neutral-400" />}</span>
@@ -593,7 +605,8 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
                       </span>
                     </button>
                   </li>
-                ))}
+                  )
+                })}
               </ul>
             </section>
             <section className="space-y-2" aria-labelledby="titulo-sesiones">
@@ -707,6 +720,83 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
           </div>
         )}
       </div>
+
+      {logroSeleccionado && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={() => setLogroSeleccionado(null)}>
+          <div className="w-full max-w-sm rounded-3xl bg-card p-6 shadow-2xl dark:bg-card-dark flex flex-col items-center" onClick={e => e.stopPropagation()}>
+            <div className={`mb-4 flex h-24 w-24 items-center justify-center rounded-full border-4 text-4xl shadow-xl ${
+              logroSeleccionado.nivel === 'diamante' ? 'border-cyan-400 bg-cyan-500/20 text-cyan-400 shadow-[0_0_30px_rgba(34,211,238,0.5)]' :
+              logroSeleccionado.nivel === 'oro' ? 'border-yellow-400 bg-yellow-500/20 text-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.4)]' :
+              logroSeleccionado.nivel === 'plata' ? 'border-neutral-400 bg-neutral-500/20 text-neutral-400' :
+              'border-orange-400 bg-orange-500/20 text-orange-400'
+            }`}>
+              {logroSeleccionado.ok ? logroSeleccionado.icono : <Trophy size={48} className="text-neutral-400" />}
+            </div>
+            
+            <h3 className="text-2xl font-bold tracking-tight text-center text-graphite dark:text-neutral-100">
+              {logroSeleccionado.titulo}
+            </h3>
+            
+            <p className="mt-2 text-center text-sm text-neutral-500 dark:text-neutral-400">
+              {logroSeleccionado.detalle}
+            </p>
+
+            <div className="mt-4 flex w-full flex-col items-center rounded-2xl bg-neutral-50 p-4 dark:bg-neutral-900">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">Rareza del logro</span>
+              <span className={`mt-1 text-lg font-black uppercase tracking-widest ${
+                logroSeleccionado.nivel === 'diamante' ? 'text-cyan-500' :
+                logroSeleccionado.nivel === 'oro' ? 'text-yellow-500' :
+                logroSeleccionado.nivel === 'plata' ? 'text-neutral-400' :
+                'text-orange-500'
+              }`}>
+                {logroSeleccionado.nivel}
+              </span>
+              <p className="mt-2 text-xs text-neutral-500">Solo el <strong>{logroSeleccionado.porcentaje}%</strong> de usuarios lo tiene.</p>
+            </div>
+
+            <div className="mt-4 w-full">
+              <h4 className="text-sm font-semibold text-graphite dark:text-neutral-200 mb-2">Ventajas y beneficios</h4>
+              <ul className="flex flex-col gap-1">
+                {logroSeleccionado.ventajas.map((v, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm text-neutral-600 dark:text-neutral-400">
+                    <span className="mt-0.5 text-mint-500">•</span> {v}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="mt-8 flex w-full gap-3">
+              <button
+                type="button"
+                onClick={() => setLogroSeleccionado(null)}
+                className="flex-1 rounded-xl bg-neutral-200 py-3 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-300 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
+              >
+                Cerrar
+              </button>
+              {logroSeleccionado.ok && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (navigator.share) {
+                      navigator.share({
+                        title: `¡He desbloqueado ${logroSeleccionado.titulo} en NutriFit!`,
+                        text: `He conseguido el logro "${logroSeleccionado.titulo}" (${logroSeleccionado.nivel.toUpperCase()}). ${logroSeleccionado.detalle}. ¡Únete a NutriFit!`,
+                        url: window.location.origin
+                      }).catch(() => {})
+                    } else {
+                      toast({ tipo: 'exito', mensaje: 'Certificado copiado al portapapeles' })
+                      navigator.clipboard.writeText(`¡He conseguido el logro ${logroSeleccionado.titulo} (${logroSeleccionado.nivel.toUpperCase()}) en NutriFit!`)
+                    }
+                  }}
+                  className="flex-1 rounded-xl bg-mint py-3 text-sm font-semibold text-white transition hover:bg-mint-600"
+                >
+                  Compartir
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   )
 }

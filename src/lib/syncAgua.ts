@@ -15,7 +15,7 @@ import { apiMismoOrigen, urlApi } from './config.ts'
 import { idbDelete, idbLeerTodo, idbPut } from './localDb.ts'
 import { alAbrirVentana, debeVolcar, enVentanaCacheada, programarDespertador } from './ventanaCliente.ts'
 
-export const DEBOUNCE_AGUA_MS = 30_000
+export const DEBOUNCE_AGUA_MS = 5_000
 const MAX_ML = 10_000
 const CLAVE = 'nf:agua:outbox'
 

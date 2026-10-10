@@ -27,7 +27,7 @@ import { sanitizarContextoModelo } from './sanitizar.ts'
 export const GEMINI_MODELO_POR_DEFECTO = 'gemini-2.0-flash'
 const TIMEOUT_GEMINI_MS = 25_000
 /** Cada gateway de la foto del plato. Texto y etiqueta siguen con TIMEOUT_GEMINI_MS. */
-export const TIMEOUT_GATEWAY_FOTO_MS = 5_000
+export const TIMEOUT_GATEWAY_FOTO_MS = 15_000
 /** A los 2 s sin respuesta del principal se lanza el respaldo, sin cancelar al primero. */
 export const CARRERA_VISION_MS = 2_000
 

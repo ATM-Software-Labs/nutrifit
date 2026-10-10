@@ -8,13 +8,13 @@ test('un archivo sin uuid no se pide', () => {
   assert.equal(idArchivoValido('/api/archivos/id'), false)
   assert.equal(idArchivoValido('/api/archivos/'), false)
   assert.equal(archivoRechazado('/api/archivos/id'), true)
-  assert.equal(archivoRechazado(`https://api.trujillomingorance.com/v1/archivos/no-es-uuid`), true)
+  assert.equal(archivoRechazado(`https://api.trujillomingorance.com/nutrifit/archivos/no-es-uuid`), true)
   assert.equal(archivoRechazado(`https://lh3.googleusercontent.com/a/foto`), false)
 })
 
 test('un uuid de archivo sí es mostrable', () => {
   assert.equal(idArchivoValido(`/api/archivos/${ID}`), true)
-  assert.equal(idArchivoValido(`https://api.trujillomingorance.com/v1/archivos/${ID}`), true)
+  assert.equal(idArchivoValido(`https://api.trujillomingorance.com/nutrifit/archivos/${ID}`), true)
   assert.equal(archivoRechazado(`/api/archivos/${ID}`), false)
 })
 

@@ -73,7 +73,7 @@ export async function atender(request: Request, env: GatewayEnv, ctx: ContextoGa
 
   // La cookie __Host- solo vive en el host que la escribe. Google vuelve a la
   // PWA, así que el inicio tiene que salir de ese mismo host y no de este.
-  if (request.method === 'GET' && ruta === '/v1/auth/google') {
+  if (request.method === 'GET' && ruta === '/nutrifit/auth/google') {
     const destino = new URL('/api/auth/google', URL_PAGINA)
     destino.search = url.search
     return cerrar(request, new Response(null, {
@@ -82,12 +82,12 @@ export async function atender(request: Request, env: GatewayEnv, ctx: ContextoGa
     }))
   }
 
-  if (ruta === '/v1/nutrifit/vision') {
+  if (ruta === '/nutrifit/vision') {
     if (request.method !== 'POST') return cerrar(request, respuestaJson(405, { ok: false, error: 'Método no permitido.' }))
     return cerrar(request, await analizarConLimite(request, env, ctx))
   }
 
-  if (ruta === '/v1' || ruta.startsWith('/v1/')) {
+  if (ruta === '/nutrifit' || ruta.startsWith('/nutrifit/')) {
     const destino = destinoDeProxy(ruta, url.search, env.PAGES_ORIGIN)
     if (!destino) {
       console.error('[gateway] origen no configurado')

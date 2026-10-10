@@ -7,6 +7,7 @@ import { iniciarTema } from './lib/tema.ts'
 import { iniciarIdioma } from './lib/i18n.ts'
 import { iniciarSyncAgua } from './lib/syncAgua.ts'
 import { iniciarSyncPeso } from './lib/syncPeso.ts'
+import { programarNotificacionesDiarias } from './lib/notificaciones.ts'
 import { registrarServiceWorker } from './lib/sw.ts'
 import { comprobarEstilos, vigilarChunks } from './lib/recuperacion.ts'
 import { capturarPromptInstalar } from './lib/instalacion.ts'
@@ -20,6 +21,7 @@ iniciarIdioma()
 iniciarSyncAgua()
 iniciarSyncPeso()
 capturarPromptInstalar()
+programarNotificacionesDiarias()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

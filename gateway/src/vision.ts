@@ -1,5 +1,5 @@
 /**
- * POST /v1/nutrifit/vision.
+ * POST /nutrifit/vision.
  * El prompt es el de orquestarEscaneo (capa clínica ya fija). Aquí no se
  * concatena EXIF, nombre de archivo ni texto del cliente.
  */

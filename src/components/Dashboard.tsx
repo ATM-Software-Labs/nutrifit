@@ -5,7 +5,7 @@
  * panel en 2–3 columnas con «Añadir comida» siempre visible.
  */
 import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
-import { ChartColumn, Plus, Settings, User } from 'lucide-react'
+import { ChartColumn, Droplet, House, Plus, User } from 'lucide-react'
 import { Logo } from './Logo.tsx'
 import { BarreraEscanner } from './BarreraEscanner.tsx'
 import { AnilloCalorias } from './AnilloCalorias.tsx'
@@ -15,6 +15,8 @@ import { SeccionComida } from './SeccionComida.tsx'
 import { HojaAnadir } from './HojaAnadir.tsx'
 
 import { WidgetAyuno } from './WidgetAyuno.tsx'
+import { WidgetAgua } from './WidgetAgua.tsx'
+import { WidgetPeso } from './WidgetPeso.tsx'
 import { BannerInstalarPWA } from './BannerInstalarPWA.tsx'
 import { BarraLateral } from './BarraLateral.tsx'
 import { AnadirRapido } from './AnadirRapido.tsx'
@@ -116,9 +118,16 @@ export default function Dashboard({
     try {
       let imagen = nueva.imagen_url ?? null
       if (imagen?.startsWith('data:')) {
-        const subida = await api.subirFotoPlato(blobDesdeDataUrl(imagen))
-        imagen = subida.imagen_url
-      } else if (imagen && !imagen.startsWith('/api/archivos/') && !imagen.startsWith('https://')) {
+        try {
+          const subida = await api.subirFotoPlato(blobDesdeDataUrl(imagen))
+          imagen = subida.imagen_url
+        } catch (uploadError) {
+          console.warn('Fallo al subir la foto al servidor, guardando en local', uploadError)
+          const localId = `local-img-${crypto.randomUUID()}`
+          import('../lib/localDb.ts').then((m) => m.idbGuardarImagen(localId, imagen!))
+          imagen = localId
+        }
+      } else if (imagen && !imagen.startsWith('/api/archivos/') && !imagen.startsWith('https://') && !imagen.startsWith('local-img-')) {
         imagen = null
       }
       const { comida } = await api.guardarComida({ ...nueva, imagen_url: imagen })
@@ -233,6 +242,8 @@ export default function Dashboard({
             </div>
 
             <div className="space-y-4 lg:space-y-6 xl:hidden">
+              <WidgetPeso usuario={usuario} />
+              <WidgetAgua fecha={fecha} inicial={resumen?.agua_ml ?? 0} pesoKg={usuario.peso_kg} onActividad={onActividad} onCambio={(ml) => actualizar((r) => ({ ...r, agua_ml: ml }))} />
               <WidgetAyuno />
             </div>
           </div>
@@ -246,6 +257,8 @@ export default function Dashboard({
           </div>
 
           <div className="hidden xl:flex xl:col-span-3 flex-col gap-6 lg:sticky lg:top-8">
+            <WidgetPeso usuario={usuario} />
+            <WidgetAgua fecha={fecha} inicial={resumen?.agua_ml ?? 0} pesoKg={usuario.peso_kg} onActividad={onActividad} onCambio={(ml) => actualizar((r) => ({ ...r, agua_ml: ml }))} />
             <WidgetAyuno />
           </div>
         </div>
@@ -254,7 +267,7 @@ export default function Dashboard({
   )
 
   return (
-    <div className="min-h-dvh lg:flex">
+    <div className="min-h-dvh lg:flex lg:h-dvh lg:overflow-hidden">
       <BarraLateral
         usuario={usuario}
         vista={vista}
@@ -267,7 +280,7 @@ export default function Dashboard({
         onPerfil={() => navegar('/profile')}
         onSalir={onSalir}
       />
-      <div className="mx-auto min-h-dvh w-full pb-24 lg:mx-0 lg:min-w-0 lg:flex-1 lg:pb-12">
+      <div className="mx-auto w-full pb-24 lg:mx-0 lg:min-w-0 lg:flex-1 lg:h-dvh lg:overflow-y-auto lg:pb-8 lg:pr-2">
       <header className="sticky top-0 z-30 border-b border-transparent bg-bg/80 px-5 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-md dark:bg-bg-dark/80 lg:hidden">
         {vista === 'hoy' ? (
           <div className="flex items-center justify-between">
@@ -276,17 +289,6 @@ export default function Dashboard({
               <span className="text-lg font-semibold tracking-tight">
                 Nutri<span className="text-mint-700 dark:text-mint-400">Fit</span>
               </span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon" aria-label="Historial" onClick={() => navegar('/historial')}>
-                <ChartColumn size={20} strokeWidth={1.75} />
-              </Button>
-              <Button variant="ghost" size="icon" aria-label="Mi perfil" onClick={() => navegar('/profile')}>
-                <User size={20} strokeWidth={1.75} />
-              </Button>
-              <Button variant="ghost" size="icon" aria-label="Ajustes" onClick={() => navegar('/ajustes')}>
-                <Settings size={20} strokeWidth={1.75} />
-              </Button>
             </div>
           </div>
         ) : (
@@ -337,17 +339,41 @@ export default function Dashboard({
       </footer>
       </div>
 
-      {/* Botón flotante: añadir al tipo de comida que toca por la hora */}
-      {vista !== 'profile' && <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 flex justify-center pb-[max(1.25rem,env(safe-area-inset-bottom))] lg:hidden">
-        <button
-          type="button"
-          onClick={() => setHoja({ tipo: 'anadir', comida: tipoPorHora() })}
-          aria-label="Añadir comida"
-          className="pointer-events-auto flex h-14 w-14 items-center justify-center rounded-full bg-graphite text-white shadow-lift transition-transform hover:scale-105 active:scale-95 dark:bg-white dark:text-graphite"
-        >
-          <Plus size={24} strokeWidth={2} />
+      {/* Navegación inferior (móvil) */}
+      <nav className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between border-t border-neutral-200 bg-bg/90 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur-md dark:border-neutral-800 dark:bg-bg-dark/90 lg:hidden">
+        <button type="button" onClick={() => verHoy()} className={`flex flex-col items-center gap-1 p-2 transition-colors ${vista === 'hoy' ? 'text-mint-600 dark:text-mint-400' : 'text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200'}`}>
+          <House size={24} strokeWidth={vista === 'hoy' ? 2 : 1.75} />
+          <span className="text-[10px] font-medium">Hoy</span>
         </button>
-      </div>}
+        <button type="button" onClick={() => navegar('/historial')} className={`flex flex-col items-center gap-1 p-2 transition-colors ${vista === 'historial' ? 'text-mint-600 dark:text-mint-400' : 'text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200'}`}>
+          <ChartColumn size={24} strokeWidth={vista === 'historial' ? 2 : 1.75} />
+          <span className="text-[10px] font-medium">Historial</span>
+        </button>
+        
+        <div className="relative -top-5 mx-2">
+          <button
+            type="button"
+            onClick={() => setHoja({ tipo: 'anadir', comida: tipoPorHora() })}
+            aria-label="Añadir comida"
+            className="flex h-14 w-14 items-center justify-center rounded-full bg-graphite text-white shadow-lift transition-transform hover:scale-105 active:scale-95 dark:bg-white dark:text-graphite"
+          >
+            <Plus size={26} strokeWidth={2} />
+          </button>
+        </div>
+
+        <button type="button" onClick={() => navegar('/agua')} className={`flex flex-col items-center gap-1 p-2 transition-colors ${vista === 'agua' ? 'text-mint-600 dark:text-mint-400' : 'text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200'}`}>
+          <Droplet size={24} strokeWidth={vista === 'agua' ? 2 : 1.75} />
+          <span className="text-[10px] font-medium">Agua</span>
+        </button>
+        <button type="button" onClick={() => navegar('/peso')} className={`flex flex-col items-center gap-1 p-2 transition-colors ${vista === 'peso' ? 'text-mint-600 dark:text-mint-400' : 'text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200'}`}>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={vista === 'peso' ? 2 : 1.75} strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          <span className="text-[10px] font-medium">Peso</span>
+        </button>
+        <button type="button" onClick={() => navegar('/profile')} className={`flex flex-col items-center gap-1 p-2 transition-colors ${vista === 'profile' ? 'text-mint-600 dark:text-mint-400' : 'text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200'}`}>
+          <User size={24} strokeWidth={vista === 'profile' ? 2 : 1.75} />
+          <span className="text-[10px] font-medium">Perfil</span>
+        </button>
+      </nav>
 
       <HojaAnadir
         abierto={hoja?.tipo === 'anadir'}

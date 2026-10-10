@@ -135,7 +135,7 @@ test('redirect_uri usa el origen permitido y no un host ajeno', async () => {
   const produccion = 'https://nutri.trujillomingorance.com/api/auth/callback/google'
   for (const origen of ['https://nutri.trujillomingorance.com', 'https://nutrifit.trujillomingorance.com', 'https://evil.example']) {
     assert.equal(await redirectGoogle(env, new Request(`${origen}/api/auth/google`)), produccion)
-    assert.equal(destinoTrasGoogle(env, new Request(`${origen}/api/auth/callback/google?code=1`)), 'https://nutri.trujillomingorance.com/?auth=error')
+    assert.equal(destinoTrasGoogle(env, new Request(`${origen}/api/auth/callback/google?code=1`)), 'https://nutri.trujillomingorance.com/?auth=error&motivo=error_token&detalle=%7B%22error%22%3A%22invalid_grant%22%2C%22error_description%22%3A%22Bad%20Request%22%7D')
   }
 
   const res = await inicioGoogle({
@@ -168,7 +168,7 @@ test('una petición firmada por la pasarela sigue usando el callback de la PWA',
   assert.equal(uri, 'https://nutri.trujillomingorance.com/api/auth/callback/google')
   assert.equal(new URL(uri).pathname, '/api/auth/callback/google')
   assert.equal(destinoTrasGoogle(env, req), 'https://nutri.trujillomingorance.com/?auth=error')
-  assert.equal(redirectGoogle(env, req), redirectGoogle(env, new Request('https://api.trujillomingorance.com/v1/auth/callback/google?code=1')))
+  assert.equal(redirectGoogle(env, req), redirectGoogle(env, new Request('https://api.trujillomingorance.com/nutrifit/auth/callback/google?code=1')))
 })
 
 test('el canje usa el mismo redirect_uri y registra el cuerpo si Google lo rechaza', async () => {

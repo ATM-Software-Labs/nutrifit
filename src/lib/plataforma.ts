@@ -15,4 +15,4 @@ type CapacitorGlobal = { isNativePlatform?: () => boolean }
 const Capacitor = (globalThis as { Capacitor?: CapacitorGlobal }).Capacitor
 
 export const esNativa = Capacitor?.isNativePlatform?.() === true
-export const API_BASE = API_URL || 'https://api.trujillomingorance.com/v1'
+export const API_BASE = API_URL || 'https://api.trujillomingorance.com/nutrifit'

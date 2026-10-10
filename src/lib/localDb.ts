@@ -21,6 +21,7 @@ export function abrirLocalDb(): Promise<IDBDatabase> {
         if (!db.objectStoreNames.contains('agua')) db.createObjectStore('agua')
         if (!db.objectStoreNames.contains('peso')) db.createObjectStore('peso')
         if (!db.objectStoreNames.contains(TIENDA_ALIMENTOS)) db.createObjectStore(TIENDA_ALIMENTOS)
+        if (!db.objectStoreNames.contains('imagenes')) db.createObjectStore('imagenes')
       }
       req.onsuccess = () => resolve(req.result)
       req.onerror = () => reject(req.error)
@@ -106,4 +107,35 @@ export async function idbLeerTodo(store: AlmacenLocal): Promise<Record<string, n
     }
     req.onerror = () => reject(req.error)
   })
+}
+
+export function idbGuardarImagen(clave: string, valor: string) {
+  return abrirLocalDb()
+    .then(
+      (db) =>
+        new Promise<void>((resolve, reject) => {
+          const tx = db.transaction('imagenes', 'readwrite')
+          tx.objectStore('imagenes').put(valor, clave)
+          tx.oncomplete = () => resolve()
+          tx.onerror = () => reject(tx.error)
+        }),
+    )
+    .catch(() => {})
+}
+
+export function idbLeerImagen(clave: string): Promise<string | undefined> {
+  return abrirLocalDb()
+    .then(
+      (db) =>
+        new Promise<string | undefined>((resolve, reject) => {
+          if (!db.objectStoreNames.contains('imagenes')) {
+            resolve(undefined)
+            return
+          }
+          const req = db.transaction('imagenes', 'readonly').objectStore('imagenes').get(clave)
+          req.onsuccess = () => resolve(req.result)
+          req.onerror = () => reject(req.error)
+        }),
+    )
+    .catch(() => undefined)
 }

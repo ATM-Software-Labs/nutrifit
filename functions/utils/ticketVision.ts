@@ -4,8 +4,8 @@
  * La caducidad la mira quien verifica. firmar() solo garantiza la firma.
  */
 export const PROPOSITO_VISION = 'vision-gateway'
-export const TTL_TICKET_VISION_S = 60
-export const URL_VISION = 'https://api.trujillomingorance.com/v1/nutrifit/vision'
+export const TTL_TICKET_VISION_S = 300
+export const URL_VISION = 'https://api.trujillomingorance.com/nutrifit/vision'
 
 /** Mismos topes que POST /api/alimentos/escanear. El gateway añade 5/min encima. */
 export const CUPOS_ESCANEO = {

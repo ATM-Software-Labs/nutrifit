@@ -28,11 +28,11 @@ import type { Idioma } from '../lib/i18n.ts'
 const SELECT =
   'h-12 w-full appearance-none rounded-2xl border border-neutral-200 bg-card px-4 text-[15px] focus:border-mint focus:outline-none focus:ring-4 focus:ring-mint/15 dark:border-neutral-800 dark:bg-card-dark'
 
-function Seccion({ id, titulo, children }: { id?: string; titulo: string; children: React.ReactNode }) {
+function Seccion({ id, titulo, children, noCard = false }: { id?: string; titulo: string; children: React.ReactNode; noCard?: boolean }) {
   return (
-    <section id={id} className="space-y-4 scroll-mt-8">
-      <h3 className="etiqueta">{titulo}</h3>
-      {children}
+    <section id={id} className="space-y-3 scroll-mt-8">
+      <h3 className="text-sm font-semibold tracking-wide text-neutral-500 uppercase ml-1">{titulo}</h3>
+      {noCard ? children : <div className="tarjeta p-4 md:p-5 space-y-4">{children}</div>}
     </section>
   )
 }
@@ -54,6 +54,8 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
   const { idioma, t, cambiar: cambiarIdioma } = useIdioma()
   const { contenedorRef, obtenerToken } = useTurnstile('perfil')
   const toast = useToast()
+  
+  const [seccionActiva, setSeccionActiva] = useState<'perfil' | 'preferencias' | 'dispositivos' | 'conexiones' | 'estrategia' | 'mas' | 'cuenta' | 'peligro'>('perfil')
 
   const n = { edad: Number(edad), peso: Number(peso.replace(',', '.')), altura: Number(altura) }
   const valido = n.edad >= 14 && n.edad <= 100 && n.peso >= 30 && n.peso <= 300 && n.altura >= 120 && n.altura <= 230 && nombre.trim().length > 0
@@ -127,18 +129,34 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
     }
   }
 
+  const BotonNav = ({ id, label }: { id: typeof seccionActiva; label: string }) => (
+    <button 
+      onClick={() => setSeccionActiva(id)}
+      className={`text-left px-3 py-2 rounded-xl transition ${seccionActiva === id ? 'bg-mint-500/10 text-mint-700 dark:bg-mint-500/20 dark:text-mint-300 font-semibold' : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800'}`}
+    >
+      {label}
+    </button>
+  )
+
   return (
     <main className="mx-auto max-w-5xl px-5 pt-6 lg:px-8 lg:pt-10 flex flex-col lg:flex-row gap-8 lg:gap-16">
       <aside className="w-full lg:w-56 shrink-0 lg:sticky lg:top-10 h-max z-10">
         <h1 className="mb-6 text-2xl lg:text-3xl font-semibold tracking-tight text-graphite dark:text-neutral-100 hidden lg:block">{t('ajustes.titulo')}</h1>
-        <nav className="hidden lg:flex flex-col gap-1 text-sm font-medium" aria-label="Ajustes">
-          <a href="#perfil" className="px-3 py-2 rounded-xl text-graphite dark:text-neutral-100 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition">Perfil y Objetivos</a>
-          <a href="#preferencias" className="px-3 py-2 rounded-xl text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition">Preferencias</a>
-          <a href="#dispositivos" className="px-3 py-2 rounded-xl text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition">Conexiones y Dispositivos</a>
-          <a href="#cuenta" className="px-3 py-2 rounded-xl text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition">Cuenta</a>
+        {/* Mobile back button logic can be handled if needed, for now just show pills on mobile */}
+        <nav className="flex lg:flex-col gap-1 text-sm font-medium overflow-x-auto pb-2 lg:pb-0 scrollbar-hide snap-x" aria-label="Ajustes">
+          <BotonNav id="perfil" label="Perfil y Objetivos" />
+          <BotonNav id="preferencias" label="Preferencias" />
+          <BotonNav id="estrategia" label="Estrategia y Ayuno" />
+          <BotonNav id="conexiones" label="Conexiones y Apps" />
+          <BotonNav id="dispositivos" label="Dispositivos" />
+          <BotonNav id="cuenta" label="Cuenta" />
+          <BotonNav id="mas" label="Más" />
+          <BotonNav id="peligro" label="Zona Crítica" />
         </nav>
       </aside>
-      <div className="flex-1 space-y-12 pb-2 min-w-0">
+      
+      <div className="flex-1 pb-12 min-w-0">
+        {seccionActiva === 'perfil' && (
         <Seccion id="perfil" titulo={t('ajustes.perfil')}>
           <Input label={t('ajustes.nombre')} value={nombre} maxLength={60} onChange={(e) => setNombre(e.target.value)} />
           <Segmented label={t('ajustes.sexo')} valor={sexo} onChange={setSexo} opciones={[{ valor: 'hombre', etiqueta: t('ajustes.hombre') }, { valor: 'mujer', etiqueta: t('ajustes.mujer') }]} />
@@ -203,47 +221,58 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
             {t('ajustes.guardar')}
           </Button>
         </Seccion>
+        )}
 
-        <Seccion id="preferencias" titulo={t('ajustes.idioma')}>
-          <Segmented
-            label={t('ajustes.idioma')}
-            valor={idioma}
-            onChange={(siguiente) => cambiarIdioma(siguiente as Idioma)}
-            opciones={[
-              { valor: 'es', etiqueta: 'Español' },
-              { valor: 'ca', etiqueta: 'Català' },
-              { valor: 'en', etiqueta: 'English' },
-            ]}
-          />
-        </Seccion>
+        {seccionActiva === 'preferencias' && (
+          <div className="space-y-8">
+            <Seccion id="preferencias" titulo={t('ajustes.idioma')}>
+              <Segmented
+                label={t('ajustes.idioma')}
+                valor={idioma}
+                onChange={(siguiente) => cambiarIdioma(siguiente as Idioma)}
+                opciones={[
+                  { valor: 'es', etiqueta: 'Español' },
+                  { valor: 'ca', etiqueta: 'Català' },
+                  { valor: 'en', etiqueta: 'English' },
+                ]}
+              />
+            </Seccion>
+            <Seccion titulo={t('ajustes.apariencia')}>
+              <Segmented
+                label={t('ajustes.tema')}
+                valor={preferencia}
+                onChange={cambiar}
+                opciones={[
+                  { valor: 'sistema', etiqueta: <span className="flex items-center justify-center gap-1.5"><Monitor size={14} /> {t('ajustes.sistema')}</span> },
+                  { valor: 'claro', etiqueta: <span className="flex items-center justify-center gap-1.5"><Sun size={14} /> {t('ajustes.claro')}</span> },
+                  { valor: 'oscuro', etiqueta: <span className="flex items-center justify-center gap-1.5"><Moon size={14} /> {t('ajustes.oscuro')}</span> },
+                ]}
+              />
+            </Seccion>
+          </div>
+        )}
 
-        <Seccion titulo={t('ajustes.apariencia')}>
-          <Segmented
-            label={t('ajustes.tema')}
-            valor={preferencia}
-            onChange={cambiar}
-            opciones={[
-              { valor: 'sistema', etiqueta: <span className="flex items-center gap-1.5"><Monitor size={14} /> {t('ajustes.sistema')}</span> },
-              { valor: 'claro', etiqueta: <span className="flex items-center gap-1.5"><Sun size={14} /> {t('ajustes.claro')}</span> },
-              { valor: 'oscuro', etiqueta: <span className="flex items-center gap-1.5"><Moon size={14} /> {t('ajustes.oscuro')}</span> },
-            ]}
-          />
-        </Seccion>
-
-        <Seccion id="dispositivos" titulo={t('ajustes.dispositivos')}>
+        {seccionActiva === 'dispositivos' && (
+        <Seccion id="dispositivos" titulo={t('ajustes.dispositivos')} noCard>
           <SeccionDispositivos />
         </Seccion>
+        )}
 
-        <Seccion titulo={t('ajustes.conexiones')}>
+        {seccionActiva === 'conexiones' && (
+        <Seccion titulo={t('ajustes.conexiones')} noCard>
           <SeccionIntegraciones />
         </Seccion>
+        )}
 
-        <Seccion titulo={t('ajustes.estrategia')}>
+        {seccionActiva === 'estrategia' && (
+        <Seccion titulo={t('ajustes.estrategia')} noCard>
           <SeccionPreferenciasAvanzadas />
         </Seccion>
+        )}
 
-        <Seccion titulo={t('ajustes.mas')}>
-          <div className="divide-y divide-neutral-100 rounded-2xl border border-neutral-200 dark:divide-neutral-800 dark:border-neutral-800">
+        {seccionActiva === 'mas' && (
+        <Seccion titulo={t('ajustes.mas')} noCard>
+          <div className="divide-y divide-neutral-100 bg-card rounded-2xl border border-neutral-200 dark:divide-neutral-800 dark:border-neutral-800 dark:bg-card-dark overflow-hidden mt-6">
             {!esNativa && (
               <ControlInstalar className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-[15px] hover:bg-neutral-50 dark:hover:bg-neutral-900">
                 <Download size={18} className="text-neutral-500 dark:text-neutral-400" />
@@ -270,7 +299,9 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
             </a>
           </div>
         </Seccion>
+        )}
 
+        {seccionActiva === 'cuenta' && (
         <Seccion id="cuenta" titulo={t('ajustes.cuenta')}>
           <p className="text-sm text-neutral-500 dark:text-neutral-400">
             {t('ajustes.sesion')} <span className="font-medium text-graphite dark:text-neutral-200">{usuario.email}</span>
@@ -282,9 +313,11 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
             {t('ajustes.cerrar')}
           </Button>
         </Seccion>
+        )}
 
-        <Seccion id="peligro" titulo="Zona Crítica">
-          <div className="rounded-2xl border border-red-200 bg-red-50/50 p-4 dark:border-red-900/30 dark:bg-red-950/20">
+        {seccionActiva === 'peligro' && (
+        <Seccion id="peligro" titulo="Zona Crítica" noCard>
+          <div className="rounded-2xl border border-red-200 bg-red-50/50 p-4 dark:border-red-900/30 dark:bg-red-950/20 mt-6">
             <p className="mb-4 text-sm text-red-600 dark:text-red-400">
               Esta acción es irreversible y borrará todos tus datos.
             </p>
@@ -292,8 +325,9 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
               {t('ajustes.eliminar')}
             </Button>
           </div>
-          <p className="text-center text-2xs text-neutral-500 dark:text-neutral-400">NutriFit v{__APP_VERSION__} · {t('ajustes.dudas')} soporte@trujillomingorance.com</p>
+          <p className="text-center text-2xs text-neutral-500 dark:text-neutral-400 mt-6">NutriFit v{__APP_VERSION__} · {t('ajustes.dudas')} soporte@trujillomingorance.com</p>
         </Seccion>
+        )}
       </div>
     </main>
   )

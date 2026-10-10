@@ -1,3 +1,3 @@
 User-agent: *
 Allow: /
-Disallow: /api/
+Sitemap: https://nutri.trujillomingorance.com/sitemap.xml

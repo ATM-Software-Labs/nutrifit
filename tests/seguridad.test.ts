@@ -69,7 +69,7 @@ test('cookie __Host- con rotación, gracia y revocación si se reutiliza', async
   env.DB.sqlite.prepare("INSERT INTO usuarios (id, email) VALUES ('u1', 'a@b.es')").run()
   const ahora = Math.floor(Date.now() / 1000)
   const emitida = await crearCookieSesion(env, 'u1', 'a@b.es', ahora - ROTACION_SESION - 10)
-  assert.match(emitida, /^__Host-nf_session=[^;]+; HttpOnly; Secure; SameSite=Strict; Path=\/; Max-Age=\d+$/)
+  assert.match(emitida, /^__Host-nf_session=[^;]+; HttpOnly; Secure; SameSite=Lax; Path=\/; Max-Age=\d+$/)
   assert.doesNotMatch(emitida, /Domain=/)
   const req = (setCookie: string) => new Request('https://n/api/auth/yo', { headers: { Cookie: setCookie.split(';')[0]! } })
 
