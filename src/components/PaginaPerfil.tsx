@@ -147,6 +147,7 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
   const [avatar, setAvatar] = useState(usuario.avatar_url ?? '')
   const [banner, setBanner] = useState(usuario.banner_url ?? '')
   const [racha, setRacha] = useState(0)
+  const [historialDias, setHistorialDias] = useState<any[]>([])
   const [sesiones, setSesiones] = useState<Sesion[]>([])
   const [amistades, setAmistades] = useState<Amistad[]>([])
   const [busqueda, setBusqueda] = useState('')
@@ -185,6 +186,7 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
       .then((r) => {
         if (!vivo) return
         setRacha(rachaDias(r.dias.filter((d) => d.num_comidas > 0).map((d) => d.fecha), hoy))
+        setHistorialDias(r.dias)
       })
       .catch(() => {})
     return () => {
@@ -361,16 +363,26 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
   const agua = resumen?.agua_ml ?? 0
   const caloriasOk = metas.calorias > 0 && totales.calorias >= metas.calorias - 200 && totales.calorias <= metas.calorias + 200
   const macrosOk = metas.proteinas > 0 && totales.proteinas >= metas.proteinas * 0.9 && totales.carbohidratos >= metas.carbohidratos * 0.9 && totales.grasas >= metas.grasas * 0.9
+  const metaProteina = metas.proteinas > 0 ? metas.proteinas : 0;
+  const diasProteina = historialDias.filter(d => metaProteina > 0 && d.proteinas >= metaProteina * 0.9).length;
+  
   const logros = [
     { id: 'racha7', icono: <Flame size={24} className="text-orange-500" />, titulo: '7 días seguidos', detalle: 'Una semana registrando', ok: racha >= 7, nivel: 'bronce', porcentaje: 45, ventajas: ['Mejora el hábito y la constancia', 'Disminuye el estrés por no saber qué comer'] },
-    { id: 'racha30', icono: <Flame size={24} className="text-orange-500" />, titulo: '30 días seguidos', detalle: 'Un mes de constancia', ok: racha >= 30, nivel: 'plata', porcentaje: 20, ventajas: ['Cambio de estilo de vida', 'Aumento de la energía diaria'] },
+    { id: 'racha14', icono: <Flame size={24} className="text-orange-500" />, titulo: '14 días seguidos', detalle: 'Dos semanas imparables', ok: racha >= 14, nivel: 'plata', porcentaje: 30, ventajas: ['Adherencia al plan consolidada', 'Mejora en la planificación semanal'] },
+    { id: 'racha30', icono: <Flame size={24} className="text-orange-500" />, titulo: '30 días seguidos', detalle: 'Un mes de constancia', ok: racha >= 30, nivel: 'oro', porcentaje: 20, ventajas: ['Cambio de estilo de vida', 'Aumento de la energía diaria'] },
     { id: 'racha100', icono: <Flame size={24} className="text-orange-500" />, titulo: '100 días seguidos', detalle: 'Una dedicación increíble', ok: racha >= 100, nivel: 'diamante', porcentaje: 2, ventajas: ['Transformación física total', 'Liderazgo en salud corporativa', 'Reducción de riesgos cardiovasculares'] },
+    
     { id: 'prote', icono: <Dumbbell size={24} className="text-blue-500" />, titulo: 'Meta de proteína', detalle: 'El objetivo de hoy', ok: metas.proteinas > 0 && totales.proteinas >= metas.proteinas, nivel: 'bronce', porcentaje: 60, ventajas: ['Mantenimiento muscular', 'Mayor saciedad'] },
-    { id: 'equilibrio', icono: <Scale size={24} className="text-emerald-500" />, titulo: 'Equilibrio perfecto', detalle: 'Cumpliste tus macros', ok: macrosOk, nivel: 'oro', porcentaje: 15, ventajas: ['Nutrición integral', 'Prevención de enfermedades metabólicas'] },
+    { id: 'prote4', icono: <Dumbbell size={24} className="text-blue-500" />, titulo: 'Constancia Proteica', detalle: '4 días alcanzando tu proteína', ok: diasProteina >= 4, nivel: 'plata', porcentaje: 35, ventajas: ['Crecimiento muscular optimizado', 'Acelera la recuperación post-entrenamiento'] },
+    { id: 'prote14', icono: <Dumbbell size={24} className="text-blue-500" />, titulo: 'Muro de Acero', detalle: '14 días alcanzando tu proteína', ok: diasProteina >= 14, nivel: 'oro', porcentaje: 15, ventajas: ['Prevención máxima del catabolismo', 'Metabolismo basal más rápido'] },
+
+    { id: 'equilibrio', icono: <Scale size={24} className="text-emerald-500" />, titulo: 'Equilibrio perfecto', detalle: 'Cumpliste tus macros de hoy', ok: macrosOk, nivel: 'oro', porcentaje: 15, ventajas: ['Nutrición integral', 'Prevención de enfermedades metabólicas'] },
     { id: 'calorias', icono: <Target size={24} className="text-purple-500" />, titulo: 'Diana de calorías', detalle: 'Acierto exacto en calorías', ok: caloriasOk, nivel: 'plata', porcentaje: 35, ventajas: ['Control de peso corporal', 'Optimización del sueño'] },
-    { id: 'agua', icono: <Droplets size={24} className="text-cyan-500" />, titulo: 'Hidratación óptima', detalle: 'Más de 2 litros de agua', ok: agua >= 2000, nivel: 'plata', porcentaje: 40, ventajas: ['Piel más sana', 'Mejor función cognitiva', 'Menor fatiga en el trabajo'] },
+    
+    { id: 'agua', icono: <Droplets size={24} className="text-cyan-500" />, titulo: 'Hidratación óptima', detalle: 'Más de 2 litros de agua', ok: agua >= 2000, nivel: 'bronce', porcentaje: 40, ventajas: ['Piel más sana', 'Mejor función cognitiva', 'Menor fatiga en el trabajo'] },
     { id: 'deportista', icono: <Trophy size={24} className="text-yellow-500" />, titulo: 'Deportista activo', detalle: 'Has registrado al menos 5 entrenamientos', ok: sesiones.length >= 5, nivel: 'oro', porcentaje: 12, ventajas: ['Fuerza y movilidad', 'Aumento de endorfinas', 'Reducción de bajas por enfermedad'] },
     { id: 'intenso', icono: <Zap size={24} className="text-red-500" />, titulo: 'Entrenamiento intenso', detalle: 'Registraste una sesión de alta intensidad', ok: sesiones.some(s => s.intensidad === 'alta'), nivel: 'diamante', porcentaje: 5, ventajas: ['Salud cardiovascular máxima', 'Mayor sensibilidad a la insulina'] },
+    
     { id: 'social', icono: <Users size={24} className="text-indigo-500" />, titulo: 'Amigable', detalle: 'Tienes al menos 1 amigo', ok: amigos >= 1, nivel: 'bronce', porcentaje: 70, ventajas: ['Apoyo moral', 'Mayor adherencia al plan'] },
     { id: 'pionero', icono: <Rocket size={24} className="text-pink-500" />, titulo: 'Pionero', detalle: 'Cuenta creada en NutriFit', ok: Boolean(usuario.creado_en), nivel: 'oro', porcentaje: 10, ventajas: ['Innovación tecnológica en salud', 'Adoptador temprano de IA nutritiva'] },
   ]
@@ -777,15 +789,16 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
                 <button
                   type="button"
                   onClick={() => {
+                    const enlaceCompartir = `${window.location.origin}/@${username || usuario.id}?logro=${logroSeleccionado.id}`;
                     if (navigator.share) {
                       navigator.share({
                         title: `¡He desbloqueado ${logroSeleccionado.titulo} en NutriFit!`,
                         text: `He conseguido el logro "${logroSeleccionado.titulo}" (${logroSeleccionado.nivel.toUpperCase()}). ${logroSeleccionado.detalle}. ¡Únete a NutriFit!`,
-                        url: window.location.origin
+                        url: enlaceCompartir
                       }).catch(() => {})
                     } else {
-                      toast({ tipo: 'exito', mensaje: 'Certificado copiado al portapapeles' })
-                      navigator.clipboard.writeText(`¡He conseguido el logro ${logroSeleccionado.titulo} (${logroSeleccionado.nivel.toUpperCase()}) en NutriFit!`)
+                      toast({ tipo: 'exito', mensaje: 'Enlace de logro copiado al portapapeles' })
+                      navigator.clipboard.writeText(`¡He conseguido el logro ${logroSeleccionado.titulo} (${logroSeleccionado.nivel.toUpperCase()}) en NutriFit! Mira mi perfil: ${enlaceCompartir}`)
                     }
                   }}
                   className="flex-1 rounded-xl bg-mint py-3 text-sm font-semibold text-white transition hover:bg-mint-600"
