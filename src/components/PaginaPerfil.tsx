@@ -398,10 +398,9 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
               <button 
                 type="button" 
                 onClick={() => borrarImagen('banner')}
-                className="flex h-6 w-6 items-center justify-center rounded-full bg-red-500/80 text-white backdrop-blur-sm transition hover:bg-red-600"
-                aria-label="Eliminar banner"
+                className="cursor-pointer rounded-full bg-black/45 px-3 py-1 text-xs text-red-300 backdrop-blur-sm transition hover:bg-black/60 hover:text-red-400"
               >
-                <X size={14} strokeWidth={2.5} />
+                Quitar
               </button>
             )}
             <label className="cursor-pointer rounded-full bg-black/45 px-3 py-1 text-xs text-white backdrop-blur-sm transition hover:bg-black/60">
@@ -432,10 +431,9 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
               <button 
                 type="button" 
                 onClick={() => borrarImagen('avatar')}
-                className="mb-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white shadow-sm transition hover:bg-red-600"
-                aria-label="Eliminar avatar"
+                className="mb-2 cursor-pointer rounded-full bg-neutral-100 dark:bg-neutral-800 px-2.5 py-1 text-[11px] font-medium text-red-500 shadow-sm transition hover:bg-neutral-200 dark:hover:bg-neutral-700"
               >
-                <X size={14} strokeWidth={2.5} />
+                Quitar
               </button>
             )}
           </div>

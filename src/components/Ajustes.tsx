@@ -281,9 +281,17 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
           <Button variant="outline" block icon={<LogOut size={16} />} onClick={onSalir}>
             {t('ajustes.cerrar')}
           </Button>
-          <Button variant="danger" block loading={borrando} onClick={() => void eliminarCuenta()}>
-            {t('ajustes.eliminar')}
-          </Button>
+        </Seccion>
+
+        <Seccion id="peligro" titulo="Zona Crítica">
+          <div className="rounded-2xl border border-red-200 bg-red-50/50 p-4 dark:border-red-900/30 dark:bg-red-950/20">
+            <p className="mb-4 text-sm text-red-600 dark:text-red-400">
+              Esta acción es irreversible y borrará todos tus datos.
+            </p>
+            <Button variant="danger" block loading={borrando} onClick={() => void eliminarCuenta()}>
+              {t('ajustes.eliminar')}
+            </Button>
+          </div>
           <p className="text-center text-2xs text-neutral-500 dark:text-neutral-400">NutriFit v{__APP_VERSION__} · {t('ajustes.dudas')} soporte@trujillomingorance.com</p>
         </Seccion>
       </div>
