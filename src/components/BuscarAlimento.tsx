@@ -154,7 +154,7 @@ export default function BuscarAlimento({ onClose, onResultado }: { onClose: () =
   const locales = useMemo(() => {
     if (fuente === 'local') {
       if (escribiendo) return []
-      return buscarLocal('', categoria, 40)
+      return buscarLocal('', categoria, 8)
     }
     if (textoBusqueda.trim().length < 1) return []
     return buscarLocal(textoBusqueda, null, 12)
