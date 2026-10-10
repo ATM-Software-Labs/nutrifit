@@ -126,7 +126,7 @@ export interface MensajeCorreo {
 export function mensajeMagicLink(enlace: string, codigo?: string): MensajeCorreo {
   const caduca = textoCaducidad()
   const aviso = AVISO_SEGURIDAD(caduca)
-  const cifras = codigo && /^\\d{6}$/.test(codigo) ? codigo : ''
+  const cifras = codigo && /^\d{6}$/.test(codigo) ? codigo : ''
 
   const jsonLd = cifras ? `
 <script type="application/ld+json">

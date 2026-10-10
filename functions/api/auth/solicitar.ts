@@ -6,7 +6,7 @@ import { claveLimite, exigirLimite } from '../../utils/rateLimit.ts'
 import { crearMagicToken } from '../../utils/magicLink.ts'
 import { enviarMagicLink } from '../../utils/email.ts'
 import { crearCodigoLogin } from '../../utils/codigoLogin.ts'
-import { origenLocalPages, URL_PASARELA } from '../../utils/pasarela.ts'
+import { origenLocalPages } from '../../utils/pasarela.ts'
 
 const MENSAJE_ENVIADO = 'Enlace y código enviados. Revisa tu bandeja de entrada o spam.'
 const MENSAJE_RECIENTE = 'Ya te enviamos un código recientemente. Revisa tu correo o espera unos minutos.'
@@ -44,9 +44,7 @@ export const onRequestPost: Handler = async (ctx) => {
   const enlace =
     cliente === 'app'
       ? `${raiz}/app-login?token=${encodeURIComponent(token)}`
-      : local
-        ? `${raiz}/api/auth/verificar?token=${encodeURIComponent(token)}`
-        : `${URL_PASARELA}/nutrifit/auth/verificar?token=${encodeURIComponent(token)}`
+      : `${raiz}/api/auth/verificar?token=${encodeURIComponent(token)}`
 
   const codigo = await crearCodigoLogin(env, email)
 
