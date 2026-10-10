@@ -253,7 +253,7 @@ export default function App() {
         break
       }
       if (estado.fase === 'app') {
-        const vistaDashboard = rutaApp === '/historial' ? 'historial' : rutaApp === '/profile' ? 'profile' : rutaApp === '/ajustes' ? 'ajustes' : rutaApp === '/peso' ? 'peso' : 'hoy'
+        const vistaDashboard = rutaApp === '/historial' ? 'historial' : rutaApp === '/profile' ? 'profile' : rutaApp === '/ajustes' ? 'ajustes' : rutaApp === '/peso' ? 'peso' : rutaApp === '/agua' ? 'agua' : 'hoy'
         pantalla = <Dashboard usuario={estado.usuario} vista={vistaDashboard} onUsuario={(usuario: any) => setEstado({ fase: 'app', usuario })} onSalir={salir} />
         break
       }

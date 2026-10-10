@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent, type MouseEvent } from 'react'
-import { ArrowLeft, BadgeCheck, Flame, User, Trophy, Target, Droplets, Dumbbell, Zap, Users, Rocket, Scale } from 'lucide-react'
+import { ArrowLeft, BadgeCheck, Flame, User, Trophy, Target, Droplets, Dumbbell, Zap, Users, Rocket, Scale, X } from 'lucide-react'
 import { navegar } from '../lib/rutas.ts'
 import { useSrcArchivo } from '../lib/archivoSrc.ts'
 import { api, ApiError } from '../lib/api.ts'
@@ -210,6 +210,23 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
     }
   }
 
+  async function borrarImagen(clase: 'avatar' | 'banner') {
+    try {
+      if (clase === 'avatar') {
+        await api.borrarAvatar()
+        setAvatar('')
+        onUsuario({ ...usuario, avatar_url: null })
+      } else {
+        await api.borrarBanner()
+        setBanner('')
+        onUsuario({ ...usuario, banner_url: null })
+      }
+      toast({ tipo: 'exito', mensaje: `${clase === 'avatar' ? 'Avatar' : 'Banner'} eliminado.` })
+    } catch (e) {
+      toast({ tipo: 'error', mensaje: `No se pudo eliminar el ${clase}.` })
+    }
+  }
+
   async function guardarTexto() {
     const limpio = username.replace(/^@/, '').trim()
     try {
@@ -359,43 +376,69 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
   ]
 
   return (
-    <main className="px-5 pt-4 lg:px-10 lg:pt-8 flex flex-col gap-6 lg:gap-8">
+    <main className="px-4 pt-3 lg:px-8 lg:pt-6 flex flex-col gap-4 lg:gap-6 min-h-[calc(100vh-80px)]">
       <div className="mx-auto max-w-5xl w-full">
-        <header className="flex items-center gap-4 hidden lg:flex mb-6">
-          <button onClick={() => navegar('/')} className="rounded-full p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition" aria-label="Volver">
-            <ArrowLeft size={24} className="text-graphite dark:text-neutral-100" />
+        <header className="flex items-center gap-3 hidden lg:flex mb-4">
+          <button onClick={() => navegar('/')} className="rounded-full p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition" aria-label="Volver">
+            <ArrowLeft size={20} className="text-graphite dark:text-neutral-100" />
           </button>
-          <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-graphite dark:text-neutral-100">
+          <h1 className="text-xl lg:text-2xl font-semibold tracking-tight text-graphite dark:text-neutral-100">
             Mi Perfil
           </h1>
         </header>
         <div className="relative">
-          <div className="bannerContainer relative h-[132px] overflow-hidden rounded-3xl bg-[#022c22]">
+          <div className="bannerContainer relative h-[96px] overflow-hidden rounded-2xl bg-[#022c22]">
             <div className="absolute inset-0" style={{ background: BANNER_VACIO }} />
             {banner ? <BannerFoto key={banner} url={banner} /> : null}
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
           </div>
-          <label className="absolute bottom-3 right-3 cursor-pointer rounded-full bg-black/45 px-3 py-1 text-xs text-white backdrop-blur-sm transition hover:bg-black/60">
-            Banner
-            <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) setCropImage({ url: URL.createObjectURL(f), tipo: 'banner' });
-              e.target.value = '';
-            }} />
-          </label>
-          <label className="absolute -bottom-11 left-5 cursor-pointer">
-            <span id="userAvatar" className="relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-4 border-[#10b981] bg-mint-50 text-2xl font-semibold text-mint-800 shadow-lg ring-2 ring-white dark:bg-mint-950 dark:text-mint-200 dark:ring-[#111827]">
-              <FotoAvatar key={avatar || 'vacio'} url={avatar || null} nombre={usuario.nombre || usuario.email || 'NutriFit'} grande />
-            </span>
-            <span className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full border-2 border-white bg-[#10b981]" title="Activo">
-              <span className="sr-only">Estado activo</span>
-            </span>
-            <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) setCropImage({ url: URL.createObjectURL(f), tipo: 'avatar' });
-              e.target.value = '';
-            }} />
-          </label>
+          
+          <div className="absolute bottom-3 right-3 flex items-center gap-2">
+            {banner && (
+              <button 
+                type="button" 
+                onClick={() => borrarImagen('banner')}
+                className="flex h-6 w-6 items-center justify-center rounded-full bg-red-500/80 text-white backdrop-blur-sm transition hover:bg-red-600"
+                aria-label="Eliminar banner"
+              >
+                <X size={14} strokeWidth={2.5} />
+              </button>
+            )}
+            <label className="cursor-pointer rounded-full bg-black/45 px-3 py-1 text-xs text-white backdrop-blur-sm transition hover:bg-black/60">
+              Banner
+              <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) setCropImage({ url: URL.createObjectURL(f), tipo: 'banner' });
+                e.target.value = '';
+              }} />
+            </label>
+          </div>
+
+          <div className="absolute -bottom-8 left-4 flex items-end gap-2">
+            <label className="cursor-pointer">
+              <span id="userAvatar" className="relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-[3px] border-[#10b981] bg-mint-50 text-xl font-semibold text-mint-800 shadow-lg ring-2 ring-white dark:bg-mint-950 dark:text-mint-200 dark:ring-[#111827]">
+                <FotoAvatar key={avatar || 'vacio'} url={avatar || null} nombre={usuario.nombre || usuario.email || 'NutriFit'} grande />
+              </span>
+              <span className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full border-2 border-white bg-[#10b981]" title="Activo">
+                <span className="sr-only">Estado activo</span>
+              </span>
+              <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) setCropImage({ url: URL.createObjectURL(f), tipo: 'avatar' });
+                e.target.value = '';
+              }} />
+            </label>
+            {avatar && (
+              <button 
+                type="button" 
+                onClick={() => borrarImagen('avatar')}
+                className="mb-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white shadow-sm transition hover:bg-red-600"
+                aria-label="Eliminar avatar"
+              >
+                <X size={14} strokeWidth={2.5} />
+              </button>
+            )}
+          </div>
         </div>
 
         {cropImage && (
@@ -414,7 +457,7 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
           />
         )}
 
-        <div className="mt-14 flex items-start justify-between gap-3">
+        <div className="mt-10 flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h1 className="flex items-center gap-1.5 truncate text-2xl font-semibold tracking-tight">
               {usuario.nombre || 'Tu perfil'}

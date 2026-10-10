@@ -13,7 +13,7 @@ import { BarraMacro } from './BarrasMacros.tsx'
 import { SelectorSemana } from './SelectorSemana.tsx'
 import { SeccionComida } from './SeccionComida.tsx'
 import { HojaAnadir } from './HojaAnadir.tsx'
-import { WidgetAgua } from './WidgetAgua.tsx'
+
 import { WidgetAyuno } from './WidgetAyuno.tsx'
 import { BannerInstalarPWA } from './BannerInstalarPWA.tsx'
 import { BarraLateral } from './BarraLateral.tsx'
@@ -41,6 +41,7 @@ const PaginaPerfil = lazy(async () => {
 const DescribirComida = lazy(() => import('./DescribirComida.tsx'))
 const BuscarAlimento = lazy(() => import('./BuscarAlimento.tsx'))
 const PaginaPeso = lazy(() => import('./PaginaPeso.tsx'))
+const PaginaAgua = lazy(() => import('./PaginaAgua.tsx'))
 
 type Hoja =
   | null
@@ -77,7 +78,7 @@ export default function Dashboard({
   onSalir,
 }: {
   usuario: Usuario
-  vista?: 'hoy' | 'historial' | 'profile' | 'ajustes' | 'peso'
+  vista?: 'hoy' | 'historial' | 'profile' | 'ajustes' | 'peso' | 'agua'
   onUsuario: (u: Usuario) => void
   onSalir: () => void
 }) {
@@ -233,7 +234,6 @@ export default function Dashboard({
 
             <div className="space-y-4 lg:space-y-6 xl:hidden">
               <WidgetAyuno />
-              <WidgetAgua fecha={fecha} inicial={resumen?.agua_ml ?? 0} pesoKg={usuario.peso_kg} onActividad={onActividad} onCambio={(ml) => actualizar((r) => ({ ...r, agua_ml: ml }))} />
             </div>
           </div>
 
@@ -247,7 +247,6 @@ export default function Dashboard({
 
           <div className="hidden xl:flex xl:col-span-3 flex-col gap-6 lg:sticky lg:top-8">
             <WidgetAyuno />
-            <WidgetAgua fecha={fecha} inicial={resumen?.agua_ml ?? 0} pesoKg={usuario.peso_kg} onActividad={onActividad} onCambio={(ml) => actualizar((r) => ({ ...r, agua_ml: ml }))} />
           </div>
         </div>
       </div>
@@ -263,7 +262,7 @@ export default function Dashboard({
         onHistorial={() => navegar('/historial')}
         onAnadir={() => setHoja({ tipo: 'anadir', comida: tipoPorHora() })}
         onPeso={() => navegar('/peso')}
-          onAgua={() => verHoy('agua')}
+        onAgua={() => navegar('/agua')}
         onAjustes={() => navegar('/ajustes')}
         onPerfil={() => navegar('/profile')}
         onSalir={onSalir}
@@ -296,7 +295,7 @@ export default function Dashboard({
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-graphite dark:text-neutral-100"><path d="m15 18-6-6 6-6"/></svg>
             </button>
             <span className="text-lg font-semibold tracking-tight text-graphite dark:text-neutral-100">
-              {vista === 'ajustes' ? 'Ajustes' : vista === 'profile' ? 'Mi Perfil' : vista === 'peso' ? 'Control de Peso' : 'Historial'}
+              {vista === 'ajustes' ? 'Ajustes' : vista === 'profile' ? 'Mi Perfil' : vista === 'peso' ? 'Control de Peso' : vista === 'agua' ? 'Hidratación' : 'Historial'}
             </span>
           </div>
         )}
@@ -315,6 +314,10 @@ export default function Dashboard({
       ) : vista === 'peso' ? (
         <Suspense fallback={<div className="p-10"><Esqueleto alto="h-64" /></div>}>
           <PaginaPeso usuario={usuario} />
+        </Suspense>
+      ) : vista === 'agua' ? (
+        <Suspense fallback={<div className="p-10"><Esqueleto alto="h-64" /></div>}>
+          <PaginaAgua fecha={fecha} inicial={resumen?.agua_ml ?? 0} pesoKg={usuario.peso_kg} onActividad={onActividad} onCambio={(ml) => actualizar((r) => ({ ...r, agua_ml: ml }))} />
         </Suspense>
       ) : (
         <Suspense fallback={<div className="p-10"><Esqueleto alto="h-64" /></div>}>

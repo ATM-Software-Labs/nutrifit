@@ -352,6 +352,8 @@ export const api = {
     fd.append('imagen', imagen, `banner.${ext}`)
     return pedir<{ ok: true; banner_url: string }>('/api/usuarios/banner', { method: 'POST', body: fd })
   },
+  borrarAvatar: () => pedir<{ ok: true }>('/api/usuarios/avatar', { method: 'DELETE' }),
+  borrarBanner: () => pedir<{ ok: true }>('/api/usuarios/banner', { method: 'DELETE' }),
   subirFotoPlato: (imagen: Blob) => {
     const fd = new FormData()
     const ext = imagen.type === 'image/png' ? 'png' : imagen.type === 'image/webp' ? 'webp' : 'jpg'

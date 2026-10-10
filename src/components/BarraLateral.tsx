@@ -52,7 +52,7 @@ export function BarraLateral({
   onSalir,
 }: {
   usuario: Usuario
-  vista: 'hoy' | 'historial' | 'profile' | 'ajustes' | 'peso'
+  vista: 'hoy' | 'historial' | 'profile' | 'ajustes' | 'peso' | 'agua'
   onHoy: () => void
   onHistorial: () => void
   onAnadir: () => void
@@ -92,7 +92,7 @@ export function BarraLateral({
           <Item icono={<Scale {...i} />} onClick={onPeso}>
             {t('nav.peso')}
           </Item>
-          <Item icono={<Droplet {...i} />} onClick={onAgua}>
+          <Item icono={<Droplet {...i} />} activo={vista === 'agua'} onClick={onAgua}>
             {t('nav.agua')}
           </Item>
         </ul>
