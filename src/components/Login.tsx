@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState, type FormEvent, type MouseEvent } from 'react'
-import { ArrowRight, Mail, MonitorSmartphone } from 'lucide-react'
+import { ArrowRight, Mail, MonitorSmartphone, Smartphone } from 'lucide-react'
 import { Logo } from './Logo.tsx'
 import { Button } from './ui/Button.tsx'
 import { Input } from './ui/Input.tsx'
@@ -10,7 +10,6 @@ import { urlApi, URL_REPO } from '../lib/config.ts'
 import { clicPrivacidad, clicRecursos } from '../lib/rutas.ts'
 import { guardarTokenApp } from '../lib/tokenApp.ts'
 import { ESCRITORIO, useMedia } from '../hooks/useMedia.ts'
-import { BloqueDescarga } from './BloqueDescarga.tsx'
 import { ControlInstalar } from './ControlInstalar.tsx'
 import { useIdioma } from '../hooks/useIdioma.ts'
 import type { Usuario } from '../lib/tipos.ts'
@@ -206,7 +205,17 @@ export default function Login({ onEntrar, vinculando = false }: { onEntrar: (u: 
               <IconoGoogle />
               <span>{t('login.google')}</span>
             </button>
-            {!vinculando && <BloqueDescarga className="mt-8" sinQr={escritorio} />}
+            {!vinculando && !esNativa && (
+              <div className="mt-6 flex items-center justify-center">
+                <a
+                  href="/descargar"
+                  className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-neutral-50/80 px-3.5 py-1.5 text-xs font-medium text-neutral-600 transition hover:border-mint hover:bg-mint-50 hover:text-mint-800 dark:border-neutral-800 dark:bg-neutral-900/80 dark:text-neutral-400 dark:hover:border-mint/50 dark:hover:bg-mint-950 dark:hover:text-mint-300"
+                >
+                  <Smartphone size={13} className="text-mint" />
+                  <span>Instalar en móvil o PC →</span>
+                </a>
+              </div>
+            )}
           </div>
         ) : (
           <div key="enviado" className="animate-pop-in" role="status">
