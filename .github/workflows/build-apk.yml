@@ -66,10 +66,10 @@ jobs:
             exit 1
           fi
 
-      - name: Node 20 LTS
+      - name: Node 22 LTS
         uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: '22'
           cache: npm
 
       - name: Dependencias (checksums sha512 del lockfile)
