@@ -76,9 +76,9 @@ function pieHtml(texto: string): string {
     .replaceAll(RESPONDER_A.email, `<a href="mailto:${RESPONDER_A.email}" style="color:#6b7280;text-decoration:underline;">${RESPONDER_A.email}</a>`)
     .replaceAll('\n\n', '<br /><br />')
     .replaceAll('\n', '<br />')
-  return `<tr><td style="padding:36px 32px 0;"><hr style="border:none;border-top:1px solid #e5e7eb;margin:0;" /></td></tr>
-<tr><td class="nf-suave" style="padding:24px 32px 12px;font-size:11px;line-height:1.5;color:#6b7280;">${html}</td></tr>
-<tr><td class="nf-suave" align="center" style="padding:0 32px 24px;font-size:12px;line-height:1.5;color:#9ca3af;"><a href="${URL_AJUSTES}" style="color:#9ca3af;text-decoration:underline;">Gestionar notificaciones</a> · <a href="${URL_AJUSTES}" style="color:#9ca3af;text-decoration:underline;">Darme de baja</a></td></tr>`
+  return `<tr><td style="padding:32px 32px 0;"><hr style="border:none;border-top:1px solid #e5e7eb;margin:0;" /></td></tr>
+<tr><td class="nf-suave" align="center" style="padding:24px 32px 12px;font-size:11px;line-height:1.5;color:#6b7280;text-align:center;">${html}</td></tr>
+<tr><td class="nf-suave" align="center" style="padding:0 32px 24px;font-size:12px;line-height:1.5;color:#9ca3af;text-align:center;"><a href="${URL_AJUSTES}" style="color:#9ca3af;text-decoration:underline;">Gestionar notificaciones</a> · <a href="${URL_AJUSTES}" style="color:#9ca3af;text-decoration:underline;">Darme de baja</a></td></tr>`
 }
 
 function envolver(cuerpo: string, preheader: string, jsonLd?: string): string {
@@ -98,7 +98,7 @@ function envolver(cuerpo: string, preheader: string, jsonLd?: string): string {
     .nf-tarjeta { background-color: #18181b !important; }
     .nf-texto { color: #f4f4f5 !important; }
     .nf-suave { color: #a1a1aa !important; }
-    .nf-codigo { background-color: #27272a !important; color: #fafafa !important; border-color: #3f3f46 !important; }
+    .nf-codigo { background-color: #27272a !important; color: #10b981 !important; border-color: #3f3f46 !important; }
   }
 </style>
 ${jsonLd || ''}
@@ -125,7 +125,7 @@ export interface MensajeCorreo {
   texto: string
 }
 
-export function mensajeMagicLink(enlace: string, codigo?: string): MensajeCorreo {
+export function mensajeMagicLink(enlace: string, codigo?: string, emailDestino?: string): MensajeCorreo {
   const caduca = textoCaducidad()
   const aviso = AVISO_SEGURIDAD(caduca)
   const cifras = codigo && /^\d{6}$/.test(codigo) ? codigo : ''
@@ -155,7 +155,7 @@ export function mensajeMagicLink(enlace: string, codigo?: string): MensajeCorreo
   "body": [
     {
       "type": "TextBlock",
-      "text": "Acceso rápido a NutriFit",
+      "text": "Código de verificación de NutriFit",
       "weight": "Bolder",
       "size": "Medium"
     },
@@ -168,36 +168,59 @@ export function mensajeMagicLink(enlace: string, codigo?: string): MensajeCorreo
   "actions": [
     {
       "type": "Action.OpenUrl",
-      "title": "Entrar directamente",
+      "title": "Acceder a mi cuenta",
       "url": "${enlace}"
     }
   ]
 }
 </script>` : ''
 
+  const cuentaTxt = emailDestino ? ` (<strong>${escaparHtml(emailDestino)}</strong>)` : ''
+  const cuentaPlano = emailDestino ? ` (${emailDestino})` : ''
+
   const bloqueCodigo = cifras
-    ? `<tr><td class="nf-suave" align="center" style="padding:8px 32px 10px;font-family:${FUENTE};font-size:14px;line-height:1.5;color:#6b7280;">Tu código de seguridad</td></tr>
-<tr><td align="center" style="padding:0 32px 28px;">
-<div class="nf-codigo" translate="no" style="border:1px solid #e5e7eb;background-color:#f6f8fa;border-radius:8px;padding:16px 12px;font-family:${MONO};font-size:28px;line-height:1.2;font-weight:700;letter-spacing:6px;text-align:center;color:#111827;">${cifras}</div>
+    ? `<tr><td class="nf-suave" align="center" style="padding:4px 32px 12px;font-family:${FUENTE};font-size:14px;line-height:1.5;color:#6b7280;text-align:center;">Tu código de verificación de NutriFit es:</td></tr>
+<tr><td align="center" style="padding:0 32px 24px;">
+<div class="nf-codigo" translate="no" style="display:inline-block;border:1px solid #e5e7eb;background-color:#f6f8fa;border-radius:12px;padding:16px 32px;font-family:${MONO};font-size:28px;line-height:1.2;font-weight:700;letter-spacing:6px;text-align:center;color:#059669;">${cifras}</div>
 </td></tr>`
     : ''
 
   const html = envolver(
-    `<tr><td class="nf-texto" align="center" style="padding:16px 32px 24px;font-family:${FUENTE};font-size:16px;line-height:1.5;color:#111827;">Has solicitado iniciar sesión en <strong>NutriFit</strong>.</td></tr>
+    `<tr><td class="nf-texto" align="center" style="padding:8px 32px 10px;font-family:${FUENTE};font-size:22px;line-height:1.3;font-weight:700;color:#111827;text-align:center;">Código de verificación de NutriFit</td></tr>
+<tr><td class="nf-suave" align="center" style="padding:0 32px 20px;font-family:${FUENTE};font-size:15px;line-height:1.6;color:#4b5563;text-align:center;">Hemos recibido una solicitud para acceder a tu cuenta${cuentaTxt} a través de tu dirección de correo electrónico. Has solicitado iniciar sesión en <strong>NutriFit</strong>.</td></tr>
 ${bloqueCodigo}
-<tr><td align="center" style="padding:0 32px 28px;">
+<tr><td align="center" style="padding:0 32px 24px;">
 <a href="${hrefSeguro(enlace)}" style="background-color: #059669; color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">Acceder a mi cuenta</a>
 </td></tr>
-<tr><td class="nf-suave" align="center" style="padding:0 32px;font-family:${FUENTE};font-size:13px;line-height:1.5;color:#6b7280;">${escaparHtml(aviso)}</td></tr>
-<tr><td class="nf-suave" align="center" style="padding:12px 32px 0;font-family:${FUENTE};font-size:12px;line-height:1.5;color:#6b7280;">Si el botón no funciona, copia este enlace:<br /><a href="${hrefSeguro(enlace)}" style="color:#6b7280;text-decoration:underline;word-break:break-all;">${escaparHtml(enlace)}</a></td></tr>
+<tr><td class="nf-suave" align="center" style="padding:0 32px 14px;font-family:${FUENTE};font-size:13px;line-height:1.6;color:#6b7280;text-align:center;">Si no has solicitado este código, es posible que otra persona esté intentando acceder a la cuenta de NutriFit${cuentaTxt}. No reenvíes ni des este código a nadie.</td></tr>
+<tr><td class="nf-suave" align="center" style="padding:0 32px 20px;font-family:${FUENTE};font-size:12px;line-height:1.5;color:#9ca3af;text-align:center;">${escaparHtml(aviso)}</td></tr>
+<tr><td class="nf-texto" align="center" style="padding:0 32px 2px;font-family:${FUENTE};font-size:14px;font-weight:600;color:#374151;text-align:center;">Atentamente,</td></tr>
+<tr><td class="nf-suave" align="center" style="padding:0 32px 20px;font-family:${FUENTE};font-size:13px;color:#6b7280;text-align:center;">El equipo de NutriFit</td></tr>
+<tr><td class="nf-suave" align="center" style="padding:10px 32px 0;font-family:${FUENTE};font-size:11px;line-height:1.5;color:#9ca3af;text-align:center;">Si el botón no funciona, copia este enlace en tu navegador:<br /><a href="${hrefSeguro(enlace)}" style="color:#6b7280;text-decoration:underline;word-break:break-all;">${escaparHtml(enlace)}</a></td></tr>
 ${pieHtml(PIE_ACCESO)}`,
-    cifras ? `Tu código de acceso a NutriFit es ${cifras}. Válido durante ${caduca}.` : `Tu enlace de acceso caduca en ${caduca}`,
+    cifras ? `Tu código de verificación de NutriFit es ${cifras}. Válido durante 15 minutos.` : `Tu enlace de acceso caduca en ${caduca}`,
     schemaScripts
   )
 
   const texto = cifras
-    ? `Tu código de NutriFit es: ${cifras}\n\nO pulsa este enlace para entrar:\n${enlace}\n\nPara gestionar tus notificaciones: ${URL_AJUSTES}`
-    : `Has solicitado iniciar sesión en NutriFit.\n\nAcceder a mi cuenta:\n${enlace}\n\n${aviso}\n\nNutriFit · Seguridad transaccional\nhttps://nutri.trujillomingorance.com\n\nPara gestionar tus notificaciones: ${URL_AJUSTES}`;
+    ? `Código de verificación de NutriFit\n\n` +
+      `Estimado usuario de NutriFit,\n\n` +
+      `Hemos recibido una solicitud para acceder a tu cuenta de NutriFit${cuentaPlano} a través de tu dirección de correo electrónico.\n\n` +
+      `Tu código de NutriFit es: ${cifras}\n\n` +
+      `O pulsa este enlace para acceder directamente a tu cuenta:\n${enlace}\n\n` +
+      `Si no has solicitado este código, es posible que otra persona esté intentando acceder a la cuenta de NutriFit${cuentaPlano}. No reenvíes ni des este código a nadie.\n\n` +
+      `${aviso}\n\n` +
+      `Atentamente,\nEl equipo de NutriFit\n\n` +
+      `Este correo no admite respuestas directas. Para soporte: ${RESPONDER_A.email}\n` +
+      `NutriFit · Seguridad transaccional\n${URL_APP}\n\n` +
+      `Para gestionar tus notificaciones o darte de baja: ${URL_AJUSTES}`
+    : `Código de acceso a NutriFit\n\n` +
+      `Hemos recibido una solicitud para acceder a tu cuenta de NutriFit${cuentaPlano}.\n\n` +
+      `Acceder a mi cuenta:\n${enlace}\n\n` +
+      `${aviso}\n\n` +
+      `Atentamente,\nEl equipo de NutriFit\n\n` +
+      `NutriFit · Seguridad transaccional\n${URL_APP}\n\n` +
+      `Para gestionar tus notificaciones: ${URL_AJUSTES}`;
 
   return {
     asunto: cifras ? `${cifras} es tu código de verificación de NutriFit` : 'Tu enlace para entrar en NutriFit',
@@ -298,7 +321,7 @@ export async function enviarMagicLink(env: Env, email: string, enlace: string, c
     console.log(`\n[auth] Magic link para ${email} (válido ${textoCaducidad()}):\n${enlace}${codigo ? `\n[auth] Código: ${codigo}` : ''}\n`)
     return false
   }
-  const mensaje = mensajeMagicLink(enlace, codigo)
+  const mensaje = mensajeMagicLink(enlace, codigo, email)
   return enviar(env, { para: email, ...mensaje, esAuth: true })
 }
 
