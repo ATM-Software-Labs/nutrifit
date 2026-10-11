@@ -4,8 +4,8 @@
 #    (nombre fijo para releases/latest/download/NutriFit.apk).
 #  · Manual (workflow_dispatch) → artefacto y, si se pide, pre-release.
 #
-# Toolchain fija: Node 20 LTS y JDK 17 (Temurin). Capacitor 8 genera
-# sourceCompatibility 21; el job lo baja a 17 para que compile el JDK del runner.
+# # Toolchain fija: Node 22 LTS y JDK 21 (Temurin). Capacitor 8 requiere
+# Java 21 y Kotlin jvmToolchain(21).
 #
 # Firma (obligatoria; el job falla si falta un secreto):
 #   ANDROID_KEYSTORE_BASE64 y la contraseña/alias. Acepta los nombres actuales
@@ -120,11 +120,11 @@ jobs:
       - name: Compilar web
         run: npm run build
 
-      - name: JDK 17 (Temurin)
+      - name: JDK 21 (Temurin)
         uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '21'
           cache: gradle
 
       - name: Android SDK
@@ -135,7 +135,7 @@ jobs:
       - name: Capacitor sync
         run: npx cap sync android
 
-      - name: Gradle (APK de release sin firmar, JDK 17)
+      - name: Gradle (APK de release sin firmar, JDK 21)
         working-directory: android
         env:
           NUTRIFIT_VERSION_NAME: ${{ steps.version.outputs.nombre }}
@@ -143,9 +143,6 @@ jobs:
         run: |
           set -euo pipefail
           chmod +x gradlew
-          # Los .gradle generados por Capacitor piden Java 21. El runner es JDK 17.
-          find . ../node_modules/@capacitor -name '*.gradle' -print0 \
-            | xargs -0 -r sed -i 's/JavaVersion.VERSION_21/JavaVersion.VERSION_17/g'
           ./gradlew --no-daemon --no-build-cache assembleRelease
           test -f app/build/outputs/apk/release/app-release-unsigned.apk
 
