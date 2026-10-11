@@ -2,7 +2,7 @@
 import { useMemo, useState } from 'react'
 import { ChevronRight, Download, ExternalLink, LogOut, Monitor, Moon, Shield, Sun } from 'lucide-react'
 import { URL_REPO } from '../lib/config.ts'
-import { clicPrivacidad, navegar } from '../lib/rutas.ts'
+import { clicPrivacidad, clicRecursos, navegar } from '../lib/rutas.ts'
 import { esNativa } from '../lib/plataforma.ts'
 import { Button } from './ui/Button.tsx'
 import { Input } from './ui/Input.tsx'
@@ -316,6 +316,24 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
           <p className="text-sm text-neutral-500 dark:text-neutral-400">
             {t('ajustes.sesion')} <span className="font-medium text-graphite dark:text-neutral-200">{usuario.email}</span>
           </p>
+          <div className="flex flex-col gap-2 pt-2 border-t border-neutral-100 dark:border-neutral-800">
+            <a
+              href="/recursos"
+              onClick={clicRecursos}
+              className="flex items-center justify-between rounded-xl border border-neutral-200 bg-neutral-50/50 px-3.5 py-2.5 text-xs font-semibold text-graphite hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900/40 dark:text-neutral-200 dark:hover:bg-neutral-800"
+            >
+              <span>Recursos Corporativos & Legal (Drive)</span>
+              <ChevronRight size={14} className="text-neutral-400" />
+            </a>
+            <a
+              href="/privacidad"
+              onClick={clicPrivacidad}
+              className="flex items-center justify-between rounded-xl border border-neutral-200 bg-neutral-50/50 px-3.5 py-2.5 text-xs font-semibold text-graphite hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900/40 dark:text-neutral-200 dark:hover:bg-neutral-800"
+            >
+              <span>Política de Privacidad y RGPD</span>
+              <ChevronRight size={14} className="text-neutral-400" />
+            </a>
+          </div>
           <Button variant="outline" block icon={<Download size={16} />} loading={exportando} onClick={() => void descargarDatos()}>
             {t('ajustes.descargar')}
           </Button>
@@ -335,7 +353,7 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
               {t('ajustes.eliminar')}
             </Button>
           </div>
-          <p className="text-center text-2xs text-neutral-500 dark:text-neutral-400 mt-6">NutriFit v{__APP_VERSION__} · {t('ajustes.dudas')} soporte@trujillomingorance.com</p>
+          <p className="text-center text-2xs text-neutral-500 dark:text-neutral-400 mt-6">NutriFit v{__APP_VERSION__} · Contacto oficial: <a href="mailto:nutrifit@trujillomingorance.com" className="text-mint hover:underline">nutrifit@trujillomingorance.com</a></p>
         </Seccion>
         )}
       </div>

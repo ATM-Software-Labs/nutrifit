@@ -208,14 +208,18 @@ export async function completarGoogle(env: Env, request: Request): Promise<Respo
   }
   const u = await asegurarUsuario(env, email)
   if (!u) return fallo('error_bd')
-  if (nombre) {
-    await env.DB.prepare('UPDATE usuarios SET nombre = ?1 WHERE id = ?2 AND (nombre IS NULL OR nombre = \'\')').bind(nombre, u.id).run()
-  }
-  if (foto) {
-    try {
-      await env.DB.prepare(`UPDATE usuarios SET avatar_url = ?1 WHERE id = ?2 AND (avatar_url IS NULL OR avatar_url = '')`).bind(foto, u.id).run()
-    } catch {
-      // Sin la columna de 0007, o si D1 rechaza la URL, el login sigue.
+  // Solo asociar avatar y nombre en el registro inicial. Si ya tiene cuenta,
+  // nunca se sobreescribe su foto (p. ej. si la quitó para usar UI-Avatars o subió una propia).
+  if (u.esNuevo) {
+    if (nombre) {
+      await env.DB.prepare('UPDATE usuarios SET nombre = ?1 WHERE id = ?2').bind(nombre, u.id).run()
+    }
+    if (foto) {
+      try {
+        await env.DB.prepare('UPDATE usuarios SET avatar_url = ?1 WHERE id = ?2').bind(foto, u.id).run()
+      } catch {
+        // Sin la columna de 0007, o si D1 rechaza la URL, el login sigue.
+      }
     }
   }
   const h = new Headers({ Location: destinoTrasGoogle(env, request, 'ok').replace('/?auth=ok', '/'), 'Cache-Control': 'no-store' })

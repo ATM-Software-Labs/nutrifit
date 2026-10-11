@@ -8,14 +8,20 @@
  */
 import { useEffect, useState } from 'react'
 
-export type RutaApp = '/' | '/historial' | '/profile' | '/vincular' | '/ajustes' | '/peso' | '/agua' | '/descargar'
-const RUTAS: RutaApp[] = ['/', '/historial', '/profile', '/vincular', '/ajustes', '/peso', '/agua', '/descargar']
+export type RutaApp = '/' | '/historial' | '/profile' | '/vincular' | '/ajustes' | '/peso' | '/agua' | '/descargar' | '/recursos' | '/legal'
+const RUTAS: RutaApp[] = ['/', '/historial', '/profile', '/vincular', '/ajustes', '/peso', '/agua', '/descargar', '/recursos', '/legal']
 
 export const rutaActual = () => location.pathname.replace(/\/+$/, '') || '/'
 
 /** `/privacidad` y `/privacidad/` son la política. El resto no. */
 export function esRutaPrivacidad(path: string): boolean {
   return path === '/privacidad' || path.replace(/\/+$/, '') === '/privacidad'
+}
+
+/** `/recursos` y `/legal` para recursos corporativos y documentación para Drive. */
+export function esRutaRecursos(path: string): boolean {
+  const p = path.replace(/\/+$/, '')
+  return p === '/recursos' || p === '/legal'
 }
 
 export function rutaApp(r = rutaActual()): RutaApp {
@@ -38,6 +44,12 @@ export function abrirPrivacidad() {
   window.scrollTo({ top: 0 })
 }
 
+export function abrirRecursos() {
+  if (window.location.pathname !== '/recursos') history.pushState(null, '', '/recursos')
+  window.dispatchEvent(new Event(EVENTO))
+  window.scrollTo({ top: 0 })
+}
+
 /**
  * Clic normal: abre la política en esta página. Un clic con modificador o el
  * botón central conserva el href para abrir otra pestaña.
@@ -46,6 +58,12 @@ export function clicPrivacidad(e: { preventDefault(): void; metaKey: boolean; ct
   if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return
   e.preventDefault()
   abrirPrivacidad()
+}
+
+export function clicRecursos(e: { preventDefault(): void; metaKey: boolean; ctrlKey: boolean; shiftKey: boolean; altKey: boolean; button: number }) {
+  if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return
+  e.preventDefault()
+  abrirRecursos()
 }
 
 /** Ruta actual, reactiva a navegar() y a los botones atrás/adelante. */

@@ -8,7 +8,7 @@ import { CookieBanner } from './components/CookieBanner.tsx'
 import { activarActualizacion } from './lib/sw.ts'
 import { esNativa } from './lib/plataforma.ts'
 import { borrarTokenApp, guardarTokenApp } from './lib/tokenApp.ts'
-import { EVENTO, esRutaPrivacidad, guardarVinculoPendiente, navegar, rutaActual, tomarVinculoPendiente, useRuta } from './lib/rutas.ts'
+import { EVENTO, esRutaPrivacidad, esRutaRecursos, guardarVinculoPendiente, navegar, rutaActual, tomarVinculoPendiente, useRuta } from './lib/rutas.ts'
 
 // Pantallas en chunks separados. Se precargan en paralelo a /api/auth/yo según
 // la pista "nf:sesion" para no añadir una cascada de red.
@@ -25,11 +25,13 @@ const Onboarding = lazy(cargarOnboarding)
 // Páginas sueltas (accesibles sin sesión)
 const SeccionDescargas = lazy(() => import('./components/SeccionDescargas.tsx'))
 const Privacidad = lazy(() => import('./components/Privacidad.tsx'))
+const RecursosCorporativos = lazy(() => import('./components/RecursosCorporativos.tsx'))
 const Vincular = lazy(() => import('./components/Vincular.tsx'))
 
 const ruta = rutaActual()
-/** La política no pasa por el panel. Se mira el pathname real, no una ruta normalizada a Hoy. */
+/** La política y los recursos no pasan por el panel. Se mira el pathname real. */
 const entraEnPrivacidad = window.location.pathname === '/privacidad' || esRutaPrivacidad(window.location.pathname)
+const entraEnRecursos = esRutaRecursos(window.location.pathname)
 
 // /vincular#<id>: el id del QR viaja en el fragmento (no llega a ningún servidor
 // ni a los logs). Lo sacamos de la URL nada más arrancar.
@@ -41,12 +43,12 @@ if (ruta === '/vincular') {
     guardarVinculoPendiente(id) // por si hay que entrar antes (enlace mágico en otra pestaña)
   }
   history.replaceState(null, '', '/vincular')
-} else if (!entraEnPrivacidad && ruta !== '/descargar' && ruta !== '/' && ruta !== '/historial' && ruta !== '/profile' && ruta !== '/ajustes' && ruta !== '/peso') {
+} else if (!entraEnPrivacidad && !entraEnRecursos && ruta !== '/descargar' && ruta !== '/' && ruta !== '/historial' && ruta !== '/profile' && ruta !== '/ajustes' && ruta !== '/peso' && ruta !== '/agua') {
   history.replaceState(null, '', '/') // ruta desconocida → Hoy
 }
 
 const PISTA = 'nf:sesion'
-if (!entraEnPrivacidad && ruta !== '/descargar') {
+if (!entraEnPrivacidad && !entraEnRecursos && ruta !== '/descargar') {
   if (localStorage.getItem(PISTA)) void (ruta === '/vincular' ? import('./components/Vincular.tsx') : cargarDashboard())
   else void cargarLogin()
 }
@@ -71,10 +73,14 @@ export default function App() {
   const [vinculo, setVinculo] = useState<string | null>(vinculoInicial)
   const rutaApp = useRuta()
   const [enPrivacidad, setEnPrivacidad] = useState(entraEnPrivacidad)
+  const [enRecursos, setEnRecursos] = useState(entraEnRecursos)
   const toast = useToast()
 
   useEffect(() => {
-    const sync = () => setEnPrivacidad(window.location.pathname === '/privacidad' || esRutaPrivacidad(window.location.pathname))
+    const sync = () => {
+      setEnPrivacidad(window.location.pathname === '/privacidad' || esRutaPrivacidad(window.location.pathname))
+      setEnRecursos(esRutaRecursos(window.location.pathname))
+    }
     window.addEventListener('popstate', sync)
     window.addEventListener(EVENTO, sync)
     return () => {
@@ -208,6 +214,13 @@ export default function App() {
     return (
       <Suspense fallback={<Cargando />}>
         <Privacidad />
+      </Suspense>
+    )
+  }
+  if (esRutaRecursos(window.location.pathname) || rutaApp === '/recursos' || rutaApp === '/legal' || enRecursos) {
+    return (
+      <Suspense fallback={<Cargando />}>
+        <RecursosCorporativos />
       </Suspense>
     )
   }

@@ -7,7 +7,7 @@ import { useTurnstile } from '../hooks/useTurnstile.ts'
 import { api, ApiError } from '../lib/api.ts'
 import { esNativa } from '../lib/plataforma.ts'
 import { urlApi, URL_REPO } from '../lib/config.ts'
-import { clicPrivacidad } from '../lib/rutas.ts'
+import { clicPrivacidad, clicRecursos } from '../lib/rutas.ts'
 import { guardarTokenApp } from '../lib/tokenApp.ts'
 import { ESCRITORIO, useMedia } from '../hooks/useMedia.ts'
 import { BloqueDescarga } from './BloqueDescarga.tsx'
@@ -284,6 +284,9 @@ export default function Login({ onEntrar, vinculando = false }: { onEntrar: (u: 
           )}
           <a href="/privacidad" onClick={clicPrivacidad} className="hover:text-graphite dark:hover:text-white">
             Privacidad
+          </a>
+          <a href="/recursos" onClick={clicRecursos} className="hover:text-graphite dark:hover:text-white">
+            Recursos & Legal
           </a>
           <a href={URL_REPO} target="_blank" rel="noopener noreferrer" className="hover:text-graphite dark:hover:text-white">
             GitHub

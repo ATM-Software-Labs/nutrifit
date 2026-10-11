@@ -33,11 +33,20 @@
   body,
   #root {
     min-height: 100%;
-    scrollbar-width: none;
+    overflow-x: hidden;
   }
-  html::-webkit-scrollbar, body::-webkit-scrollbar, #root::-webkit-scrollbar {
-    display: none;
-  
+
+  /* Ocultar barra fea de scroll de forma global en todo el navegador */
+  *,
+  *::before,
+  *::after {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+  *::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
   }
   body {
     @apply bg-bg font-sans text-graphite antialiased dark:bg-bg-dark dark:text-neutral-100;

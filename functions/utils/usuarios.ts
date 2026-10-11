@@ -31,10 +31,16 @@ export function obtenerUsuario(env: Env, id: string) {
   return env.DB.prepare(`SELECT ${COLUMNAS_USUARIO} FROM usuarios WHERE id = ?1`).bind(id).first<Usuario>()
 }
 
-/** Crea el usuario si no existe (alta por magic link) y devuelve id + email. */
-export async function asegurarUsuario(env: Env, email: string): Promise<{ id: string; email: string } | null> {
+/** Crea el usuario si no existe (alta por magic link) y devuelve id + email + esNuevo. */
+export async function asegurarUsuario(env: Env, email: string): Promise<{ id: string; email: string; esNuevo: boolean } | null> {
+  const previo = await env.DB.prepare('SELECT id, email FROM usuarios WHERE email = ?1').bind(email).first<{ id: string; email: string }>()
+  if (previo) {
+    return { id: previo.id, email: previo.email, esNuevo: false }
+  }
+  const nuevoId = crypto.randomUUID()
   await env.DB.prepare('INSERT INTO usuarios (id, email) VALUES (?1, ?2) ON CONFLICT (email) DO NOTHING')
-    .bind(crypto.randomUUID(), email)
+    .bind(nuevoId, email)
     .run()
-  return env.DB.prepare('SELECT id, email FROM usuarios WHERE email = ?1').bind(email).first<{ id: string; email: string }>()
+  const fila = await env.DB.prepare('SELECT id, email FROM usuarios WHERE email = ?1').bind(email).first<{ id: string; email: string }>()
+  return fila ? { id: fila.id, email: fila.email, esNuevo: true } : null
 }

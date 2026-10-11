@@ -58,9 +58,14 @@ function renderizar(md: string): ReactNode[] {
 export default function Privacidad() {
   return (
     <div className="mx-auto min-h-dvh max-w-2xl px-5 pb-16 pt-[max(1rem,env(safe-area-inset-top))]">
-      <a href="/" className="-ml-2 mt-3 inline-flex items-center rounded-full px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-800">
-        ← Volver al inicio
-      </a>
+      <div className="flex items-center justify-between -ml-2 mt-3">
+        <a href="/" className="inline-flex items-center rounded-full px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-800">
+          ← Volver al inicio
+        </a>
+        <a href="/recursos" className="inline-flex items-center rounded-full px-3 py-2 text-xs font-semibold text-mint hover:bg-neutral-100 dark:hover:bg-neutral-800">
+          Recursos Corporativos & DPA →
+        </a>
+      </div>
       <article className="mt-6 space-y-4 text-[15px] leading-relaxed text-neutral-600 dark:text-neutral-300">{renderizar(texto)}</article>
     </div>
   )
