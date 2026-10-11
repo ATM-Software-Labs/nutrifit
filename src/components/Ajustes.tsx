@@ -1,6 +1,6 @@
 /** Ajustes: perfil y objetivos (recalculados al momento), tema, cuenta y enlaces. */
-import { useMemo, useState } from 'react'
-import { ChevronRight, Download, ExternalLink, LogOut, Monitor, Moon, Shield, Sun } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { Check, ChevronRight, Download, ExternalLink, LogOut, Mail, Monitor, Moon, Shield, Sun } from 'lucide-react'
 import { URL_REPO } from '../lib/config.ts'
 import { clicPrivacidad, clicRecursos, navegar } from '../lib/rutas.ts'
 import { esNativa } from '../lib/plataforma.ts'
@@ -53,8 +53,109 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
   const { idioma, t, cambiar: cambiarIdioma } = useIdioma()
   const { contenedorRef, obtenerToken } = useTurnstile('perfil')
   const toast = useToast()
-  
-  const [seccionActiva, setSeccionActiva] = useState<'perfil' | 'preferencias' | 'dispositivos' | 'conexiones' | 'estrategia' | 'mas' | 'cuenta' | 'peligro'>('perfil')
+
+  type SeccionId = 'perfil' | 'preferencias' | 'notificaciones' | 'estrategia' | 'conexiones' | 'dispositivos' | 'cuenta' | 'mas' | 'peligro'
+
+  const obtenerSeccionInicial = (): SeccionId => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash.toLowerCase()
+      const search = window.location.search.toLowerCase()
+      if (hash.includes('notific') || hash.includes('baja') || search.includes('notific') || search.includes('baja')) {
+        return 'notificaciones'
+      }
+      if (hash.includes('dispositivo')) return 'dispositivos'
+      if (hash.includes('cuenta')) return 'cuenta'
+      if (hash.includes('preferencia')) return 'preferencias'
+      if (hash.includes('estrategia')) return 'estrategia'
+      if (hash.includes('conexion')) return 'conexiones'
+      if (hash.includes('peligro')) return 'peligro'
+    }
+    return 'perfil'
+  }
+
+  const [seccionActiva, setSeccionActiva] = useState<SeccionId>(obtenerSeccionInicial)
+
+  useEffect(() => {
+    const alCambiarHash = () => {
+      setSeccionActiva(obtenerSeccionInicial())
+    }
+    window.addEventListener('hashchange', alCambiarHash)
+    return () => window.removeEventListener('hashchange', alCambiarHash)
+  }, [])
+
+  const [resumenSemanal, setResumenSemanal] = useState(() => {
+    if (typeof window === 'undefined') return true
+    return localStorage.getItem('nf:pref:resumen') !== 'false'
+  })
+  const [recordatoriosHabitos, setRecordatoriosHabitos] = useState(() => {
+    if (typeof window === 'undefined') return true
+    return localStorage.getItem('nf:pref:habitos') !== 'false'
+  })
+  const [novedades, setNovedades] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return localStorage.getItem('nf:pref:novedades') === 'true'
+  })
+  const [bajaComunicaciones, setBajaComunicaciones] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return localStorage.getItem('nf:pref:baja') === 'true' || (window.location.hash.toLowerCase().includes('baja'))
+  })
+
+  function conmutarResumen() {
+    const sig = !resumenSemanal
+    setResumenSemanal(sig)
+    localStorage.setItem('nf:pref:resumen', String(sig))
+    if (sig) {
+      setBajaComunicaciones(false)
+      localStorage.setItem('nf:pref:baja', 'false')
+    }
+    toast({ tipo: 'exito', mensaje: sig ? 'Resumen semanal activado' : 'Resumen semanal desactivado' })
+  }
+
+  function conmutarHabitos() {
+    const sig = !recordatoriosHabitos
+    setRecordatoriosHabitos(sig)
+    localStorage.setItem('nf:pref:habitos', String(sig))
+    if (sig) {
+      setBajaComunicaciones(false)
+      localStorage.setItem('nf:pref:baja', 'false')
+    }
+    toast({ tipo: 'exito', mensaje: sig ? 'Recordatorios activados' : 'Recordatorios desactivados' })
+  }
+
+  function conmutarNovedades() {
+    const sig = !novedades
+    setNovedades(sig)
+    localStorage.setItem('nf:pref:novedades', String(sig))
+    if (sig) {
+      setBajaComunicaciones(false)
+      localStorage.setItem('nf:pref:baja', 'false')
+    }
+    toast({ tipo: 'exito', mensaje: sig ? 'Novedades activadas' : 'Novedades desactivadas' })
+  }
+
+  function darDeBajaTodas() {
+    if (bajaComunicaciones) {
+      setResumenSemanal(true)
+      setRecordatoriosHabitos(true)
+      setNovedades(false)
+      setBajaComunicaciones(false)
+      localStorage.setItem('nf:pref:resumen', 'true')
+      localStorage.setItem('nf:pref:habitos', 'true')
+      localStorage.setItem('nf:pref:novedades', 'false')
+      localStorage.setItem('nf:pref:baja', 'false')
+      toast({ tipo: 'exito', mensaje: 'Preferencias de comunicación restablecidas.' })
+    } else {
+      setResumenSemanal(false)
+      setRecordatoriosHabitos(false)
+      setNovedades(false)
+      setBajaComunicaciones(true)
+      localStorage.setItem('nf:pref:resumen', 'false')
+      localStorage.setItem('nf:pref:habitos', 'false')
+      localStorage.setItem('nf:pref:novedades', 'false')
+      localStorage.setItem('nf:pref:baja', 'true')
+      toast({ tipo: 'exito', mensaje: 'Baja completada: solo recibirás códigos de seguridad solicitados.' })
+    }
+  }
 
   const n = { edad: Number(edad), peso: Number(peso.replace(',', '.')), altura: Number(altura) }
   const valido = n.edad >= 14 && n.edad <= 100 && n.peso >= 30 && n.peso <= 300 && n.altura >= 120 && n.altura <= 230 && nombre.trim().length > 0
@@ -145,6 +246,7 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
         <nav className="flex lg:flex-col gap-1 text-sm font-medium overflow-x-auto pb-2 lg:pb-0 scrollbar-hide snap-x" aria-label="Ajustes">
           <BotonNav id="perfil" label="Perfil y Objetivos" />
           <BotonNav id="preferencias" label="Preferencias" />
+          <BotonNav id="notificaciones" label={t('ajustes.notificaciones')} />
           <BotonNav id="estrategia" label="Estrategia y Ayuno" />
           <BotonNav id="conexiones" label="Conexiones y Apps" />
           <BotonNav id="dispositivos" label="Dispositivos" />
@@ -249,6 +351,120 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
               />
             </Seccion>
           </div>
+        )}
+
+        {seccionActiva === 'notificaciones' && (
+          <Seccion id="notificaciones" titulo={t('ajustes.notificaciones')}>
+            <div className="space-y-4">
+              {bajaComunicaciones ? (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50/70 p-4 dark:border-amber-900/40 dark:bg-amber-950/20 text-sm text-amber-800 dark:text-amber-200 flex items-start gap-3">
+                  <Mail className="size-5 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
+                  <div>
+                    <p className="font-semibold">Baja de comunicaciones no esenciales activada</p>
+                    <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
+                      Solo recibirás correos transaccionales estrictamente necesarios para acceder a tu cuenta (códigos de seguridad).
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-neutral-200 bg-neutral-50/60 p-4 dark:border-neutral-800 dark:bg-neutral-900/40 text-sm text-neutral-600 dark:text-neutral-300 flex items-start gap-3">
+                  <Mail className="size-5 shrink-0 text-mint mt-0.5" />
+                  <div className="flex-1 text-xs">
+                    <p className="font-medium text-graphite dark:text-neutral-100">
+                      Canal oficial de envío: <code className="bg-neutral-200/60 dark:bg-neutral-800 px-1 py-0.5 rounded font-mono">nutrifit@trujillomingorance.com</code>
+                    </p>
+                    <p className="mt-1 text-neutral-500 dark:text-neutral-400">
+                      Servidores: <span className="font-mono">nutri.trujillomingorance.com</span> · Gateway: <span className="font-mono">api.trujillomingorance.com/nutrifit</span>
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <div className="divide-y divide-neutral-100 dark:divide-neutral-800 border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden bg-white dark:bg-card-dark">
+                <div className="p-4 flex items-center justify-between gap-4">
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-graphite dark:text-neutral-100">Correos de Acceso y Seguridad</span>
+                      <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">Obligatorio</span>
+                    </div>
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                      Códigos de verificación de un solo uso de 6 cifras y enlaces de acceso seguro solicitados por ti.
+                    </p>
+                  </div>
+                  <div className="shrink-0 text-emerald-600 dark:text-emerald-400">
+                    <Check size={20} />
+                  </div>
+                </div>
+
+                <div className="p-4 flex items-center justify-between gap-4">
+                  <div className="space-y-0.5">
+                    <span className="text-sm font-semibold text-graphite dark:text-neutral-100">Resumen Semanal de Progreso</span>
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                      Informe semanal con tus calorías medias, balance de macronutrientes y evolución de peso.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={resumenSemanal}
+                    onClick={conmutarResumen}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${resumenSemanal ? 'bg-mint' : 'bg-neutral-300 dark:bg-neutral-700'}`}
+                  >
+                    <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${resumenSemanal ? 'translate-x-5' : 'translate-x-0'}`} />
+                  </button>
+                </div>
+
+                <div className="p-4 flex items-center justify-between gap-4">
+                  <div className="space-y-0.5">
+                    <span className="text-sm font-semibold text-graphite dark:text-neutral-100">Recordatorios de Hábitos y Agua</span>
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                      Avisos para registrar el consumo diario de agua y comidas para no perder tus rachas.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={recordatoriosHabitos}
+                    onClick={conmutarHabitos}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${recordatoriosHabitos ? 'bg-mint' : 'bg-neutral-300 dark:bg-neutral-700'}`}
+                  >
+                    <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${recordatoriosHabitos ? 'translate-x-5' : 'translate-x-0'}`} />
+                  </button>
+                </div>
+
+                <div className="p-4 flex items-center justify-between gap-4">
+                  <div className="space-y-0.5">
+                    <span className="text-sm font-semibold text-graphite dark:text-neutral-100">Novedades y Actualizaciones</span>
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                      Comunicaciones sobre nuevas funcionalidades de NutriFit y mejoras en la plataforma.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={novedades}
+                    onClick={conmutarNovedades}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${novedades ? 'bg-mint' : 'bg-neutral-300 dark:bg-neutral-700'}`}
+                  >
+                    <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${novedades ? 'translate-x-5' : 'translate-x-0'}`} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <Button
+                  variant="outline"
+                  onClick={darDeBajaTodas}
+                  className="w-full sm:w-auto text-xs text-neutral-600 dark:text-neutral-400 hover:text-red-600 dark:hover:text-red-400"
+                >
+                  {bajaComunicaciones ? 'Restablecer preferencias de correo' : 'Darme de baja de todas las comunicaciones no esenciales'}
+                </Button>
+                <span className="text-2xs text-neutral-400 text-center sm:text-right">
+                  Cumplimiento RGPD (UE 2016/679) &amp; RFC 8058 One-Click
+                </span>
+              </div>
+            </div>
+          </Seccion>
         )}
 
         {seccionActiva === 'dispositivos' && (

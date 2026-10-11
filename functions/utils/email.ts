@@ -78,7 +78,7 @@ function pieHtml(texto: string): string {
     .replaceAll('\n', '<br />')
   return `<tr><td style="padding:32px 32px 0;"><hr style="border:none;border-top:1px solid #e5e7eb;margin:0;" /></td></tr>
 <tr><td class="nf-suave" align="center" style="padding:24px 32px 12px;font-size:11px;line-height:1.5;color:#6b7280;text-align:center;">${html}</td></tr>
-<tr><td class="nf-suave" align="center" style="padding:0 32px 24px;font-size:12px;line-height:1.5;color:#9ca3af;text-align:center;"><a href="${URL_AJUSTES}" style="color:#9ca3af;text-decoration:underline;">Gestionar notificaciones</a> · <a href="${URL_AJUSTES}" style="color:#9ca3af;text-decoration:underline;">Darme de baja</a></td></tr>`
+<tr><td class="nf-suave" align="center" style="padding:0 32px 24px;font-size:12px;line-height:1.5;color:#9ca3af;text-align:center;"><a href="${URL_AJUSTES}#notificaciones" style="color:#9ca3af;text-decoration:underline;">Gestionar notificaciones</a> · <a href="${URL_AJUSTES}#notificaciones" style="color:#9ca3af;text-decoration:underline;">Darme de baja</a></td></tr>`
 }
 
 function envolver(cuerpo: string, preheader: string, jsonLd?: string): string {
@@ -111,6 +111,11 @@ ${jsonLd || ''}
 <tr><td align="center" style="padding:40px 32px 16px;font-family:${FUENTE};">
 <img src="${URL_APP}/logo.svg" alt="NutriFit Logo" width="64" height="64" style="display:inline-block;width:64px;height:auto;vertical-align:middle;border:0;outline:none;text-decoration:none;" />
 <div style="margin-top:16px;font-size:24px;font-weight:700;letter-spacing:-0.3px;color:${MINT};">NutriFit</div>
+<div style="margin-top:8px;font-size:12px;line-height:1.5;color:#9ca3af;font-family:${FUENTE};text-align:center;">
+  <span>NutriFit &lt;<a href="mailto:${REMITENTE.email}" style="color:#9ca3af;text-decoration:none;">${REMITENTE.email}</a>&gt;</span>
+  <span style="margin:0 6px;color:#d1d5db;">·</span>
+  <a href="${URL_AJUSTES}#notificaciones" style="color:#059669;text-decoration:underline;font-weight:600;">Darse de baja / Unsubscribe</a>
+</div>
 </td></tr>
 ${cuerpo}
 </table>
@@ -268,10 +273,6 @@ interface Correo {
 /** Cuerpo JSON de POST /v3/smtp/email. Las cabeceras RFC van en \`headers\`. */
 export function cuerpoBrevo(c: Correo): Record<string, unknown> {
   const headers: Record<string, string> = { ...CABECERAS_CORREO }
-  if (c.esAuth) {
-    delete headers['List-Unsubscribe']
-    delete headers['List-Unsubscribe-Post']
-  }
 
   headers['X-Entity-Ref-ID'] = `nf-auth-${Date.now()}`
 
