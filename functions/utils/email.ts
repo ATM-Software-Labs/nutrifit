@@ -109,7 +109,7 @@ ${jsonLd || ''}
 <tr><td align="center" style="padding:48px 16px;">
 <table role="presentation" class="nf-tarjeta" width="480" cellpadding="0" cellspacing="0" bgcolor="#ffffff" style="width:100%;max-width:480px;background-color:#ffffff;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.04);">
 <tr><td align="center" style="padding:40px 32px 16px;font-family:${FUENTE};">
-<img src="${URL_APP}/logo.png" alt="NutriFit Logo" width="64" height="64" style="display:inline-block;width:64px;height:auto;vertical-align:middle;border:0;outline:none;text-decoration:none;" />
+<img src="${URL_APP}/logo.svg" alt="NutriFit Logo" width="64" height="64" style="display:inline-block;width:64px;height:auto;vertical-align:middle;border:0;outline:none;text-decoration:none;" />
 <div style="margin-top:16px;font-size:24px;font-weight:700;letter-spacing:-0.3px;color:${MINT};">NutriFit</div>
 </td></tr>
 ${cuerpo}
@@ -195,16 +195,13 @@ ${pieHtml(PIE_ACCESO)}`,
     schemaScripts
   )
 
-  // Ojo: reemplazar el logo.png introducido antes a logo.svg para no romper nada
-  const htmlCorregido = html.replace('logo.png', 'logo.svg')
-
   const texto = cifras
     ? `Tu código de NutriFit es: ${cifras}\n\nO pulsa este enlace para entrar:\n${enlace}\n\nPara gestionar tus notificaciones: ${URL_AJUSTES}`
     : `Has solicitado iniciar sesión en NutriFit.\n\nAcceder a mi cuenta:\n${enlace}\n\n${aviso}\n\nNutriFit · Seguridad transaccional\nhttps://nutri.trujillomingorance.com\n\nPara gestionar tus notificaciones: ${URL_AJUSTES}`;
 
   return {
     asunto: cifras ? `${cifras} es tu código de verificación de NutriFit` : 'Tu enlace para entrar en NutriFit',
-    html: htmlCorregido,
+    html,
     texto,
   }
 }
