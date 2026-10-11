@@ -141,8 +141,8 @@ export function PanelActividadHidratacion({
   }
 
   return (
-    <div className="space-y-4">
-      <section id="agua" className="tarjeta scroll-mt-6 p-5" aria-labelledby="titulo-agua">
+    <div className="space-y-3">
+      <section id="agua" className="tarjeta scroll-mt-6 p-4" aria-labelledby="titulo-agua">
         <div className="flex items-center justify-between gap-3">
           <h2 id="titulo-agua" className="flex items-center gap-2 font-semibold">
             <Droplet size={16} strokeWidth={2} className="text-water" /> Agua recomendada
@@ -153,7 +153,7 @@ export function PanelActividadHidratacion({
           </p>
         </div>
         <div
-          className="mt-4 h-2 overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-800"
+          className="mt-3 h-2 overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-800"
           role="progressbar"
           aria-label="Agua bebida"
           aria-valuemin={0}
@@ -210,7 +210,7 @@ export function PanelActividadHidratacion({
         </div>
       </section>
 
-      <section className="tarjeta p-5" aria-labelledby="titulo-actividad">
+      <section className="tarjeta p-4" aria-labelledby="titulo-actividad">
         <div className="flex items-center justify-between gap-3">
           <h2 id="titulo-actividad" className="flex items-center gap-2 font-semibold">
             <Dumbbell size={16} strokeWidth={2} className="text-mint-600 dark:text-mint-400" /> Actividad física

@@ -179,9 +179,9 @@ export default function SeccionDescargas() {
         : [<Android key="a" />, <Iphone key="i" />]
 
   return (
-    <div className="mx-auto min-h-dvh max-w-2xl px-5 pb-16 pt-[max(1rem,env(safe-area-inset-top))]">
+    <article aria-label="Instalación de NutriFit" className="mx-auto min-h-dvh max-w-2xl px-5 pb-16 pt-[max(1rem,env(safe-area-inset-top))]">
       <header className="flex items-center justify-between py-3">
-        <a href="/" className="-ml-2 flex items-center gap-1.5 rounded-full px-2 py-1.5 text-sm font-medium text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800">
+        <a href="/" className="-ml-2 flex items-center gap-1.5 rounded-full px-2 py-1.5 text-sm font-medium text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800" aria-label="Volver a la página principal">
           <ArrowLeft size={18} /> Volver
         </a>
         <Logo size={30} className="text-graphite dark:text-neutral-100" />
@@ -231,11 +231,12 @@ export default function SeccionDescargas() {
           href={URL_REPO}
           target="_blank"
           rel="noopener noreferrer"
+          aria-label={`Ver código fuente en GitHub: ${GITHUB_REPO}`}
           className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-neutral-200 px-4 text-sm font-medium hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-neutral-900"
         >
           <ExternalLink size={16} /> {GITHUB_REPO}
         </a>
       </section>
-    </div>
+    </article>
   )
 }

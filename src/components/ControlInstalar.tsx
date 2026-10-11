@@ -7,7 +7,7 @@ import type { ReactNode } from 'react'
 import { navegar } from '../lib/rutas.ts'
 import { instalarPWA } from '../lib/instalacion.ts'
 
-export function ControlInstalar({ className, children }: { className?: string; children: ReactNode }) {
+export function ControlInstalar({ className, children, mostrarMasInfo = false }: { className?: string; children: ReactNode; mostrarMasInfo?: boolean }) {
   async function pulsar() {
     try {
       const posible = await instalarPWA()
@@ -20,9 +20,25 @@ export function ControlInstalar({ className, children }: { className?: string; c
     }
   }
 
+  if (!mostrarMasInfo) {
+    return (
+      <button type="button" className={className} onClick={pulsar}>
+        {children}
+      </button>
+    )
+  }
+
   return (
-    <button type="button" className={className} onClick={pulsar}>
-      {children}
-    </button>
+    <div>
+      <button type="button" className={className} onClick={pulsar}>
+        {children}
+      </button>
+      <a
+        href="/descargar"
+        className="mt-1.5 block text-center text-sm font-medium text-neutral-500 transition hover:text-graphite dark:text-neutral-400 dark:hover:text-white"
+      >
+        Más info →
+      </a>
+    </div>
   )
 }

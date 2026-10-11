@@ -206,7 +206,7 @@ export default function Login({ onEntrar, vinculando = false }: { onEntrar: (u: 
               <IconoGoogle />
               <span>{t('login.google')}</span>
             </button>
-            {!vinculando && <BloqueDescarga className="mt-8" />}
+            {!vinculando && <BloqueDescarga className="mt-8" sinQr={escritorio} />}
           </div>
         ) : (
           <div key="enviado" className="animate-pop-in" role="status">

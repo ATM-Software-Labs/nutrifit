@@ -390,9 +390,9 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
   const [logroSeleccionado, setLogroSeleccionado] = useState<typeof logros[0] | null>(null)
 
   return (
-    <main className="px-4 pt-3 pb-6 lg:px-8 lg:pt-6 flex flex-col gap-4 lg:gap-6 min-h-0">
+    <main className="px-4 pt-2 pb-4 lg:px-6 lg:pt-2 flex flex-col gap-3 min-h-0">
       <div className="mx-auto max-w-5xl w-full">
-        <header className="flex items-center gap-3 hidden lg:flex mb-4">
+        <header className="flex items-center gap-3 hidden lg:flex mb-2">
           <button onClick={() => navegar('/')} className="rounded-full p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition" aria-label="Volver">
             <ArrowLeft size={20} className="text-graphite dark:text-neutral-100" />
           </button>
@@ -401,7 +401,7 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
           </h1>
         </header>
         <div className="relative">
-          <div className="bannerContainer relative h-[96px] overflow-hidden rounded-2xl bg-[#022c22]">
+          <div className="bannerContainer relative h-[80px] overflow-hidden rounded-2xl bg-[#022c22]">
             <div className="absolute inset-0" style={{ background: BANNER_VACIO }} />
             {banner ? <BannerFoto key={banner} url={banner} /> : null}
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
@@ -469,7 +469,7 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
           />
         )}
 
-        <div className="mt-14 flex items-start justify-between gap-3">
+        <div className="mt-9 flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h1 className="flex items-center gap-1.5 truncate text-2xl font-semibold tracking-tight">
               {usuario.nombre || 'Tu perfil'}
@@ -477,21 +477,21 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
             </h1>
             <p className="text-sm text-mint-700 dark:text-mint-400">{username ? `@${username}` : 'Sin nombre de usuario'}</p>
             <p className="mt-1 inline-flex rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-2xs font-semibold uppercase tracking-wide text-emerald-800 dark:text-emerald-300">Nivel {nivel}</p>
-            {bio && <p className="mt-2 max-w-prose text-sm text-neutral-600 dark:text-neutral-300">{bio}</p>}
+            {bio && <p className="mt-1.5 max-w-prose text-sm text-neutral-600 dark:text-neutral-300">{bio}</p>}
           </div>
           {!editando && (
-            <div className="flex flex-col gap-2 shrink-0">
+            <div className="flex flex-col gap-1.5 shrink-0">
               <button
                 type="button"
                 onClick={() => setEditando(true)}
-                className="rounded-full border border-neutral-200 bg-card px-4 py-2 text-sm font-semibold text-graphite shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-emerald-500 hover:bg-emerald-500 hover:text-black hover:shadow-md hover:shadow-emerald-500/25 dark:border-neutral-700 dark:bg-card-dark dark:text-neutral-100"
+                className="rounded-full border border-neutral-200 bg-card px-3.5 py-1.5 text-xs font-semibold text-graphite shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-emerald-500 hover:bg-emerald-500 hover:text-black hover:shadow-md hover:shadow-emerald-500/25 dark:border-neutral-700 dark:bg-card-dark dark:text-neutral-100"
               >
                 Editar perfil
               </button>
               <button
                 type="button"
                 onClick={() => navegar('/ajustes')}
-                className="rounded-full border border-neutral-200 bg-card px-4 py-2 text-sm font-semibold text-graphite shadow-sm transition duration-200 hover:-translate-y-0.5 hover:bg-neutral-100 dark:border-neutral-700 dark:bg-card-dark dark:text-neutral-100 dark:hover:bg-neutral-800"
+                className="rounded-full border border-neutral-200 bg-card px-3.5 py-1.5 text-xs font-semibold text-graphite shadow-sm transition duration-200 hover:-translate-y-0.5 hover:bg-neutral-100 dark:border-neutral-700 dark:bg-card-dark dark:text-neutral-100 dark:hover:bg-neutral-800"
               >
                 Ajustes (Meta & Físico)
               </button>
@@ -499,24 +499,24 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
           )}
         </div>
 
-        <ul className="mt-4 grid grid-cols-3 gap-2">
-          <li className="rounded-2xl border border-neutral-200 bg-card px-3 py-3 dark:border-neutral-800 dark:bg-card-dark">
-            <p className="cifra text-lg font-semibold leading-none">{racha}</p>
-            <p className="mt-1 flex items-center gap-1 text-xs text-neutral-500"><Flame size={12} className="text-emerald-500" aria-hidden="true" /> {t('perfil.racha')}</p>
+        <ul className="mt-2.5 grid grid-cols-3 gap-2">
+          <li className="rounded-2xl border border-neutral-200 bg-card px-3 py-2 dark:border-neutral-800 dark:bg-card-dark">
+            <p className="cifra text-base font-semibold leading-none">{racha}</p>
+            <p className="mt-1 flex items-center gap-1 text-2xs text-neutral-500"><Flame size={12} className="text-emerald-500" aria-hidden="true" /> {t('perfil.racha')}</p>
           </li>
-          <li className="rounded-2xl border border-neutral-200 bg-card px-3 py-3 dark:border-neutral-800 dark:bg-card-dark">
-            <p className="cifra text-lg font-semibold leading-none">{entrenosMes}</p>
-            <p className="mt-1 text-xs text-neutral-500">{t('perfil.sesiones')}</p>
+          <li className="rounded-2xl border border-neutral-200 bg-card px-3 py-2 dark:border-neutral-800 dark:bg-card-dark">
+            <p className="cifra text-base font-semibold leading-none">{entrenosMes}</p>
+            <p className="mt-1 text-2xs text-neutral-500">{t('perfil.sesiones')}</p>
           </li>
-          <li className="rounded-2xl border border-neutral-200 bg-card px-3 py-3 dark:border-neutral-800 dark:bg-card-dark">
-            <p className="cifra text-lg font-semibold leading-none">{amigos}</p>
-            <p className="mt-1 text-xs text-neutral-500">{t('perfil.amigos')}</p>
+          <li className="rounded-2xl border border-neutral-200 bg-card px-3 py-2 dark:border-neutral-800 dark:bg-card-dark">
+            <p className="cifra text-base font-semibold leading-none">{amigos}</p>
+            <p className="mt-1 text-2xs text-neutral-500">{t('perfil.amigos')}</p>
           </li>
         </ul>
 
         {editando ? (
           <form
-            className="tarjeta mt-4 space-y-3 p-4"
+            className="tarjeta mt-3 space-y-2.5 p-3.5"
             onSubmit={(e) => {
               e.preventDefault()
               void guardarTexto()
@@ -524,20 +524,20 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
           >
             <label className="block text-sm">
               Usuario
-              <input value={username} onChange={(e) => setUsername(e.target.value)} maxLength={20} className="mt-1 h-10 w-full rounded-xl border border-neutral-200 bg-transparent px-3 dark:border-neutral-800" />
+              <input value={username} onChange={(e) => setUsername(e.target.value)} maxLength={20} className="mt-1 h-9 w-full rounded-xl border border-neutral-200 bg-transparent px-3 dark:border-neutral-800" />
             </label>
             <label className="block text-sm">
               Biografía
-              <textarea value={bio} onChange={(e) => setBio(e.target.value)} maxLength={160} rows={3} className="mt-1 w-full rounded-xl border border-neutral-200 bg-transparent px-3 py-2 dark:border-neutral-800" />
+              <textarea value={bio} onChange={(e) => setBio(e.target.value)} maxLength={160} rows={2} className="mt-1 w-full rounded-xl border border-neutral-200 bg-transparent px-3 py-1.5 dark:border-neutral-800" />
             </label>
             <div className="flex gap-2">
-              <button type="submit" className="h-9 rounded-xl bg-mint px-3 text-sm font-medium text-white">Guardar</button>
-              <button type="button" onClick={() => setEditando(false)} className="h-9 rounded-xl px-3 text-sm text-neutral-500">Cancelar</button>
+              <button type="submit" className="h-8 rounded-xl bg-mint px-3 text-xs font-medium text-white">Guardar</button>
+              <button type="button" onClick={() => setEditando(false)} className="h-8 rounded-xl px-3 text-xs text-neutral-500">Cancelar</button>
             </div>
           </form>
         ) : null}
 
-        <div className="mt-6 grid grid-cols-2 gap-2" role="tablist">
+        <div className="mt-3 grid grid-cols-2 gap-2" role="tablist">
           {(['feed', 'amigos'] as const).map((id) => (
             <button
               key={id}
@@ -546,7 +546,7 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
               role="tab"
               aria-selected={pestana === id}
               onClick={() => setPestana(id)}
-              className={`h-10 rounded-xl text-sm font-medium ${pestana === id ? 'bg-mint text-white' : 'border border-neutral-200 dark:border-neutral-800'}`}
+              className={`h-9 rounded-xl text-xs font-semibold ${pestana === id ? 'bg-mint text-white' : 'border border-neutral-200 dark:border-neutral-800'}`}
             >
               {id === 'feed' ? 'Feed' : t('perfil.amigos')}
             </button>
@@ -554,7 +554,7 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
         </div>
 
         {pestana === 'feed' ? (
-          <div className="mt-4 grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
+          <div className="mt-3 grid grid-cols-1 items-start gap-3 lg:grid-cols-2">
             <section className="tarjeta p-4" aria-labelledby="titulo-macros">
               <div className="flex items-center justify-between gap-4">
                 <div>

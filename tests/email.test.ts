@@ -33,7 +33,7 @@ test('el acceso usa la plantilla XHTML, el botón y el código de 6 cifras', () 
 
 test('el pie legal y el texto plano llevan los enlaces completos', () => {
   const m = mensajeMagicLink(ENLACE, CODIGO)
-  assert.match(m.html, /Alberto Trujillo Mingorance \(Barcelona, España\)/)
+  assert.match(m.html, /NutriFit · Desarrollado en Barcelona, España/)
   assert.match(m.html, /<meta http-equiv="Content-Language" content="es" \/>/)
   assert.match(m.html, /src="https:\/\/nutri\.trujillomingorance\.com\/logo\.svg"/)
   assert.match(m.html, /Correo transaccional de seguridad solicitado por el usuario/)

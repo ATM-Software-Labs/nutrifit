@@ -6,7 +6,7 @@
  * No se muestra dentro de la app nativa ni si ya está instalada.
  */
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
-import { SquarePlus } from 'lucide-react'
+import { SquarePlus, Smartphone } from 'lucide-react'
 import { alCambiarPrompt, detectarPlataforma, instalada, instalarPWA, ofrecerDescarga, promptInstalar, URL_DESCARGAR, type Plataforma } from '../lib/instalacion.ts'
 import { cx } from './ui/cx.ts'
 
@@ -119,7 +119,7 @@ function BotonesMovil({ plataforma }: { plataforma: Plataforma }) {
  * variante «tarjeta»: bloque completo (login y /descargar).
  * variante «lateral»: QR pequeño para la barra lateral de escritorio.
  */
-export function BloqueDescarga({ variante = 'tarjeta', className, conEnlace = true }: { variante?: 'tarjeta' | 'lateral'; className?: string; conEnlace?: boolean }) {
+export function BloqueDescarga({ variante = 'tarjeta', className, conEnlace = true, sinQr = false }: { variante?: 'tarjeta' | 'lateral'; className?: string; conEnlace?: boolean; sinQr?: boolean }) {
   const plataforma = useMemo(() => detectarPlataforma(), [])
   const mostrar = useMemo(ofrecerDescarga, [])
   if (!mostrar) return null
@@ -142,15 +142,21 @@ export function BloqueDescarga({ variante = 'tarjeta', className, conEnlace = tr
     <section aria-labelledby="titulo-descarga" className={cx('tarjeta p-5', className)}>
       {plataforma === 'escritorio' ? (
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-          <div className="hidden sm:block shrink-0 rounded-2xl border border-neutral-200 p-1.5 dark:border-neutral-800">
-            <QrDescarga tamano={100} />
-          </div>
+          {!sinQr ? (
+            <div className="hidden sm:block shrink-0 rounded-2xl border border-neutral-200 p-1.5 dark:border-neutral-800">
+              <QrDescarga tamano={100} />
+            </div>
+          ) : (
+            <div className="hidden sm:flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-mint-50 dark:bg-mint-950/60 border border-mint-200 dark:border-mint-800/40">
+              <Smartphone size={32} className="text-mint-600 dark:text-mint-400" />
+            </div>
+          )}
           <div className="min-w-0 flex-1">
             <h2 id="titulo-descarga" className="text-lg font-semibold tracking-tight">
               Instala la app
             </h2>
             <p className="mt-1.5 mb-3 text-sm leading-relaxed text-neutral-500 dark:text-neutral-400">
-              Instala NutriFit en tu ordenador o escanea el QR para llevarla en tu móvil.
+              {sinQr ? 'Instala NutriFit en tu ordenador o descárgala en tu móvil.' : 'Instala NutriFit en tu ordenador o escanea el QR para llevarla en tu móvil.'}
             </p>
             <BotonesMovil plataforma={plataforma} />
             {conEnlace && (

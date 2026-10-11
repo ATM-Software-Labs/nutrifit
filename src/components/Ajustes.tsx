@@ -2,7 +2,7 @@
 import { useMemo, useState } from 'react'
 import { ChevronRight, Download, ExternalLink, LogOut, Monitor, Moon, Shield, Sun } from 'lucide-react'
 import { URL_REPO } from '../lib/config.ts'
-import { clicPrivacidad } from '../lib/rutas.ts'
+import { clicPrivacidad, navegar } from '../lib/rutas.ts'
 import { esNativa } from '../lib/plataforma.ts'
 import { Button } from './ui/Button.tsx'
 import { Input } from './ui/Input.tsx'
@@ -22,7 +22,6 @@ import { SeccionDispositivos } from './SeccionDispositivos.tsx'
 import { SeccionIntegraciones } from './SeccionIntegraciones.tsx'
 import { SeccionPreferenciasAvanzadas } from './SeccionPreferenciasAvanzadas.tsx'
 import { useIdioma } from '../hooks/useIdioma.ts'
-import { ControlInstalar } from './ControlInstalar.tsx'
 import type { Idioma } from '../lib/i18n.ts'
 
 const SELECT =
@@ -139,9 +138,9 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
   )
 
   return (
-    <main className="mx-auto max-w-5xl px-5 pt-6 lg:px-8 lg:pt-4 flex flex-col lg:flex-row gap-8 lg:gap-8">
-      <aside className="w-full lg:w-56 shrink-0 lg:sticky lg:top-4 h-max z-10">
-        <h1 className="mb-6 text-2xl lg:text-3xl font-semibold tracking-tight text-graphite dark:text-neutral-100 hidden lg:block">{t('ajustes.titulo')}</h1>
+    <main className="mx-auto max-w-5xl px-5 pt-3 lg:px-8 lg:pt-2 flex flex-col lg:flex-row gap-4 lg:gap-6">
+      <aside className="w-full lg:w-56 shrink-0 lg:sticky lg:top-2 h-max z-10">
+        <h1 className="mb-3 text-xl lg:text-2xl font-semibold tracking-tight text-graphite dark:text-neutral-100 hidden lg:block">{t('ajustes.titulo')}</h1>
         {/* Mobile back button logic can be handled if needed, for now just show pills on mobile */}
         <nav className="flex lg:flex-col gap-1 text-sm font-medium overflow-x-auto pb-2 lg:pb-0 scrollbar-hide snap-x" aria-label="Ajustes">
           <BotonNav id="perfil" label="Perfil y Objetivos" />
@@ -155,7 +154,7 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
         </nav>
       </aside>
       
-      <div className="flex-1 pb-12 min-w-0">
+      <div className="flex-1 pb-6 min-w-0">
         {seccionActiva === 'perfil' && (
         <Seccion id="perfil" titulo={t('ajustes.perfil')}>
           <Input label={t('ajustes.nombre')} value={nombre} maxLength={60} onChange={(e) => setNombre(e.target.value)} />
@@ -274,11 +273,22 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
         <Seccion titulo={t('ajustes.mas')} noCard>
           <div className="divide-y divide-neutral-100 bg-card rounded-2xl border border-neutral-200 dark:divide-neutral-800 dark:border-neutral-800 dark:bg-card-dark overflow-hidden mt-6">
             {!esNativa && (
-              <ControlInstalar className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-[15px] hover:bg-neutral-50 dark:hover:bg-neutral-900">
+              <a
+                href="/descargar"
+                onClick={(e) => {
+                  e.preventDefault()
+                  navegar('/descargar')
+                }}
+                className="flex items-center gap-3 px-4 py-3.5 text-[15px] hover:bg-neutral-50 dark:hover:bg-neutral-900"
+              >
                 <Download size={18} className="text-neutral-500 dark:text-neutral-400" />
-                <span className="flex-1">{t('ajustes.instalar')}</span>
+                <div className="flex-1">
+                  <span>{t('ajustes.instalar')}</span>
+                  <span className="block text-xs text-neutral-400">Guía paso a paso, APK o código QR para tu móvil</span>
+                </div>
+                <span className="text-xs font-semibold text-mint-600 dark:text-mint-400">Más info / QR →</span>
                 <ChevronRight size={16} className="text-neutral-400" />
-              </ControlInstalar>
+              </a>
             )}
             <a
               href="/privacidad"

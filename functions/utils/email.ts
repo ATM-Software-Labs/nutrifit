@@ -61,12 +61,12 @@ const DERECHOS =
 
 /** Pie del correo de acceso. La segunda frase solo es cierta en ese envío. */
 export const PIE_ACCESO =
-  `NutriFit · Proyecto titularidad de Alberto Trujillo Mingorance (Barcelona, España).\n` +
+  `NutriFit · Desarrollado en Barcelona, España.\n` +
   `Correo transaccional de seguridad solicitado por el usuario. Sin publicidad ni cookies comerciales.\n\n` +
   DERECHOS
 
 const PIE_CUENTA =
-  `NutriFit · Proyecto titularidad de Alberto Trujillo Mingorance (Barcelona, España).\n` +
+  `NutriFit · Desarrollado en Barcelona, España.\n` +
   `Este es un correo transaccional sobre la configuración de tu cuenta. ${FRASE_NO_COMERCIAL}\n\n` +
   DERECHOS
 
@@ -76,7 +76,9 @@ function pieHtml(texto: string): string {
     .replaceAll(RESPONDER_A.email, `<a href="mailto:${RESPONDER_A.email}" style="color:#6b7280;text-decoration:underline;">${RESPONDER_A.email}</a>`)
     .replaceAll('\n\n', '<br /><br />')
     .replaceAll('\n', '<br />')
-  return `<tr><td class="nf-suave" style="padding-top:36px;font-size:11px;line-height:1.5;color:#6b7280;">${html}<br /><br /><a href="${URL_AJUSTES}" style="color:#6b7280;text-decoration:underline;">Ajustes</a></td></tr>`
+  return `<tr><td style="padding:36px 32px 0;"><hr style="border:none;border-top:1px solid #e5e7eb;margin:0;" /></td></tr>
+<tr><td class="nf-suave" style="padding:24px 32px 12px;font-size:11px;line-height:1.5;color:#6b7280;">${html}</td></tr>
+<tr><td class="nf-suave" align="center" style="padding:0 32px 24px;font-size:12px;line-height:1.5;color:#9ca3af;"><a href="${URL_AJUSTES}" style="color:#9ca3af;text-decoration:underline;">Gestionar notificaciones</a> · <a href="${URL_AJUSTES}" style="color:#9ca3af;text-decoration:underline;">Darme de baja</a></td></tr>`
 }
 
 function envolver(cuerpo: string, preheader: string, jsonLd?: string): string {
@@ -197,8 +199,8 @@ ${pieHtml(PIE_ACCESO)}`,
   const htmlCorregido = html.replace('logo.png', 'logo.svg')
 
   const texto = cifras
-    ? `Tu código de NutriFit es: ${cifras}\n\nO pulsa este enlace para entrar:\n${enlace}`
-    : `Has solicitado iniciar sesión en NutriFit.\n\nAcceder a mi cuenta:\n${enlace}\n\n${aviso}\n\nNutriFit · Seguridad transaccional\nhttps://nutri.trujillomingorance.com`;
+    ? `Tu código de NutriFit es: ${cifras}\n\nO pulsa este enlace para entrar:\n${enlace}\n\nPara gestionar tus notificaciones: ${URL_AJUSTES}`
+    : `Has solicitado iniciar sesión en NutriFit.\n\nAcceder a mi cuenta:\n${enlace}\n\n${aviso}\n\nNutriFit · Seguridad transaccional\nhttps://nutri.trujillomingorance.com\n\nPara gestionar tus notificaciones: ${URL_AJUSTES}`;
 
   return {
     asunto: cifras ? `${cifras} es tu código de verificación de NutriFit` : 'Tu enlace para entrar en NutriFit',
@@ -230,7 +232,7 @@ ${pieHtml(PIE_CUENTA)}`,
     `Hola, ${nombre}.\n\nHemos calculado tus objetivos diarios:\n` +
     `· Calorías: ${plan.calorias} kcal\n· Proteína: ${plan.proteinas} g\n· Carbohidratos: ${plan.carbohidratos} g\n· Grasas: ${plan.grasas} g\n\n` +
     `Empezar a registrar: ${URL_APP}\n\n` +
-    `${PIE_CUENTA}\n\nAjustes: ${URL_AJUSTES}`
+    `${PIE_CUENTA}\n\nPara gestionar tus notificaciones o darte de baja: ${URL_AJUSTES}`
   return { asunto: `${nombre}, tu plan NutriFit está listo`, html, texto }
 }
 

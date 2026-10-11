@@ -85,8 +85,8 @@ export default function Historial({ usuario, onVerDia }: { usuario: Usuario; onV
   const diasPasados = datos?.dias.filter((d) => d.fecha <= hoy) ?? []
 
   return (
-    <main className="px-5 pb-8 lg:px-10 lg:pt-4">
-      <div className="flex flex-col gap-4 pb-5 pt-3 lg:flex-row lg:items-end lg:justify-between lg:pt-0">
+    <main className="px-5 pb-2 lg:px-10 lg:pt-2">
+      <div className="flex flex-col gap-3 pb-3 pt-2 lg:flex-row lg:items-end lg:justify-between lg:pt-0">
         <div>
           <p className="text-sm text-neutral-500 dark:text-neutral-400">Tu progreso</p>
           <h1 className="text-2xl font-semibold tracking-tight">Historial</h1>
@@ -143,7 +143,7 @@ export default function Historial({ usuario, onVerDia }: { usuario: Usuario; onV
             <Kpi etiqueta="Agua media" valor={datos.medias?.agua_ml ? litros(datos.medias.agua_ml) : '—'} detalle={`Meta ${litros(META_AGUA_ML)} al día`} />
           </div>
 
-          <div className="mt-4 grid gap-4 xl:grid-cols-2">
+          <div className="mt-3 grid gap-3 xl:grid-cols-2">
             <Panel
               titulo="Calorías"
               leyenda={
@@ -196,27 +196,27 @@ export default function Historial({ usuario, onVerDia }: { usuario: Usuario; onV
             </Panel>
           </div>
 
-          <section className="tarjeta mt-4 overflow-hidden" aria-labelledby="titulo-dias">
-            <h2 id="titulo-dias" className="px-5 pb-2 pt-5 font-semibold">
+          <section className="tarjeta mt-3 overflow-hidden" aria-labelledby="titulo-dias">
+            <h2 id="titulo-dias" className="px-4 pb-1.5 pt-3 font-semibold">
               Días
             </h2>
             <div className="overflow-x-auto">
               <table className="cifra w-full min-w-[36rem] text-sm">
                 <thead>
                   <tr className="text-left text-xs text-neutral-500 dark:text-neutral-400">
-                    <th scope="col" className="px-5 py-2 font-medium">Fecha</th>
-                    <th scope="col" className="px-3 py-2 text-right font-medium">Calorías</th>
-                    <th scope="col" className="px-3 py-2 text-right font-medium">P</th>
-                    <th scope="col" className="px-3 py-2 text-right font-medium">C</th>
-                    <th scope="col" className="px-3 py-2 text-right font-medium">G</th>
-                    <th scope="col" className="px-3 py-2 text-right font-medium">Agua</th>
-                    <th scope="col" className="px-5 py-2 text-right font-medium">Peso</th>
+                    <th scope="col" className="px-4 py-1.5 font-medium">Fecha</th>
+                    <th scope="col" className="px-3 py-1.5 text-right font-medium">Calorías</th>
+                    <th scope="col" className="px-3 py-1.5 text-right font-medium">P</th>
+                    <th scope="col" className="px-3 py-1.5 text-right font-medium">C</th>
+                    <th scope="col" className="px-3 py-1.5 text-right font-medium">G</th>
+                    <th scope="col" className="px-3 py-1.5 text-right font-medium">Agua</th>
+                    <th scope="col" className="px-4 py-1.5 text-right font-medium">Peso</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
                   {[...diasPasados].reverse().map((d) => (
                     <tr key={d.fecha} className="transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-900">
-                      <th scope="row" className="px-5 py-2.5 text-left font-normal">
+                      <th scope="row" className="px-4 py-2 text-left font-normal">
                         <button type="button" onClick={() => onVerDia(d.fecha)} className="rounded-md text-left font-medium first-letter:uppercase hover:text-mint-700 dark:hover:text-mint-400" title="Ver este día">
                           {fechaLarga(d.fecha)}
                         </button>
