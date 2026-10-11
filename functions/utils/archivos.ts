@@ -33,7 +33,7 @@ export function validarImagenSubida(bytes: Uint8Array, mimeDeclarado?: string | 
   if (estricto && declarado && !MIME_OK.has(declarado)) {
     throw new HttpError(415, 'Formato no soportado. Usa JPEG, PNG o WebP.')
   }
-  if (declarado && MIME_OK.has(declarado) && declarado !== mime) {
+  if (estricto && declarado && MIME_OK.has(declarado) && declarado !== mime) {
     throw new HttpError(415, 'El tipo del archivo no coincide con su contenido.')
   }
   if (!estricto && declarado?.startsWith('image/') && !MIME_OK.has(declarado)) {

@@ -203,7 +203,7 @@ export const api = {
       turnstile,
     })
   },
-  /** Escáner unificado. En producción la foto sale hacia el API Gateway con un ticket de 60 s. */
+  /** Escáner unificado. En producción la foto sale hacia el API Gateway con un ticket de 60 s, con fallback automático a Cloudflare Functions. */
   escanear: async (imagen: Blob, turnstile: string) => {
     const subirFicha = () => {
       const fd = new FormData()
@@ -214,29 +214,33 @@ export const api = {
     if (!usarPasarelaVision()) {
       return subirFicha()
     }
-    const prep = await pedir<PreparadoVision>('/api/alimentos/vision-ticket', {
-      method: 'POST',
-      body: { sha256: await sha256Imagen(imagen) },
-      turnstile,
-    })
-    if (prep.modo === 'cache') return prep.plato
-    if (prep.modo === 'local') return subirFicha()
-    if (prep.modo !== 'gateway' || !prep.ticket || !urlVisionPermitida(prep.url)) {
-      throw new ApiError(504, 'La conexión tardó demasiado. Comprueba tu cobertura móvil y vuelve a pulsar.', 'upstream_timeout', undefined, 0, 'UPSTREAM_TIMEOUT')
-    }
-    let res: Response
     try {
-      res = await enviarVision(prep.url, prep.ticket, imagen)
+      const prep = await pedir<PreparadoVision>('/api/alimentos/vision-ticket', {
+        method: 'POST',
+        body: { sha256: await sha256Imagen(imagen) },
+        turnstile,
+      })
+      if (prep.modo === 'cache') return prep.plato
+      if (prep.modo === 'local') return subirFicha()
+      if (prep.modo !== 'gateway' || !prep.ticket || !urlVisionPermitida(prep.url)) {
+        return subirFicha()
+      }
+      let res: Response
+      try {
+        res = await enviarVision(prep.url, prep.ticket, imagen)
+      } catch (e) {
+        if ((e as Error).name === 'AbortError') throw e
+        return subirFicha()
+      }
+      const data = (await res.json().catch(() => ({}))) as Record<string, unknown>
+      if (!res.ok) {
+        return subirFicha()
+      }
+      return data as unknown as PlatoEscaneo
     } catch (e) {
       if ((e as Error).name === 'AbortError') throw e
-      if ((e as Error).message === 'pasarela') {
-        throw new ApiError(504, 'La conexión tardó demasiado. Comprueba tu cobertura móvil y vuelve a pulsar.', 'upstream_timeout', undefined, 0, 'UPSTREAM_TIMEOUT')
-      }
-      throw new ApiError(0, 'Sin conexión. Revisa tu red e inténtalo de nuevo.', 'red')
+      return subirFicha()
     }
-    const data = (await res.json().catch(() => ({}))) as Record<string, unknown>
-    if (!res.ok) await lanzar(res, data, {})
-    return data as unknown as PlatoEscaneo
   },
 
   analizarTexto: (descripcion: string, turnstile: string) =>

@@ -167,12 +167,22 @@ function aDataUrl(blob: Blob): Promise<string> {
 
 /** Data URL `data:image/...;base64,...` → Blob, para el multipart de la API. */
 export function blobDesdeDataUrl(dataUrl: string): Blob {
-  const m = /^data:(image\/(?:webp|jpeg|png|jpg));base64,([A-Za-z0-9+/]+={0,2})$/i.exec(dataUrl)
-  if (!m?.[1] || !m[2]) throw new ErrorImagen('No se pudo comprimir la imagen.')
-  const bin = atob(m[2])
+  const indiceSeparador = dataUrl.indexOf(',')
+  if (indiceSeparador === -1 || !dataUrl.startsWith('data:image/')) {
+    throw new ErrorImagen('No se pudo comprimir la imagen.')
+  }
+  const cabecera = dataUrl.slice(5, indiceSeparador).toLowerCase()
+  const mime = cabecera.split(';')[0]?.trim() || 'image/jpeg'
+  const b64 = dataUrl.slice(indiceSeparador + 1).replace(/\s+/g, '')
+  let bin: string
+  try {
+    bin = atob(b64)
+  } catch {
+    throw new ErrorImagen('No se pudo comprimir la imagen.')
+  }
   const bytes = new Uint8Array(bin.length)
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
-  const type = m[1].toLowerCase()
+  const type = mime === 'image/jpg' ? 'image/jpeg' : mime
   const ext = type === 'image/png' ? 'png' : type === 'image/webp' ? 'webp' : 'jpg'
   // Devolver File en vez de Blob soluciona problemas de FormData en WebView/Capacitor
   return new File([bytes], `foto.${ext}`, { type })
