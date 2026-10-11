@@ -19,7 +19,7 @@ export function idArchivoValido(valor: string): boolean {
   if (!ruta) return false
   const trozos = ruta.split('/').filter(Boolean)
   if (trozos.length !== 3 || trozos[1] !== 'archivos') return false
-  if (trozos[0] !== 'api' && trozos[0] !== 'v1') return false
+  if (trozos[0] !== 'api' && trozos[0] !== 'v1' && trozos[0] !== 'nutrifit') return false
   return UUID_ARCHIVO.test(trozos[2] ?? '')
 }
 
@@ -29,7 +29,7 @@ export function idArchivoValido(valor: string): boolean {
  */
 export function archivoRechazado(valor: string): boolean {
   const ruta = rutaDe(valor.trim())
-  if (!ruta || !/^\/(?:api|v1)\/archivos\//.test(ruta)) return false
+  if (!ruta || !/^\/(?:api|v1|nutrifit)\/archivos\//.test(ruta)) return false
   return !idArchivoValido(valor)
 }
 

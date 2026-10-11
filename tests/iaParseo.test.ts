@@ -143,7 +143,7 @@ test('el prompt obliga al nombre oficial y el esquema pide input_query y display
   assert.deepEqual(RESPONSE_SCHEMA.properties.ingredientes.items.required, ['input_query', 'display_name', 'gramos', 'calorias', 'proteinas', 'carbohidratos', 'grasas'])
   assert.equal(ESQUEMA_FOTO.required.includes('is_food'), true)
   assert.deepEqual(ESQUEMA_FOTO.properties.items.items.required, ['input_query', 'display_name', 'grams', 'min_grams', 'max_grams', 'calories', 'protein', 'carbs', 'fat'])
-  assert.equal(TIMEOUT_GATEWAY_FOTO_MS, 5_000)
+  assert.equal(TIMEOUT_GATEWAY_FOTO_MS, 15_000)
   assert.equal(CARRERA_VISION_MS, 2_000)
   assert.equal(ESQUEMA_FOTO.required.includes('alternatives'), false)
   assert.deepEqual(MODELOS_GROQ_VISION, ['llama-3.2-11b-vision-preview', 'llama-3.2-90b-vision-preview'])
