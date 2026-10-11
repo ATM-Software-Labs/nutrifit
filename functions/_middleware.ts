@@ -170,7 +170,8 @@ function conCabecerasSeguridad(res: Response, pathname: string = "/", originApp?
   if (originApp) for (const [k, v] of Object.entries(cabecerasCors(originApp))) h.set(k, v)
   else h.append('Vary', 'Origin')
   const esRutaApi = pathname.startsWith('/api/')
-  aplicarCabecerasAsvs(h, esRutaApi ? CSP_API : CSP_DOCUMENTO)
+  const esArchivo = pathname.startsWith('/api/archivos/')
+  aplicarCabecerasAsvs(h, esRutaApi ? CSP_API : CSP_DOCUMENTO, Boolean(originApp || esArchivo))
   if (!h.has('cache-control')) h.set('Cache-Control', 'no-store')
   if (!respuestaBorraSesion(h)) for (const c of cookies) h.append('Set-Cookie', c)
   return r

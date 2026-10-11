@@ -75,9 +75,25 @@ export async function asignarImagenPerfil(env: Env, usuarioId: string, clase: 'a
 }
 
 export function aBytes(valor: unknown): Uint8Array | null {
+  if (!valor) return null
   if (valor instanceof Uint8Array) return valor
   if (valor instanceof ArrayBuffer) return new Uint8Array(valor)
   if (ArrayBuffer.isView(valor)) return new Uint8Array(valor.buffer, valor.byteOffset, valor.byteLength)
   if (Array.isArray(valor)) return new Uint8Array(valor)
+  if (typeof valor === 'object') {
+    const o = valor as Record<string, unknown>
+    if (Array.isArray(o.data)) return new Uint8Array(o.data)
+  }
+  if (typeof valor === 'string') {
+    try {
+      const limpio = valor.replace(/^data:image\/[a-z0-9.+-]+;base64,/i, '').replace(/\s+/g, '')
+      const bin = atob(limpio)
+      const out = new Uint8Array(bin.length)
+      for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i)
+      return out
+    } catch {
+      return null
+    }
+  }
   return null
 }

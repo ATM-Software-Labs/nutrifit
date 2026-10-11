@@ -5,7 +5,7 @@
  */
 import { useEffect, useState } from 'react'
 import { archivoRechazado } from './avatar.ts'
-import { urlDeArchivo } from './config.ts'
+import { urlApi } from './config.ts'
 import { esNativa } from './plataforma.ts'
 import { obtenerTokenApp } from './tokenApp.ts'
 
@@ -14,7 +14,14 @@ export function srcMostrable(url: string | null | undefined): string | null {
   if (!valor) return null
   if (archivoRechazado(valor)) return null
   if (valor.startsWith('data:image/') || valor.startsWith('blob:') || valor.startsWith('local-img-')) return valor
-  if (valor.startsWith('/api/archivos/')) return urlDeArchivo(valor)
+  if (valor.startsWith('/api/archivos/')) {
+    return esNativa ? urlApi(valor) : valor
+  }
+  // En la web, si la URL guardada tiene el gateway, usar ruta relativa para que viaje la cookie de sesión
+  if (!esNativa && (valor.includes('/nutrifit/archivos/') || valor.includes('/api/archivos/'))) {
+    const m = /\/(?:nutrifit\/archivos|api\/archivos)\/([0-9a-f-]+)/i.exec(valor)
+    if (m) return `/api/archivos/${m[1]}`
+  }
   if (!valor.startsWith('https://')) return null
   try {
     return new URL(valor).hostname ? valor : null
@@ -27,6 +34,20 @@ function esArchivoGateway(url: string): boolean {
   try {
     const u = new URL(url)
     return u.protocol === 'https:' && u.hostname === 'api.trujillomingorance.com' && u.pathname.startsWith('/nutrifit/archivos/')
+  } catch {
+    return false
+  }
+}
+
+function esArchivoApi(url: string): boolean {
+  if (url.startsWith('/api/archivos/')) return true
+  try {
+    const u = new URL(url)
+    return (
+      (u.hostname === 'api.trujillomingorance.com' && u.pathname.startsWith('/nutrifit/archivos/')) ||
+      (u.hostname === 'nutri.trujillomingorance.com' && u.pathname.startsWith('/api/archivos/')) ||
+      u.pathname.startsWith('/api/archivos/')
+    )
   } catch {
     return false
   }
@@ -45,7 +66,7 @@ export function useSrcArchivo(url: string | null | undefined): string | null {
 export function useEstadoArchivo(url: string | null | undefined): EstadoArchivo {
   const directo = srcMostrable(url)
   const esLocal = !!directo && directo.startsWith('local-img-')
-  const pedir = !!directo && (esArchivoGateway(directo) || esLocal)
+  const pedir = !!directo && (esLocal || esArchivoGateway(directo) || (esNativa && esArchivoApi(directo)))
   const [blob, setBlob] = useState<string | null>(null)
   const [fase, setFase] = useState<'idle' | 'carga' | 'listo' | 'fallo'>('idle')
 
