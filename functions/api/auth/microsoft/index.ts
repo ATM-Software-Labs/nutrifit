@@ -22,3 +22,5 @@ export const onRequestGet: Handler = async ({ env, request }) => {
     headers: { ...cabeceras, Location: preparado.location },
   })
 }
+
+export const onRequest = onRequestGet
