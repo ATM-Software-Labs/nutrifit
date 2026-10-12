@@ -20,3 +20,16 @@ test('emoji guardado válido gana; texto no es emoji', () => {
   assert.equal(emojiDe({ descripcion: 'Pizza', emoji: '🥗' }), '🥗')
   assert.equal(emojiDe({ descripcion: 'Pizza', emoji: 'x' }), '🍕')
 })
+
+import { digitoControlOk, normalizarEan, variantesEan } from '../src/lib/ean.ts'
+test('EAN: control, ceros iniciales y lecturas inválidas', () => {
+  assert.ok(digitoControlOk('8412700012955'))
+  assert.ok(digitoControlOk('3017620422003'))
+  assert.ok(!digitoControlOk('8412700012954'))
+  assert.equal(normalizarEan('8412700012955'), '8412700012955')
+  assert.equal(normalizarEan('08412700012955'), '8412700012955')
+  assert.equal(normalizarEan('841270001295'), null)
+  assert.equal(normalizarEan('036000291452'), '0036000291452')
+  assert.deepEqual(variantesEan('0036000291452'), ['0036000291452', '036000291452'])
+  assert.equal(normalizarEan('96385074'), '96385074')
+})

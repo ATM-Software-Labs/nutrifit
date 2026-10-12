@@ -83,7 +83,7 @@ export function AnadirRapido({
             <Icono>
               <Barcode {...i} />
             </Icono>
-            Código de barras (Open Food Facts)
+            Código de barras
           </button>
         )}
       </div>

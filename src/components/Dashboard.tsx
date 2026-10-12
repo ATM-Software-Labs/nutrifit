@@ -432,7 +432,9 @@ export default function Dashboard({
         {hoja?.tipo === 'barcode' && (
           <EscanerBarcodeModal
             abierto={true}
-            alCerrar={cerrar}
+            alCerrar={() => setHoja((h) => (h?.tipo === 'barcode' ? null : h))}
+            alFotoEtiqueta={(archivo) => setHoja({ tipo: 'scanner', comida: hoja.comida, archivo })}
+            alManual={(codigo) => setHoja({ tipo: 'revision', comida: hoja.comida, imagenUrl: null, resultado: { nombre_plato: '', display_name: '', descripcion: `Código de barras: ${codigo}`, ingredientes: [], calorias: 0, proteinas: 0, carbohidratos: 0, grasas: 0 } })}
             alDetectar={(producto) => {
               const titulo = producto.marca ? `${producto.nombre} (${producto.marca})` : producto.nombre
               const res: ResultadoAnalisis = {

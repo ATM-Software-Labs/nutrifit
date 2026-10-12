@@ -117,7 +117,7 @@ const REGLAS: readonly { re: RegExp; emoji: string; plato?: boolean }[] = [
   { re: /\b(mantequilla|margarina)\b/, emoji: '🧈' },
   { re: /\b(miel|mermelada|confitura)\b/, emoji: '🍯' },
   { re: /\b(quesos?)\b/, emoji: '🧀' },
-  { re: /\b(yogur(?:es)?|yogurt|kefir|leche|batidos?)\b/, emoji: '🥛' },
+  { re: /\b(yogur(?:es)?|yogurt|kefir|leche|batidos?|cacaolat|protein shake)\b/, emoji: '🥛' },
   { re: /\b(panes|pan|tostadas?|bagel|hogaza)\b/, emoji: '🍞' },
   { re: /\b(huevos?)\b/, emoji: '🍳' },
   { re: /\b(brocoli|verduras?|lechuga|espinacas?)\b/, emoji: '🥦' },

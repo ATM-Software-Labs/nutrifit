@@ -78,7 +78,7 @@ export function HojaAnadir({
         </button>
         {onBarcode && (
           <button type="button" className={CLASE} onClick={onBarcode}>
-            <Opcion icono={<Barcode size={20} strokeWidth={1.75} />} titulo="Escanear código de barras" desc="Escanea el envase con Open Food Facts" />
+            <Opcion icono={<Barcode size={20} strokeWidth={1.75} />} titulo="Escanear código de barras" desc="Escanea el envase o escribe el código" />
           </button>
         )}
         <button type="button" className={CLASE} onClick={onBuscar}>
