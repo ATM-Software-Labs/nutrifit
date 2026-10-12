@@ -171,6 +171,7 @@ export const comidaGuardarSchema = z
         z.url({ protocol: /^https$/, error: 'La URL de imagen debe ser https.' }).max(500),
       ])
       .nullish(),
+    emoji: z.string().trim().min(1).max(16).nullish(),
     fecha,
   })
   // Coherencia: los macros no pueden aportar MUCHAS más kcal que las declaradas

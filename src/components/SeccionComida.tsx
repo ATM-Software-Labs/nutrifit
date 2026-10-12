@@ -2,25 +2,24 @@ import { useId, useState } from 'react'
 import { ChevronDown, Copy, Plus, Trash2 } from 'lucide-react'
 import { cx } from './ui/cx.ts'
 import { entero } from '../lib/formato.ts'
-import { useSrcArchivo } from '../lib/archivoSrc.ts'
-import { emojiComida, esFotoReal } from '../lib/miniaturaComida.ts'
+import { emojiDe } from '../lib/miniaturaComida.ts'
+import { pedirApi } from '../lib/api.ts'
+import { SelectorEmoji, TileEmoji } from './TileEmoji.tsx'
 import { NOMBRE_TIPO, type Comida, type TipoComida } from '../lib/tipos.ts'
 
 function Miniatura({ c }: { c: Comida }) {
-  const [rota, setRota] = useState(false)
-  const candidata = esFotoReal(c.imagen_url) && !rota ? c.imagen_url : null
-  const foto = useSrcArchivo(candidata)
-  if (foto) {
-    return (
-      <span className="block h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-neutral-100 dark:bg-neutral-800">
-        <img src={foto} alt="" width={36} height={36} referrerPolicy="no-referrer" className="h-full w-full object-cover" onError={() => setRota(true)} />
-      </span>
-    )
-  }
+  const [propio, setPropio] = useState<string | null>(null)
+  const actual = propio ?? emojiDe(c)
+  if (c.pendiente || c.id.startsWith('tmp-')) return <TileEmoji emoji={actual} />
   return (
-    <span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-neutral-100 text-[22px] leading-none dark:bg-neutral-800">
-      <span className="block leading-none">{emojiComida(c)}</span>
-    </span>
+    <SelectorEmoji
+      emoji={actual}
+      onElegir={(e) => {
+        const previo = propio
+        setPropio(e)
+        pedirApi(`/api/comidas/${c.id}`, { method: 'PATCH', body: { emoji: e } }).catch(() => setPropio(previo))
+      }}
+    />
   )
 }
 

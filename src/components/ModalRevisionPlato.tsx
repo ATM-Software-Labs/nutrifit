@@ -5,6 +5,8 @@
  * reparte el total estimado en proporción a los gramos originales.
  * Sin ingredientes → los totales se editan directamente.
  */
+import { emojiPorTexto, esEmojiValido } from '../lib/miniaturaComida.ts'
+import { SelectorEmoji } from './TileEmoji.tsx'
 import { useMemo, useState, type FormEvent } from 'react'
 import { Plus, X } from 'lucide-react'
 import { Sheet } from './ui/Sheet.tsx'
@@ -82,7 +84,7 @@ function CampoNumero({ label, valor, onChange, sufijo, ancho = 'w-20', etiquetaV
 
 export default function ModalRevisionPlato({
   resultado,
-  imagenUrl,
+  imagenUrl: _imagenUrl,
   tipoInicial,
   fecha,
   onClose,
@@ -97,6 +99,7 @@ export default function ModalRevisionPlato({
 }) {
   const [nombre, setNombre] = useState(resultado?.display_name || resultado?.nombre_plato || '')
   const [tipo, setTipo] = useState<TipoComida>(tipoInicial)
+  const [emoji, setEmoji] = useState<string | null>(esEmojiValido(resultado?.emoji) ? resultado.emoji : null)
   const [filas, setFilas] = useState<Fila[]>(() => filasIniciales(resultado))
   const [manuales, setManuales] = useState<Totales>(() =>
     resultado && !resultado.ingredientes.length
@@ -151,7 +154,7 @@ export default function ModalRevisionPlato({
         grasas: r1(m.grasas),
       }
     })
-    onConfirmar({ tipo_comida: tipo, descripcion: desc.slice(0, 200), calorias: kcal, proteinas: P, carbohidratos: C, grasas: G, ingredientes, imagen_url: imagenUrl, fecha })
+    onConfirmar({ tipo_comida: tipo, descripcion: desc.slice(0, 200), calorias: kcal, proteinas: P, carbohidratos: C, grasas: G, ingredientes, imagen_url: null, emoji: emoji ?? emojiPorTexto(desc, resultado?.categoria), fecha })
   }
 
   function aplicarAlternativa(a: AlternativaPlato) {
@@ -196,7 +199,7 @@ export default function ModalRevisionPlato({
           </div>
         )}
         <div className="flex items-start gap-4">
-          {imagenUrl && <img src={imagenUrl} alt="" className="h-20 w-20 shrink-0 rounded-2xl object-cover" />}
+          <SelectorEmoji tam="lg" emoji={emoji ?? emojiPorTexto(nombre, resultado?.categoria)} onElegir={setEmoji} />
           <Input
             className="flex-1"
             label="Nombre del plato"

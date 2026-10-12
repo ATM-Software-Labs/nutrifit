@@ -60,6 +60,7 @@ export interface Comida {
   carbohidratos: number
   grasas: number
   imagen_url: string | null
+  emoji?: string | null
   fecha: string
   creado_en: string
   ingredientes: Ingrediente[]
@@ -115,6 +116,7 @@ export interface ResultadoAnalisis {
   /** Desglose de ingredientes cuando el título no lo cuenta. */
   descripcion?: string
   categoria?: CategoriaPlato
+  emoji?: string
   ingredientes: Ingrediente[]
   calorias: number
   proteinas: number
@@ -133,6 +135,7 @@ export interface NuevaComida {
   grasas: number
   ingredientes?: Ingrediente[]
   imagen_url?: string | null
+  emoji?: string | null
   fecha: string
 }
 

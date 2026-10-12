@@ -12,6 +12,7 @@ import type { Env } from './env.ts'
 import { resumirFallos } from './errorVision.ts'
 import { ErrorIA, pasoEscaneo, TIMEOUT_ESCANER_GEMINI_MS, TIMEOUT_ESCANER_MS, TIMEOUT_GATEWAY_FOTO_MS, type Imagen } from './ia.ts'
 import { FotoIlegible, type ResultadoAnalisis } from './iaParseo.ts'
+import { emojiComida, esEmojiValido } from '../../src/lib/miniaturaComida.ts'
 import { CATEGORIAS_PLATO, categoriaDe, descripcionPlato, esCategoriaPlato, tituloGastronomico, type CategoriaPlato } from './tituloPlato.ts'
 
 export interface PlatoEscaneo {
@@ -19,6 +20,7 @@ export interface PlatoEscaneo {
   /** Desglose. Vacío cuando el título ya nombra el alimento. */
   descripcion: string
   categoria: CategoriaPlato
+  emoji: string
   peso_aprox_g: number
   calorias: number
   macros: { proteinas: number; carbohidratos: number; grasas: number }
@@ -29,6 +31,7 @@ const platoSchema = z.strictObject({
   alimento: z.string().trim().min(1).max(40),
   descripcion: z.string().trim().max(200),
   categoria: z.enum(CATEGORIAS_PLATO),
+  emoji: z.string().min(1).max(16),
   peso_aprox_g: z.number().finite().min(0).max(5000),
   calorias: z.number().finite().min(0).max(5000),
   macros: z.strictObject({
@@ -59,6 +62,7 @@ export function aPlato(r: ResultadoAnalisis): PlatoEscaneo {
     alimento,
     descripcion,
     categoria,
+    emoji: esEmojiValido(r.emoji) ? r.emoji : emojiComida({ descripcion: [alimento, descripcion].join(' '), categoria, ingredientes: nombres.map((nombre) => ({ nombre })), proteinas: r.proteinas, carbohidratos: r.carbohidratos, grasas: r.grasas }),
     peso_aprox_g: redondear(peso, 5000),
     calorias: redondear(r.calorias, 5000),
     macros: {

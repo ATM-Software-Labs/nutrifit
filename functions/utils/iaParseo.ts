@@ -131,6 +131,7 @@ const analisisIA = z.object({
   alimento: textoOpcional(300),
   descripcion: textoOpcional(300),
   categoria: textoOpcional(40),
+  emoji: textoOpcional(16),
   ingredientes: z.array(ingredienteIA).max(30).default([]),
   calorias: numOpt(MAX.calorias),
   proteinas: numOpt(MAX.proteinas),
@@ -149,6 +150,8 @@ export interface ResultadoAnalisis {
   /** Desglose de ingredientes cuando el título no lo cuenta. Vacío si no aporta. */
   descripcion?: string
   categoria?: CategoriaPlato
+  /** Un único emoji que represente el plato. */
+  emoji?: string
   ingredientes: IngredienteAnalisis[]
   calorias: number
   proteinas: number
@@ -216,6 +219,7 @@ function adaptarContratoClinico(obj: unknown): unknown {
     display_name: titulo,
     descripcion: comoTexto(o.descripcion),
     categoria: comoTexto(o.categoria),
+    emoji: comoTexto(o.emoji),
     items,
     total: {
       calories: macros.calories_kcal ?? macros.calories,
@@ -256,6 +260,7 @@ function adaptarEsquemaFoto(obj: unknown): unknown {
     alimento: crudo,
     descripcion: comoTexto(o.descripcion),
     categoria: comoTexto(o.categoria),
+    emoji: comoTexto(o.emoji),
     display_name: titulo,
     nombre_plato: titulo,
     ingredientes,
@@ -355,6 +360,7 @@ export function normalizarAnalisis(obj: unknown): ResultadoAnalisis {
     nombre_plato: display_name,
     ...(descripcion ? { descripcion } : {}),
     categoria,
+    ...(a.emoji && /^\p{Extended_Pictographic}/u.test(a.emoji) ? { emoji: a.emoji } : {}),
     ingredientes: a.ingredientes.map((i) => ({ ...i, nombre: i.display_name || i.nombre, display_name: i.display_name || i.nombre })),
     ...total,
     ...(alternativas.length ? { alternativas } : {}),

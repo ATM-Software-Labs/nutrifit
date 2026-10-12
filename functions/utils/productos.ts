@@ -1,5 +1,6 @@
 /** Productos propios del usuario (tabla productos_usuario, valores por 100 g/ml). */
 import type { Env } from './env.ts'
+import { emojiPorTexto } from '../../src/lib/miniaturaComida.ts'
 import type { ProductoOFF } from './off.ts'
 import type { ProductoEntrada } from './schemas.ts'
 
@@ -93,10 +94,10 @@ export async function guardarPropio(env: Env, usuarioId: string, p: ProductoEntr
   }
   const id = crypto.randomUUID()
   const f = await env.DB.prepare(
-    `INSERT INTO productos_usuario (id, usuario_id, codigo, nombre, marca, calorias, proteinas, carbohidratos, grasas, azucares, saturadas, fibra, sal, racion_g, envase_g, unidad, creado_en, actualizado_en)
-     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?17) RETURNING ${COLUMNAS}`,
+    `INSERT INTO productos_usuario (id, usuario_id, codigo, nombre, marca, calorias, proteinas, carbohidratos, grasas, azucares, saturadas, fibra, sal, racion_g, envase_g, unidad, creado_en, actualizado_en, emoji)
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?17, ?18) RETURNING ${COLUMNAS}`,
   )
-    .bind(id, usuarioId, ...valores(p), ahora)
+    .bind(id, usuarioId, ...valores(p), ahora, emojiPorTexto(p.nombre))
     .first<FilaProducto>()
   return aProducto(f!)
 }

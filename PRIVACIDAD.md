@@ -27,14 +27,15 @@ El tratamiento de tus datos de registro y uso se realiza sobre la base de la eje
 - **Aviso sobre el nivel gratuito de Gemini:** en el uso del tier gratuito de la API de Google Gemini, Google puede procesar los datos de conformidad con sus términos de servicio para desarrolladores con fines de depuración y mejora de modelos. Por ello, se prohíbe explícitamente subir fotografías que contengan rostros de personas o documentos personales. En caso de migración a niveles comerciales dedicados, se actualizará este apartado.
 - **Proveedores alternativos:** Cloudflare Workers AI no emplea los datos suministrados para entrenar modelos.
 
-### Fondo blanco en las fotos
+### Fotos de comidas: solo para el análisis
 
-Al hacer una foto de un plato o de un envase, NutriFit procesa la imagen **en tu propio dispositivo** antes de subirla. La opción está activada por defecto (Ajustes › Privacidad y legal › «Fondo blanco en fotos»).
+Las fotos de platos y envases **ya no se guardan**. Se usan en memoria únicamente para que la IA calcule los nutrientes y después se descartan. En el diario cada comida se muestra con un emoji representativo (🍕 🥗 🍔…), que puedes cambiar tocándolo. Las fotos guardadas antes de este cambio se mantienen hasta que decidas borrarlas; puedes pedirlo en cualquier momento.
 
-- Un modelo de segmentación (MediaPipe Interactive Segmenter) recorta el plato o el envase del centro del encuadre y pinta el resto de blanco (#FFFFFF). Un detector de caras (MediaPipe Face Detector) descarta los recortes que contienen una persona y tapa con blanco las caras que queden dentro de la imagen.
-- Si la segmentación no está disponible o no da un resultado fiable, se hace un recorte central y las caras detectadas se tapan igualmente.
-- **La foto original nunca sale del móvil.** Solo se envía a la IA para el análisis, y solo se guarda y se muestra, la imagen ya procesada. Hemos elegido analizar también la imagen procesada, porque el plato o el envase queda entero y la IA no necesita el fondo.
-- Los modelos se sirven desde nuestro propio dominio y se ejecutan en el navegador o en la app; no se usa ningún servicio externo para este paso.
+Antes de enviarla, la foto se procesa **en tu propio dispositivo** (opción activada por defecto en Ajustes › Privacidad y legal › «Fondo blanco en fotos»):
+
+- Un modelo de segmentación (MediaPipe Interactive Segmenter) recorta el plato o el envase del centro del encuadre y pinta el resto de blanco. Un detector de caras (MediaPipe Face Detector) descarta los recortes que contienen una persona y tapa con blanco las caras que queden.
+- Si no da un resultado fiable, se hace un recorte central y las caras se tapan igualmente. Si el procesado falla del todo, **la foto no se envía** y te pedimos que la repitas.
+- La foto original nunca sale del móvil. Los modelos se sirven desde nuestro dominio y se ejecutan en el dispositivo.
 
 ### Destinatarios y encargados del tratamiento
 

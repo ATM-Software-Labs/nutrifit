@@ -6,6 +6,7 @@ import { leerBody } from '../../utils/http.ts'
 import { comidaGuardarSchema } from '../../utils/schemas.ts'
 import { exigirSesion } from '../../utils/session.ts'
 import { exigirLimite } from '../../utils/rateLimit.ts'
+import { emojiComida, esEmojiValido } from '../../../src/lib/miniaturaComida.ts'
 import { aComidaApi, type FilaComida } from '../../utils/comidas.ts'
 
 export const onRequestPost: Handler = async ({ request, env, data }) => {
@@ -24,8 +25,8 @@ export const onRequestPost: Handler = async ({ request, env, data }) => {
 
   const fila = await env.DB.prepare(
     `INSERT INTO diario_comidas
-       (id, usuario_id, tipo_comida, descripcion, calorias, proteinas, carbohidratos, grasas, ingredientes_json, imagen_url, fecha)
-     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
+       (id, usuario_id, tipo_comida, descripcion, calorias, proteinas, carbohidratos, grasas, ingredientes_json, imagen_url, fecha, emoji)
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)
      RETURNING *`,
   )
     .bind(
@@ -40,6 +41,7 @@ export const onRequestPost: Handler = async ({ request, env, data }) => {
       c.ingredientes?.length ? JSON.stringify(c.ingredientes) : null,
       c.imagen_url ?? null,
       c.fecha,
+      esEmojiValido(c.emoji) ? c.emoji : emojiComida(c),
     )
     .first<FilaComida>()
 

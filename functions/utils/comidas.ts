@@ -10,6 +10,7 @@ export interface FilaComida {
   grasas: number
   ingredientes_json: string | null
   imagen_url: string | null
+  emoji: string | null
   fecha: string
   creado_en: string
 }

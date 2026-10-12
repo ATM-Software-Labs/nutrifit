@@ -33,8 +33,6 @@ import { useResumen } from '../hooks/useResumen.ts'
 import { api } from '../lib/api.ts'
 import { conComida, reemplazarComida, sinComida } from '../lib/resumen.ts'
 import { fechaLarga, hoyISO, tipoPorHora } from '../lib/fechas.ts'
-import { blobDesdeDataUrl } from '../lib/imagen.ts'
-import { esFotoReal } from '../lib/miniaturaComida.ts'
 import { clicPrivacidad, navegar } from '../lib/rutas.ts'
 import { fijarUsuarioSync } from '../lib/ventanaCliente.ts'
 import { TIPOS_COMIDA, type Comida, type NuevaComida, type ResultadoAnalisis, type TipoComida, type Usuario } from '../lib/tipos.ts'
@@ -128,24 +126,12 @@ export default function Dashboard({
   async function guardar(nueva: NuevaComida) {
     setHoja(null)
     const idTemporal = `tmp-${crypto.randomUUID()}`
-    const optimista: Comida = { ...nueva, id: idTemporal, imagen_url: nueva.imagen_url ?? null, creado_en: new Date().toISOString(), ingredientes: nueva.ingredientes ?? [], pendiente: true }
+    const optimista: Comida = { ...nueva, id: idTemporal, imagen_url: null, creado_en: new Date().toISOString(), ingredientes: nueva.ingredientes ?? [], pendiente: true }
     if (nueva.fecha !== fecha) setFecha(nueva.fecha)
     actualizar((r) => conComida(r, optimista))
     try {
-      let imagen = nueva.imagen_url ?? null
-      if (imagen?.startsWith('data:')) {
-        try {
-          const subida = await api.subirFotoPlato(blobDesdeDataUrl(imagen))
-          imagen = subida.imagen_url
-        } catch (uploadError) {
-          console.warn('Fallo al subir la foto al servidor, guardando en local', uploadError)
-          const localId = `local-img-${crypto.randomUUID()}`
-          import('../lib/localDb.ts').then((m) => m.idbGuardarImagen(localId, imagen!))
-          imagen = localId
-        }
-      } else if (imagen && !imagen.startsWith('/api/archivos/') && !imagen.startsWith('https://') && !imagen.startsWith('local-img-')) {
-        imagen = null
-      }
+      // Las fotos ya no se guardan: solo se usan en memoria para el análisis.
+      const imagen = null
       const { comida } = await api.guardarComida({ ...nueva, imagen_url: imagen })
       actualizar((r) => reemplazarComida(r, idTemporal, comida))
       toast({ tipo: 'exito', mensaje: `${comida.descripcion} añadido` })
@@ -158,7 +144,6 @@ export default function Dashboard({
   }
 
   function repetir(c: Comida) {
-    const imagen = esFotoReal(c.imagen_url) ? c.imagen_url : null
     void guardar({
       tipo_comida: c.tipo_comida,
       descripcion: c.descripcion,
@@ -167,7 +152,8 @@ export default function Dashboard({
       carbohidratos: c.carbohidratos,
       grasas: c.grasas,
       ingredientes: c.ingredientes,
-      imagen_url: imagen,
+      imagen_url: null,
+      emoji: c.emoji ?? null,
       fecha: hoyISO(),
     })
   }

@@ -36,9 +36,45 @@ export function esFotoReal(url: string | null | undefined): url is string {
   return u.startsWith('data:image/') || u.startsWith('blob:') || u.startsWith('/api/archivos/') || u.startsWith('https://')
 }
 
+/** Palabras en inglés → su equivalente en las reglas (que están en español). */
+const INGLES: readonly [RegExp, string][] = [
+  [/\bscrambled eggs?\b/g, 'revuelto'], [/\bfrench fries\b|\bfries\b/g, 'patatas fritas'], [/\bomel(?:e)?tt?e?s?\b/g, 'tortilla'],
+  [/\bburgers?\b|\bcheeseburgers?\b/g, 'hamburguesa'], [/\bsalads?\b/g, 'ensalada'], [/\brice\b/g, 'arroz'], [/\bchicken\b/g, 'pollo'],
+  [/\bbeef\b|\bsteaks?\b/g, 'ternera'], [/\bpork\b/g, 'cerdo'], [/\bturkey\b/g, 'pavo'], [/\blamb\b/g, 'cordero'], [/\bmeat\b/g, 'carne'], [/\bham\b/g, 'jamon'],
+  [/\bfish\b/g, 'pescado'], [/\btuna\b/g, 'atun'], [/\bcod\b/g, 'bacalao'], [/\bshrimps?\b|\bprawns?\b/g, 'gambas'],
+  [/\beggs?\b/g, 'huevo'], [/\bmilk\b|\bmilkshakes?\b/g, 'leche'], [/\bcheese\b/g, 'queso'], [/\bbutter\b/g, 'mantequilla'], [/\bhoney\b|\bjam\b/g, 'miel'],
+  [/\bbread\b|\btoasts?\b/g, 'pan'], [/\bapples?\b/g, 'manzana'], [/\boranges?\b/g, 'naranja'], [/\bstrawberr(?:y|ies)\b/g, 'fresa'], [/\bgrapes?\b/g, 'uvas'], [/\bfruits?\b|\bpears?\b/g, 'fruta'],
+  [/\bcoffee\b|\blatte\b/g, 'cafe'], [/\btea\b/g, 'te'], [/\bjuice\b/g, 'zumo'], [/\bwater\b/g, 'agua'], [/\bbeer\b/g, 'cerveza'], [/\bwine\b/g, 'vino'],
+  [/\bsoups?\b|\bstews?\b/g, 'sopa'], [/\bpotato(?:es)?\b/g, 'patata'], [/\bbeans\b/g, 'alubias'], [/\blentils\b/g, 'lentejas'], [/\bchickpeas\b/g, 'garbanzos'],
+  [/\bcookies?\b|\bbiscuits?\b/g, 'galleta'], [/\boat(?:s|meal)\b/g, 'avena'], [/\bspaghetti\b/g, 'espaguetis'], [/\bvegetables?\b|\bveggies\b/g, 'verduras'], [/\bbroccoli\b/g, 'brocoli'],
+  [/\bsandwich(?:es)?\b/g, 'sandwich'], [/\bdoughnuts?\b/g, 'donut'],
+]
+
 function plano(s: string): string {
-  return s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
+  let t = s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
+  for (const [re, es] of INGLES) t = t.replace(re, es)
+  return t
 }
+
+/** Un único emoji (pictograma) corto; descarta texto o secuencias raras. */
+export function esEmojiValido(e: unknown): e is string {
+  return typeof e === 'string' && e.length > 0 && e.length <= 16 && /^\p{Extended_Pictographic}/u.test(e) && !/[\p{L}\p{N}\s]/u.test(e.replace(/\uFE0F|\u200D/g, ''))
+}
+
+export const EMOJI_RESPALDO = '🍽️'
+
+/** Emoji guardado si es válido; si no, el deducido por nombre, categoría o macros. */
+export function emojiDe(c: Parameters<typeof emojiComida>[0] & { emoji?: string | null }): string {
+  return esEmojiValido(c.emoji) ? c.emoji : emojiComida(c)
+}
+
+/** Emoji por texto (búsqueda, código de barras, entrada manual), con respaldo 🍽️. */
+export function emojiPorTexto(texto: string, categoria?: string | null): string {
+  return emojiDeTexto(plano(texto)) || (esCategoriaPlato(categoria) ? POR_CATEGORIA[categoria] : EMOJI_RESPALDO)
+}
+
+/** Selección para el selector de emoji. */
+export const EMOJIS_COMIDA = ['🍕','🥗','🍔','🍝','🍣','🍳','🥩','🍗','🐟','🦐','🍚','🍜','🍲','🥪','🌯','🌮','🍟','🥔','🥦','🥕','🍎','🍌','🍊','🍓','🍇','🥑','🍞','🥐','🥣','🥞','🧀','🥛','☕','🧃','🥤','🍫','🍪','🍩','🍰','🍦','🥜','🫘','🍽️'] as const
 
 /**
  * `plato` gana aunque la palabra vaya después de un ingrediente
@@ -113,15 +149,7 @@ export function emojiMacro(m: { proteinas: number; carbohidratos: number; grasas
   return '🥑'
 }
 
-export function emojiComida(c: {
-  descripcion?: string
-  categoria?: string | null
-  ingredientes?: readonly { nombre?: string }[]
-  proteinas?: number
-  carbohidratos?: number
-  grasas?: number
-}): string {
-  const texto = plano([c.descripcion ?? '', ...(c.ingredientes ?? []).map((i) => i.nombre ?? '')].join(' '))
+function emojiDeTexto(texto: string): string {
   let platoIndice = Number.POSITIVE_INFINITY
   let platoEmoji = ''
   let mejorIndice = Number.POSITIVE_INFINITY
@@ -142,8 +170,20 @@ export function emojiComida(c: {
       mejorEmoji = regla.emoji
     }
   }
-  if (platoEmoji) return platoEmoji
-  if (mejorEmoji) return mejorEmoji
+  return platoEmoji || mejorEmoji
+}
+
+export function emojiComida(c: {
+  descripcion?: string
+  categoria?: string | null
+  ingredientes?: readonly { nombre?: string }[]
+  proteinas?: number
+  carbohidratos?: number
+  grasas?: number
+}): string {
+  const texto = plano([c.descripcion ?? '', ...(c.ingredientes ?? []).map((i) => i.nombre ?? '')].join(' '))
+  const e = emojiDeTexto(texto)
+  if (e) return e
   if (esCategoriaPlato(c.categoria)) return POR_CATEGORIA[c.categoria]
   return emojiMacro({
     proteinas: c.proteinas ?? 0,

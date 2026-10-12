@@ -4,6 +4,7 @@ export interface PlatoEscaneo {
   alimento: string
   descripcion?: string
   categoria?: CategoriaPlato
+  emoji?: string
   peso_aprox_g: number
   calorias: number
   macros: { proteinas: number; carbohidratos: number; grasas: number }
@@ -26,6 +27,7 @@ export function resultadoDesdePlato(p: PlatoEscaneo): ResultadoAnalisis {
     display_name: p.alimento,
     ...(p.descripcion ? { descripcion: p.descripcion } : {}),
     ...(p.categoria ? { categoria: p.categoria } : {}),
+    ...(p.emoji ? { emoji: p.emoji } : {}),
     ingredientes: [fila],
     calorias: p.calorias,
     proteinas: p.macros.proteinas,

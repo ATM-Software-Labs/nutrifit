@@ -3,6 +3,7 @@
  * POST /api/comidas/frecuentes
  * El usuario_id es el de la sesión. nombre, items y comentario se sanitizan.
  */
+import { emojiPorTexto } from '../../../../src/lib/miniaturaComida.ts'
 import type { Handler } from '../../../utils/env.ts'
 import { error, json } from '../../../utils/response.ts'
 import { leerBody } from '../../../utils/http.ts'
@@ -101,11 +102,11 @@ export const onRequestPost: Handler = async ({ request, env, data }) => {
   if (jsonItems.length > 20000) throw new HttpError(400, 'La comida frecuente es demasiado grande.')
   const id = crypto.randomUUID()
   const fila = await env.DB.prepare(
-    `INSERT INTO comidas_frecuentes (id, usuario_id, tipo_comida, nombre, items_json)
-     VALUES (?1, ?2, ?3, ?4, ?5)
+    `INSERT INTO comidas_frecuentes (id, usuario_id, tipo_comida, nombre, items_json, emoji)
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6)
      RETURNING id, tipo_comida, nombre, items_json, creado_en`,
   )
-    .bind(id, sesion.usuarioId, c.tipo_comida, c.nombre, jsonItems)
+    .bind(id, sesion.usuarioId, c.tipo_comida, c.nombre, jsonItems, emojiPorTexto(c.nombre))
     .first<Fila>()
   return json({ ok: true, comida: fila ? presentar(fila) : null }, { status: 201 })
 }

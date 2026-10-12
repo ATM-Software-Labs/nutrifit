@@ -28,7 +28,7 @@ const plato = (): ResultadoAnalisis => ({
 
 test('el plato unificado no arrastra el proveedor y deja como máximo dos alternativas', () => {
   const u = aPlato(plato())
-  assert.deepEqual(Object.keys(u).sort(), ['alimento', 'alternativas', 'calorias', 'categoria', 'descripcion', 'macros', 'peso_aprox_g'])
+  assert.deepEqual(Object.keys(u).sort(), ['alimento', 'alternativas', 'calorias', 'categoria', 'descripcion', 'emoji', 'macros', 'peso_aprox_g'])
   assert.equal(u.alimento, 'Cruasán de mantequilla')
   assert.equal(u.descripcion, '')
   assert.equal(u.categoria, 'panaderia')
