@@ -13,6 +13,7 @@ import { Sheet } from './ui/Sheet.tsx'
 import { Button } from './ui/Button.tsx'
 import { Segmented } from './ui/Segmented.tsx'
 import { cx } from './ui/cx.ts'
+import { EscanerBarcodeModal } from './EscanerBarcodeModal.tsx'
 import { useTurnstile } from '../hooks/useTurnstile.ts'
 import { api } from '../lib/api.ts'
 import { recordarAliasDelAnalisis, resolverAlias, resultadoDesdeAlias } from '../lib/aliasAlimentos.ts'
@@ -141,6 +142,7 @@ export default function BuscarAlimento({ onClose, onResultado }: { onClose: () =
   const [cesta, setCesta] = useState<EnCesta[]>([])
   const [off, setOff] = useState<{ cargando: boolean; resultados: Alimento[] | null; error: string | null }>({ cargando: false, resultados: null, error: null })
   const [ia, setIa] = useState<{ cargando: boolean; error: string | null }>({ cargando: false, error: null })
+  const [mostrarBarcode, setMostrarBarcode] = useState(false)
   const ctrl = useRef<AbortController | null>(null)
   const entrada = useRef<HTMLInputElement>(null)
   const filaCats = useRef<HTMLDivElement>(null)
@@ -400,6 +402,15 @@ export default function BuscarAlimento({ onClose, onResultado }: { onClose: () =
             className="h-11 w-full rounded-2xl border border-neutral-200 bg-card pl-10 pr-3 text-[15px] placeholder:text-neutral-400 focus:border-mint focus:outline-none focus:ring-4 focus:ring-mint/15 dark:border-neutral-800 dark:bg-card-dark"
           />
         </label>
+        <button
+          type="button"
+          onClick={() => setMostrarBarcode(true)}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-neutral-200 bg-card text-neutral-600 transition hover:border-mint hover:bg-neutral-50 hover:text-mint-600 dark:border-neutral-800 dark:bg-card-dark dark:text-neutral-400 dark:hover:border-mint/60 dark:hover:text-mint-400"
+          title="Escanear código de barras"
+          aria-label="Escanear código de barras"
+        >
+          <Barcode size={18} strokeWidth={1.75} />
+        </button>
         {fuente === 'off' && (
           <Button type="submit" variant="outline" className="h-11" loading={off.cargando} disabled={consulta.trim().length < 2}>
             Buscar
@@ -548,6 +559,29 @@ export default function BuscarAlimento({ onClose, onResultado }: { onClose: () =
         <p className="mt-4 text-center text-2xs text-neutral-400">
           {escribiendo ? 'Sugerencias en el dispositivo, macros de la ración estándar.' : 'Valores por 100 g: USDA FoodData Central (dominio público).'}
         </p>
+      )}
+
+      {mostrarBarcode && (
+        <EscanerBarcodeModal
+          abierto={mostrarBarcode}
+          alCerrar={() => setMostrarBarcode(false)}
+          alDetectar={(producto) => {
+            const alim: Alimento = {
+              id: producto.id || producto.codigo_barras || String(Date.now()),
+              nombre: producto.marca ? `${producto.nombre} (${producto.marca})` : producto.nombre,
+              detalle: producto.marca ? `Marca: ${producto.marca}` : (producto.codigo_barras ? `EAN: ${producto.codigo_barras}` : 'Open Food Facts'),
+              por100: {
+                calorias: producto.calorias,
+                proteinas: producto.proteinas,
+                carbohidratos: producto.carbohidratos,
+                grasas: producto.grasas,
+              },
+              racion: 100,
+              fuente: 'off',
+            }
+            elegir(alim)
+          }}
+        />
       )}
     </Sheet>
   )

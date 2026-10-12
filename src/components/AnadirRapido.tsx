@@ -1,6 +1,6 @@
 /** Escritorio: tarjeta «Añadir comida» siempre visible, con zona para soltar fotos. */
 import { useState, type ChangeEvent, type ReactNode } from 'react'
-import { ImageUp, PenLine, Search, Sparkles } from 'lucide-react'
+import { Barcode, ImageUp, PenLine, Search, Sparkles } from 'lucide-react'
 import { Segmented } from './ui/Segmented.tsx'
 import { cx } from './ui/cx.ts'
 import { useToast } from './ui/Toast.tsx'
@@ -20,11 +20,13 @@ export function AnadirRapido({
   onBuscar,
   onArchivo,
   onManual,
+  onBarcode,
 }: {
   onTexto: (t: TipoComida) => void
   onBuscar: (t: TipoComida) => void
   onArchivo: (t: TipoComida, f: File) => void
   onManual: (t: TipoComida) => void
+  onBarcode?: (t: TipoComida) => void
 }) {
   const [tipo, setTipo] = useState<TipoComida>(tipoPorHora)
   const toast = useToast()
@@ -76,6 +78,14 @@ export function AnadirRapido({
           </Icono>
           Manual
         </button>
+        {onBarcode && (
+          <button type="button" className={cx(BOTON, 'col-span-2')} onClick={() => onBarcode(tipo)}>
+            <Icono>
+              <Barcode {...i} />
+            </Icono>
+            Código de barras (Open Food Facts)
+          </button>
+        )}
       </div>
       <p className="mt-3 text-center text-xs text-neutral-500 dark:text-neutral-400">o arrastra aquí la foto de tu plato</p>
       {encima && (

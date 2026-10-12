@@ -76,8 +76,39 @@ function pieHtml(texto: string): string {
     .replaceAll(RESPONDER_A.email, `<a href="mailto:${RESPONDER_A.email}" style="color:#6b7280;text-decoration:underline;">${RESPONDER_A.email}</a>`)
     .replaceAll('\n\n', '<br /><br />')
     .replaceAll('\n', '<br />')
-  return `<tr><td style="padding:32px 32px 0;"><hr style="border:none;border-top:1px solid #e5e7eb;margin:0;" /></td></tr>
-<tr><td class="nf-suave" align="center" style="padding:24px 32px 12px;font-size:11px;line-height:1.5;color:#6b7280;text-align:center;">${html}</td></tr>
+  return `<!-- Widgets tecnologicos -->
+<tr><td align="center" style="padding:24px 24px 0;">
+  <!--[if mso]><table role="presentation" width="432" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:12px;background-color:#f9fafb;">
+    <tr>
+      <td width="25%" align="center" style="padding:10px 4px;border-right:1px solid #e5e7eb;font-family:${FUENTE};">
+        <div style="font-size:12px;font-weight:700;color:#2563eb;">✨ Gemini AI</div>
+        <div style="font-size:10px;color:#6b7280;margin-top:2px;">Visión 2.0 Flash</div>
+      </td>
+      <td width="25%" align="center" style="padding:10px 4px;border-right:1px solid #e5e7eb;font-family:${FUENTE};">
+        <div style="font-size:12px;font-weight:700;color:#0284c7;">🛡️ Entra / Copilot</div>
+        <div style="font-size:10px;color:#6b7280;margin-top:2px;">SSO Universal</div>
+      </td>
+      <td width="25%" align="center" style="padding:10px 4px;border-right:1px solid #e5e7eb;font-family:${FUENTE};">
+        <div style="font-size:12px;font-weight:700;color:#ea580c;">⚡ Cloudflare</div>
+        <div style="font-size:10px;color:#6b7280;margin-top:2px;">Borde Anycast D1</div>
+      </td>
+      <td width="25%" align="center" style="padding:10px 4px;font-family:${FUENTE};">
+        <div style="font-size:12px;font-weight:700;color:#059669;">🥗 Food Facts</div>
+        <div style="font-size:10px;color:#6b7280;margin-top:2px;">Open Database</div>
+      </td>
+    </tr>
+  </table>
+  <!--[if mso]></td></tr></table><![endif]-->
+</td></tr>
+<tr><td align="center" style="padding:18px 32px 4px;">
+  <!-- Boton directo de baja / unsubscribe -->
+  <a href="${URL_AJUSTES}#notificaciones" style="display:inline-block;padding:9px 20px;background-color:#f3f4f6;border:1px solid #d1d5db;border-radius:8px;font-family:${FUENTE};font-size:12px;font-weight:600;color:#374151;text-decoration:none;">
+    Darse de baja / Unsubscribe
+  </a>
+</td></tr>
+<tr><td style="padding:24px 32px 0;"><hr style="border:none;border-top:1px solid #e5e7eb;margin:0;" /></td></tr>
+<tr><td class="nf-suave" align="center" style="padding:20px 32px 10px;font-size:11px;line-height:1.5;color:#6b7280;text-align:center;">${html}</td></tr>
 <tr><td class="nf-suave" align="center" style="padding:0 32px 24px;font-size:12px;line-height:1.5;color:#9ca3af;text-align:center;"><a href="${URL_AJUSTES}#notificaciones" style="color:#9ca3af;text-decoration:underline;">Gestionar notificaciones</a> · <a href="${URL_AJUSTES}#notificaciones" style="color:#9ca3af;text-decoration:underline;">Darme de baja</a></td></tr>`
 }
 
@@ -107,6 +138,10 @@ ${jsonLd || ''}
 <span style="display:none;font-size:1px;color:#f6f8fa;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;">${escaparHtml(preheader)}</span>
 <table role="presentation" class="nf-fondo" width="100%" cellpadding="0" cellspacing="0" bgcolor="#f6f8fa" style="background-color:#f6f8fa;">
 <tr><td align="center" style="padding:48px 16px;">
+<!--[if mso]>
+<table role="presentation" width="480" align="center" cellpadding="0" cellspacing="0" border="0">
+<tr><td>
+<![endif]-->
 <table role="presentation" class="nf-tarjeta" width="480" cellpadding="0" cellspacing="0" bgcolor="#ffffff" style="width:100%;max-width:480px;background-color:#ffffff;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.04);">
 <tr><td align="center" style="padding:40px 32px 16px;font-family:${FUENTE};">
 <img src="${URL_APP}/logo.svg" alt="NutriFit Logo" width="64" height="64" style="display:inline-block;width:64px;height:auto;vertical-align:middle;border:0;outline:none;text-decoration:none;" />
@@ -119,6 +154,10 @@ ${jsonLd || ''}
 </td></tr>
 ${cuerpo}
 </table>
+<!--[if mso]>
+</td></tr>
+</table>
+<![endif]-->
 </td></tr></table>
 </body>
 </html>`

@@ -42,6 +42,10 @@ const PaginaPerfil = lazy(async () => {
 })
 const DescribirComida = lazy(() => import('./DescribirComida.tsx'))
 const BuscarAlimento = lazy(() => import('./BuscarAlimento.tsx'))
+const EscanerBarcodeModal = lazy(async () => {
+  const m = await import('./EscanerBarcodeModal.tsx')
+  return { default: m.EscanerBarcodeModal }
+})
 const PaginaPeso = lazy(() => import('./PaginaPeso.tsx'))
 const PaginaAgua = lazy(() => import('./PaginaAgua.tsx'))
 
@@ -49,6 +53,7 @@ type Hoja =
   | null
   | { tipo: 'anadir'; comida: TipoComida }
   | { tipo: 'scanner'; comida: TipoComida; archivo: File }
+  | { tipo: 'barcode'; comida: TipoComida }
   | { tipo: 'texto'; comida: TipoComida }
   | { tipo: 'buscar'; comida: TipoComida }
   | { tipo: 'revision'; comida: TipoComida; resultado: ResultadoAnalisis | null; imagenUrl: string | null }
@@ -238,6 +243,7 @@ export default function Dashboard({
                 onBuscar={(comida) => setHoja({ tipo: 'buscar', comida })}
                 onArchivo={(comida, archivo) => setHoja({ tipo: 'scanner', comida, archivo })}
                 onManual={(comida) => setHoja({ tipo: 'revision', comida, resultado: null, imagenUrl: null })}
+                onBarcode={(comida) => setHoja({ tipo: 'barcode', comida })}
               />
             </div>
 
@@ -380,6 +386,7 @@ export default function Dashboard({
         tipo={hoja?.tipo === 'anadir' ? hoja.comida : 'comida'}
         onClose={cerrar}
         onArchivo={(archivo) => hoja?.tipo === 'anadir' && setHoja({ tipo: 'scanner', comida: hoja.comida, archivo })}
+        onBarcode={() => hoja?.tipo === 'anadir' && setHoja({ tipo: 'barcode', comida: hoja.comida })}
         onManual={() => hoja?.tipo === 'anadir' && setHoja({ tipo: 'revision', comida: hoja.comida, resultado: null, imagenUrl: null })}
         onTexto={() => hoja?.tipo === 'anadir' && setHoja({ tipo: 'texto', comida: hoja.comida })}
         onBuscar={() => hoja?.tipo === 'anadir' && setHoja({ tipo: 'buscar', comida: hoja.comida })}
@@ -396,6 +403,36 @@ export default function Dashboard({
               onElegirOtra={() => setHoja({ tipo: 'anadir', comida: hoja.comida })}
             />
           </BarreraEscanner>
+        )}
+        {hoja?.tipo === 'barcode' && (
+          <EscanerBarcodeModal
+            abierto={true}
+            alCerrar={cerrar}
+            alDetectar={(producto) => {
+              const titulo = producto.marca ? `${producto.nombre} (${producto.marca})` : producto.nombre
+              const res: ResultadoAnalisis = {
+                nombre_plato: titulo,
+                display_name: titulo,
+                descripcion: `Código de barras: ${producto.codigo_barras || ''}`,
+                categoria: 'plato_elaborado',
+                ingredientes: [
+                  {
+                    nombre: producto.nombre,
+                    gramos: 100,
+                    calorias: producto.calorias,
+                    proteinas: producto.proteinas,
+                    carbohidratos: producto.carbohidratos,
+                    grasas: producto.grasas,
+                  },
+                ],
+                calorias: producto.calorias,
+                proteinas: producto.proteinas,
+                carbohidratos: producto.carbohidratos,
+                grasas: producto.grasas,
+              }
+              setHoja({ tipo: 'revision', comida: hoja.comida, resultado: res, imagenUrl: null })
+            }}
+          />
         )}
         {hoja?.tipo === 'texto' && (
           <DescribirComida

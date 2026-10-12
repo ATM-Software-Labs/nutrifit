@@ -91,6 +91,7 @@ export default function Login({ onEntrar, vinculando = false }: { onEntrar: (u: 
   const ultimoProbado = useRef('')
   const googleEnCurso = useRef(false)
   const msftEnCurso = useRef(false)
+  const [ssoEnCurso, setSsoEnCurso] = useState<'google' | 'microsoft' | null>(null)
   const [enviado, setEnviado] = useState(false)
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -208,36 +209,58 @@ export default function Login({ onEntrar, vinculando = false }: { onEntrar: (u: 
                 {!cargando && <ArrowRight size={18} strokeWidth={2} />}
               </Button>
             </form>
-            <button
-              type="button"
-              onClick={(e) => {
-                if (googleEnCurso.current) return
-                googleEnCurso.current = true
-                void iniciarSesionGoogle(e).catch((err: unknown) => {
-                  googleEnCurso.current = false
-                  setError(err instanceof Error ? err.message : 'No se pudo continuar con Google.')
-                })
-              }}
-              className="mt-3 flex h-12 w-full items-center justify-center gap-3 rounded-2xl border border-neutral-200 text-[15px] font-medium transition hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-neutral-900"
-            >
-              <IconoGoogle />
-              <span>{t('login.google')}</span>
-            </button>
-            <button
-              type="button"
-              onClick={(e) => {
-                if (msftEnCurso.current) return
-                msftEnCurso.current = true
-                void iniciarSesionMicrosoft(e).catch((err: unknown) => {
-                  msftEnCurso.current = false
-                  setError(err instanceof Error ? err.message : 'No se pudo continuar con Microsoft.')
-                })
-              }}
-              className="mt-2.5 flex h-12 w-full items-center justify-center gap-3 rounded-2xl border border-neutral-200 text-[15px] font-medium transition hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-neutral-900"
-            >
-              <IconoMicrosoft />
-              <span>{t('login.microsoft')}</span>
-            </button>
+            <div className="relative my-5 flex items-center justify-center">
+              <div className="w-full border-t border-neutral-200 dark:border-neutral-800" />
+              <span className="absolute bg-white px-3 text-xs font-medium text-neutral-400 dark:bg-neutral-950 dark:text-neutral-500">
+                {t('login.o_bien')}
+              </span>
+            </div>
+            <div className="space-y-2.5">
+              <button
+                type="button"
+                disabled={Boolean(ssoEnCurso) || cargando}
+                onClick={(e) => {
+                  if (googleEnCurso.current) return
+                  googleEnCurso.current = true
+                  setSsoEnCurso('google')
+                  void iniciarSesionGoogle(e).catch((err: unknown) => {
+                    googleEnCurso.current = false
+                    setSsoEnCurso(null)
+                    setError(err instanceof Error ? err.message : 'No se pudo continuar con Google.')
+                  })
+                }}
+                className="flex h-12 w-full items-center justify-center gap-3 rounded-2xl border border-neutral-200 bg-white text-[15px] font-medium text-neutral-800 shadow-xs transition hover:bg-neutral-50 active:scale-[0.99] disabled:opacity-60 dark:border-neutral-800 dark:bg-neutral-900/40 dark:text-neutral-200 dark:hover:bg-neutral-900"
+              >
+                {ssoEnCurso === 'google' ? (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-neutral-400 border-t-transparent" />
+                ) : (
+                  <IconoGoogle />
+                )}
+                <span>{t('login.google')}</span>
+              </button>
+              <button
+                type="button"
+                disabled={Boolean(ssoEnCurso) || cargando}
+                onClick={(e) => {
+                  if (msftEnCurso.current) return
+                  msftEnCurso.current = true
+                  setSsoEnCurso('microsoft')
+                  void iniciarSesionMicrosoft(e).catch((err: unknown) => {
+                    msftEnCurso.current = false
+                    setSsoEnCurso(null)
+                    setError(err instanceof Error ? err.message : 'No se pudo continuar con Microsoft.')
+                  })
+                }}
+                className="flex h-12 w-full items-center justify-center gap-3 rounded-2xl border border-neutral-200 bg-white text-[15px] font-medium text-neutral-800 shadow-xs transition hover:bg-neutral-50 active:scale-[0.99] disabled:opacity-60 dark:border-neutral-800 dark:bg-neutral-900/40 dark:text-neutral-200 dark:hover:bg-neutral-900"
+              >
+                {ssoEnCurso === 'microsoft' ? (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-neutral-400 border-t-transparent" />
+                ) : (
+                  <IconoMicrosoft />
+                )}
+                <span>{t('login.microsoft')}</span>
+              </button>
+            </div>
             {!vinculando && !esNativa && (
               <div className="mt-6 flex items-center justify-center">
                 <a

@@ -1,6 +1,6 @@
 /** Ajustes: perfil y objetivos (recalculados al momento), tema, cuenta y enlaces. */
 import { useEffect, useMemo, useState } from 'react'
-import { Check, ChevronRight, Download, ExternalLink, LogOut, Mail, Monitor, Moon, Shield, Sun } from 'lucide-react'
+import { Check, ChevronRight, Download, ExternalLink, FileText, Lock, LogOut, Mail, Monitor, Moon, Shield, Sun } from 'lucide-react'
 import { URL_REPO } from '../lib/config.ts'
 import { clicPrivacidad, clicRecursos, navegar } from '../lib/rutas.ts'
 import { esNativa } from '../lib/plataforma.ts'
@@ -54,7 +54,18 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
   const { contenedorRef, obtenerToken } = useTurnstile('perfil')
   const toast = useToast()
 
-  type SeccionId = 'perfil' | 'preferencias' | 'notificaciones' | 'estrategia' | 'conexiones' | 'dispositivos' | 'cuenta' | 'mas' | 'peligro'
+  const [unidades, setUnidades] = useState<'metrico' | 'imperial'>(() => {
+    if (typeof window === 'undefined') return 'metrico'
+    return (localStorage.getItem('nf:unidades') as 'metrico' | 'imperial') || 'metrico'
+  })
+
+  function cambiarUnidades(val: 'metrico' | 'imperial') {
+    setUnidades(val)
+    localStorage.setItem('nf:unidades', val)
+    toast({ tipo: 'exito', mensaje: val === 'metrico' ? 'Sistema métrico activado (kg, cm, ml)' : 'Sistema imperial activado (lb, ft, oz)' })
+  }
+
+  type SeccionId = 'perfil' | 'preferencias' | 'notificaciones' | 'estrategia' | 'conexiones' | 'dispositivos' | 'legal' | 'cuenta' | 'mas' | 'peligro'
 
   const obtenerSeccionInicial = (): SeccionId => {
     if (typeof window !== 'undefined') {
@@ -64,6 +75,7 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
         return 'notificaciones'
       }
       if (hash.includes('dispositivo')) return 'dispositivos'
+      if (hash.includes('legal') || hash.includes('privacid') || search.includes('legal')) return 'legal'
       if (hash.includes('cuenta')) return 'cuenta'
       if (hash.includes('preferencia')) return 'preferencias'
       if (hash.includes('estrategia')) return 'estrategia'
@@ -250,6 +262,7 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
           <BotonNav id="estrategia" label="Estrategia y Ayuno" />
           <BotonNav id="conexiones" label="Conexiones y Apps" />
           <BotonNav id="dispositivos" label="Dispositivos" />
+          <BotonNav id="legal" label={t('ajustes.legal')} />
           <BotonNav id="cuenta" label="Cuenta" />
           <BotonNav id="mas" label="Más" />
           <BotonNav id="peligro" label="Zona Crítica" />
@@ -337,6 +350,20 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
                   { valor: 'en', etiqueta: 'English' },
                 ]}
               />
+            </Seccion>
+            <Seccion titulo={t('ajustes.unidades')}>
+              <Segmented
+                label={t('ajustes.unidades')}
+                valor={unidades}
+                onChange={(sig) => cambiarUnidades(sig as 'metrico' | 'imperial')}
+                opciones={[
+                  { valor: 'metrico', etiqueta: t('ajustes.metrico') },
+                  { valor: 'imperial', etiqueta: t('ajustes.imperial') },
+                ]}
+              />
+              <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                Afecta a medidas corporales, registro de hidratación y cálculos nutricionales.
+              </p>
             </Seccion>
             <Seccion titulo={t('ajustes.apariencia')}>
               <Segmented
@@ -525,6 +552,138 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
             </a>
           </div>
         </Seccion>
+        )}
+
+        {seccionActiva === 'legal' && (
+          <div className="space-y-6">
+            <Seccion id="legal" titulo="Centro Legal y Cumplimiento Normativo">
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4 dark:border-emerald-900/40 dark:bg-emerald-950/20 text-sm text-emerald-900 dark:text-emerald-200 flex items-start gap-3">
+                <Shield className="size-5 shrink-0 text-emerald-600 dark:text-emerald-400 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="font-semibold text-[15px]">Compromiso de Privacidad y Cumplimiento Normativo</p>
+                  <p className="text-xs text-emerald-800 dark:text-emerald-300 leading-relaxed">
+                    NutriFit opera bajo el estricto cumplimiento del <strong>Reglamento General de Protección de Datos (RGPD UE 2016/679)</strong>,
+                    la <strong>Ley Orgánica 3/2018 (LOPDGDD)</strong> y la <strong>Ley 34/2002 (LSSI-CE)</strong>. Garantizamos <strong>cero venta de datos</strong>,
+                    ausencia total de cookies publicitarias o rastreadores comerciales y cifrado en tránsito y reposo.
+                  </p>
+                </div>
+              </div>
+            </Seccion>
+
+            <Seccion titulo="Aviso Legal (LSSI-CE art. 10)">
+              <div className="space-y-3 text-xs leading-relaxed text-neutral-600 dark:text-neutral-300">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-2">
+                  <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 p-3 bg-neutral-50/50 dark:bg-neutral-900/40">
+                    <span className="font-semibold text-neutral-700 dark:text-neutral-200 block text-2xs uppercase tracking-wider mb-1">Titular del Servicio</span>
+                    <p className="text-sm font-medium text-graphite dark:text-neutral-100">Alberto Trujillo Mingorance</p>
+                    <p className="text-2xs text-neutral-400 mt-0.5">Barcelona, España</p>
+                  </div>
+                  <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 p-3 bg-neutral-50/50 dark:bg-neutral-900/40">
+                    <span className="font-semibold text-neutral-700 dark:text-neutral-200 block text-2xs uppercase tracking-wider mb-1">Contacto Oficial</span>
+                    <p className="font-mono text-xs text-mint-700 dark:text-mint-400">nutrifit@trujillomingorance.com</p>
+                    <p className="font-mono text-2xs text-neutral-400 mt-0.5">soporte@trujillomingorance.com</p>
+                  </div>
+                </div>
+                <p>
+                  <strong>Plataforma y Dominios Oficiales:</strong> La aplicación web progresiva se presta a través del dominio principal{' '}
+                  <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono dark:bg-neutral-800">nutri.trujillomingorance.com</code>, con pasarela de borde perimetral en{' '}
+                  <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono dark:bg-neutral-800">api.trujillomingorance.com/nutrifit</code> y enrutamiento corporativo en{' '}
+                  <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono dark:bg-neutral-800">trujillomingorance.com</code>.
+                </p>
+                <p>
+                  <strong>Licencia y Propiedad Intelectual:</strong> Código distribuido bajo <strong>Licencia Abierta MIT</strong>. Todos los componentes de IA, cálculo metabólico y utilidades son libres y auditables en GitHub.
+                </p>
+                <p className="text-2xs text-neutral-400 border-l-2 border-neutral-300 dark:border-neutral-700 pl-2 italic">
+                  <strong>Aviso de Salud:</strong> NutriFit es una herramienta informativa de registro y estimación de macronutrientes. No constituye asesoramiento médico, diagnóstico clínico ni pauta terapéutica individualizada. Consulta siempre a un profesional sanitario colegiado antes de cambios dietéticos drásticos.
+                </p>
+              </div>
+            </Seccion>
+
+            <Seccion titulo="Política de Privacidad y Tratamiento de Datos (RGPD)">
+              <div className="space-y-3 text-xs leading-relaxed text-neutral-600 dark:text-neutral-300">
+                <p>
+                  <strong>1. Base Jurídica y Legitimación:</strong> Tratamos tus datos antropométricos (edad, sexo, peso, altura, actividad) exclusivamente con base en tu <strong>consentimiento expreso (art. 6.1.a RGPD)</strong> para calcular tu metabolismo basal y requerimientos energéticos.
+                </p>
+                <p>
+                  <strong>2. Inteligencia Artificial Responsable:</strong> El análisis de imágenes y descripción de comidas se procesa mediante modelos multimodales (Google Gemini 2.0 Flash) transmitiendo únicamente la imagen y metadatos del plato sin datos identificativos personales asociados.
+                </p>
+                <p>
+                  <strong>3. Cero Publicidad y Cero Cesión:</strong> Tus datos nutricionales <strong>NUNCA</strong> son vendidos, cedidos, ni compartidos con redes publicitarias, anunciantes o intermediarios de monetización de datos.
+                </p>
+                <p>
+                  <strong>4. Seguridad y Cifrado Perimetral:</strong> Toda la transmisión viaja cifrada bajo <strong>TLS 1.3</strong> en la red perimetral Anycast de Cloudflare, con bases de datos relacionales cifradas y sesiones firmadas criptográficamente con tokens HMAC-SHA256.
+                </p>
+              </div>
+            </Seccion>
+
+            <Seccion titulo="Ejercicio de Derechos ARCO-POL">
+              <div className="space-y-3">
+                <p className="text-xs text-neutral-600 dark:text-neutral-300">
+                  En cumplimiento del RGPD, puedes ejercer tus derechos de <strong>Acceso, Rectificación, Supresión (Derecho al Olvido), Oposición, Portabilidad y Limitación</strong> de forma inmediata:
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                  <Button
+                    variant="outline"
+                    icon={<Download size={15} />}
+                    loading={exportando}
+                    onClick={() => void descargarDatos()}
+                    className="justify-start text-xs h-11"
+                  >
+                    Portabilidad: Descargar mis datos (CSV)
+                  </Button>
+                  <Button
+                    variant="outline"
+                    icon={<FileText size={15} />}
+                    onClick={() => setSeccionActiva('perfil')}
+                    className="justify-start text-xs h-11"
+                  >
+                    Rectificación: Editar mi perfil
+                  </Button>
+                  <Button
+                    variant="outline"
+                    icon={<Mail size={15} />}
+                    onClick={() => setSeccionActiva('notificaciones')}
+                    className="justify-start text-xs h-11"
+                  >
+                    Oposición: Gestionar notificaciones
+                  </Button>
+                  <Button
+                    variant="outline"
+                    icon={<Lock size={15} />}
+                    onClick={() => setSeccionActiva('peligro')}
+                    className="justify-start text-xs h-11 text-red-600 dark:text-red-400 hover:border-red-300"
+                  >
+                    Supresión: Borrar mi cuenta (Olvido)
+                  </Button>
+                </div>
+              </div>
+            </Seccion>
+
+            <Seccion titulo="Política de Cookies y Almacenamiento Local">
+              <div className="space-y-3 text-xs leading-relaxed text-neutral-600 dark:text-neutral-300">
+                <p>
+                  NutriFit utiliza <strong>exclusivamente cookies técnicas esenciales</strong> para garantizar el inicio de sesión y la seguridad contra ataques CSRF:
+                </p>
+                <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 divide-y divide-neutral-100 dark:divide-neutral-800 overflow-hidden bg-white dark:bg-card-dark">
+                  <div className="p-3">
+                    <span className="font-mono text-2xs font-semibold text-mint-700 dark:text-mint-400">__Host-nf_sesion</span>
+                    <p className="text-2xs text-neutral-500 dark:text-neutral-400 mt-0.5">Cookie de sesión protegida (HttpOnly, Secure, SameSite=Lax). Almacena el token firmado de autenticación.</p>
+                  </div>
+                  <div className="p-3">
+                    <span className="font-mono text-2xs font-semibold text-mint-700 dark:text-mint-400">__Host-nf_google &amp; __Host-nf_msft</span>
+                    <p className="text-2xs text-neutral-500 dark:text-neutral-400 mt-0.5">Cookies de protección CSRF para el flujo de autorización OAuth 2.0 (caducan a los 5 minutos).</p>
+                  </div>
+                  <div className="p-3">
+                    <span className="font-semibold text-graphite dark:text-neutral-200 text-xs">Almacenamiento Local (PWA)</span>
+                    <p className="text-2xs text-neutral-500 dark:text-neutral-400 mt-0.5">LocalStorage e IndexedDB para modo sin conexión, caché de platos frecuentes y sincronización en segundo plano.</p>
+                  </div>
+                </div>
+                <p className="text-2xs text-neutral-500 dark:text-neutral-400">
+                  🛡️ <strong>0 Cookies de publicidad o seguimiento de terceros.</strong> No utilizamos Google Analytics, Facebook Pixel, ni ninguna tecnología de huella digital de navegador.
+                </p>
+              </div>
+            </Seccion>
+          </div>
         )}
 
         {seccionActiva === 'cuenta' && (

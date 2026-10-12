@@ -61,9 +61,12 @@ export async function prepararAutorizacionMicrosoft(
   request: Request
 ): Promise<{ location: string; cookie: string } | null> {
   const clientId = secretoMsft(env.MICROSOFT_CLIENT_ID)
-  const tenantId = secretoMsft(env.MICROSOFT_TENANT_ID)
+  // 'common' permite cualquier cuenta de Microsoft (Outlook.com, Hotmail, personal, corporativa o educativa).
+  // Solo se usa el tenant específico de empresa si se solicita expresamente acceso de administración (?admin=1).
+  const esAdmin = new URL(request.url).searchParams.get('admin') === '1'
+  const tenantId = esAdmin && env.MICROSOFT_TENANT_ID ? secretoMsft(env.MICROSOFT_TENANT_ID) : 'common'
   const redirect = redirectMicrosoft(env, request)
-  if (!clientId || !tenantId || !redirect || !secretoMsft(env.MICROSOFT_CLIENT_SECRET)) return null
+  if (!clientId || !redirect || !secretoMsft(env.MICROSOFT_CLIENT_SECRET)) return null
 
   const nonce = base64urlEncode(bytesAleatorios(32))
   const verifier = base64urlEncode(bytesAleatorios(32))
@@ -79,7 +82,6 @@ export async function prepararAutorizacionMicrosoft(
   url.searchParams.set('code_challenge', await retoS256(verifier))
   url.searchParams.set('code_challenge_method', 'S256')
   url.searchParams.set('response_mode', 'query')
-  url.searchParams.set('domain_hint', 'trujillomingorance.com')
 
   return { location: url.toString(), cookie: cookieState(token, MAX_EDAD) }
 }
@@ -144,9 +146,10 @@ export async function completarMicrosoft(env: Env, request: Request): Promise<Re
   const code = url.searchParams.get('code')
   const clientId = secretoMsft(env.MICROSOFT_CLIENT_ID)
   const clientSecret = secretoMsft(env.MICROSOFT_CLIENT_SECRET)
-  const tenantId = secretoMsft(env.MICROSOFT_TENANT_ID)
+  const esAdmin = url.searchParams.get('admin') === '1'
+  const tenantId = esAdmin && env.MICROSOFT_TENANT_ID ? secretoMsft(env.MICROSOFT_TENANT_ID) : 'common'
 
-  if (!state || !redirect || !code || !clientId || !clientSecret || !tenantId) {
+  if (!state || !redirect || !code || !clientId || !clientSecret) {
     return fallo('configuracion_invalida', !state ? 'state' : 'config')
   }
 

@@ -1,5 +1,5 @@
 import type { ChangeEvent, ReactNode } from 'react'
-import { Camera, ImagePlus, PenLine, Search, Sparkles } from 'lucide-react'
+import { Barcode, Camera, ImagePlus, PenLine, Search, Sparkles } from 'lucide-react'
 import { Sheet } from './ui/Sheet.tsx'
 import { cx } from './ui/cx.ts'
 import { useToast } from './ui/Toast.tsx'
@@ -36,6 +36,7 @@ export function HojaAnadir({
   onManual,
   onTexto,
   onBuscar,
+  onBarcode,
 }: {
   abierto: boolean
   tipo: TipoComida
@@ -44,6 +45,7 @@ export function HojaAnadir({
   onManual: () => void
   onTexto: () => void
   onBuscar: () => void
+  onBarcode?: () => void
 }) {
   const escritorio = useMedia(ESCRITORIO)
   const toast = useToast()
@@ -73,6 +75,11 @@ export function HojaAnadir({
         <button type="button" className={CLASE} onClick={onTexto}>
           <Opcion icono={<Sparkles size={20} strokeWidth={1.75} />} titulo="Describir con texto" desc="«Dos huevos revueltos y una tostada»" />
         </button>
+        {onBarcode && (
+          <button type="button" className={CLASE} onClick={onBarcode}>
+            <Opcion icono={<Barcode size={20} strokeWidth={1.75} />} titulo="Escanear código de barras" desc="Escanea el envase con Open Food Facts" />
+          </button>
+        )}
         <button type="button" className={CLASE} onClick={onBuscar}>
           <Opcion icono={<Search size={20} strokeWidth={1.75} />} titulo="Buscar alimento" desc="Base de alimentos y productos envasados" />
         </button>
