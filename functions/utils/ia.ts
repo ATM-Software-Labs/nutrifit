@@ -24,7 +24,10 @@ import { ErrorParseo, extraerJson, FotoIlegible, parsearRespuestaModelo, type Re
 import { aplicarRaciones } from './raciones.ts'
 import { sanitizarContextoModelo } from './sanitizar.ts'
 
-export const GEMINI_MODELO_POR_DEFECTO = 'gemini-2.0-flash'
+/** Alias estable de Google: gemini-2.0-flash se apagó el 1-jun-2026. */
+export const GEMINI_MODELO_POR_DEFECTO = 'gemini-flash-latest'
+/** Si el modelo configurado ya no existe (404) se reintenta con este. */
+const GEMINI_MODELO_RESCATE = 'gemini-2.5-flash'
 const TIMEOUT_GEMINI_MS = 25_000
 /** Cada gateway de la foto del plato. Texto y etiqueta siguen con TIMEOUT_GEMINI_MS. */
 export const TIMEOUT_GATEWAY_FOTO_MS = 15_000
@@ -41,7 +44,7 @@ export const MODELOS_VISION_WORKERS_AI = [
 /** Respaldo final de la foto del plato. */
 export const MODELO_VISION_RESPALDO = '@cf/meta/llama-3.2-11b-vision-instruct'
 /** 11B primero. El 90B solo si el 11B falla dentro de los 5 s del gateway. */
-export const MODELOS_GROQ_VISION = ['llama-3.2-11b-vision-preview', 'llama-3.2-90b-vision-preview'] as const
+export const MODELOS_GROQ_VISION = ['qwen/qwen3.8-27b']  // los llama-3.2-vision de Groq están retirados as const
 export const MODELO_GROQ_VISION = MODELOS_GROQ_VISION[0]
 const URL_GROQ_VISION = 'https://api.groq.com/openai/v1/chat/completions'
 export const URL_TRUJILLO_VISION = 'https://ai.trujillomingorance.com/v1/chat/completions'
@@ -355,6 +358,11 @@ async function visionGemini<T>(env: Env, img: Imagen, t: TareaVision<T>, timeout
       },
       AbortSignal.timeout(timeoutMs),
     )
+    if (res.status === 404 && !modeloForzado) {
+      const alternativo = modelo === GEMINI_MODELO_POR_DEFECTO ? GEMINI_MODELO_RESCATE : GEMINI_MODELO_POR_DEFECTO
+      console.warn(`[ia] Gemini ${modelo} no existe (404) → ${alternativo}`)
+      return visionGemini(env, img, t, timeoutMs, alternativo)
+    }
     if (!res.ok) throw await falloHttp(res, 'Gemini', inicio)
     const data = (await res.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] }
     return t.parsear(data.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('') ?? '')
@@ -607,7 +615,7 @@ function modeloTrujillo(env: Env): string {
 }
 
 /** El escáner nuevo usa Gemini 2.5 Flash salvo que GEMINI_MODEL diga otra cosa. */
-export const MODELO_ESCANER_GEMINI = 'gemini-2.0-flash'
+export const MODELO_ESCANER_GEMINI = GEMINI_MODELO_POR_DEFECTO
 /** Workers AI del escáner sigue en 2 s. Gemini tiene margen para el JSON del guiso. */
 export const TIMEOUT_ESCANER_MS = 2_000
 export const TIMEOUT_ESCANER_GEMINI_MS = 8_000

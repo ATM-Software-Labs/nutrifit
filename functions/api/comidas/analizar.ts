@@ -9,11 +9,11 @@
  * La cadena (functions/utils/ia.ts)
  * es un circuit breaker por gateway, 5 s cada uno:
  *   1. Gemini Flash (GEMINI_API_KEY)
- *   2. Groq Vision: llama-3.2-11b-vision-preview y, si falla dentro del plazo,
- *      llama-3.2-90b-vision-preview (GROQ_API_KEY)
+ *   2. Groq Vision: qwen/qwen3.8-27b (visión)
+ *      (GROQ_API_KEY)
  *   3. Trujillo AI (https://ai.trujillomingorance.com/v1/chat/completions)
  *   4. Workers AI @cf/meta/llama-3.2-11b-vision-instruct
- * El modelo de la foto es Gemini Flash (gemini-2.0-flash, o GEMINI_MODEL),
+ * El modelo de la foto es Gemini Flash (gemini-flash-latest, o GEMINI_MODEL),
  * temperature 0.1 y max_tokens 2048. Un plato combinado se desglosa en
  * ingredientes con grams, min_grams y max_grams. Si la foto no se distingue,
  * el modelo devuelve is_food:false y no se prueba otro proveedor. El respaldo de Workers AI es

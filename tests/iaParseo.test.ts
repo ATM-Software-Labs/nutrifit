@@ -146,7 +146,7 @@ test('el prompt obliga al nombre oficial y el esquema pide input_query y display
   assert.equal(TIMEOUT_GATEWAY_FOTO_MS, 15_000)
   assert.equal(CARRERA_VISION_MS, 2_000)
   assert.equal(ESQUEMA_FOTO.required.includes('alternatives'), false)
-  assert.deepEqual(MODELOS_GROQ_VISION, ['llama-3.2-11b-vision-preview', 'llama-3.2-90b-vision-preview'])
+  assert.deepEqual(MODELOS_GROQ_VISION, ['qwen/qwen3.8-27b'])
 })
 
 test('un coloquialismo queda en input_query y el nombre oficial en display_name', () => {
