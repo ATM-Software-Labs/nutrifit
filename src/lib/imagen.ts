@@ -20,7 +20,26 @@ export class ErrorImagen extends Error {
   }
 }
 
+/** HEIC/HEIF (iPhone): por tipo o por la marca ftyp heic/heix/mif1 en los primeros bytes. */
+async function esHeic(file: Blob): Promise<boolean> {
+  if (/hei[cf]/i.test(file.type)) return true
+  const cab = new TextDecoder().decode(new Uint8Array(await file.slice(4, 12).arrayBuffer()))
+  return /^ftyp(heic|heix|hevc|heim|heis|mif1|msf1)/.test(cab)
+}
+
 async function decodificar(file: Blob): Promise<ImageBitmap | HTMLImageElement> {
+  try {
+    return await decodificarNativo(file)
+  } catch (e) {
+    if (!(await esHeic(file))) throw e
+    // Chrome/Android no decodifican HEIC: lo pasamos a JPEG con un módulo que solo se carga aquí.
+    const { default: heic2any } = await import('heic2any')
+    const salida = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.9 })
+    return decodificarNativo(Array.isArray(salida) ? salida[0]! : salida)
+  }
+}
+
+async function decodificarNativo(file: Blob): Promise<ImageBitmap | HTMLImageElement> {
   if ('createImageBitmap' in window) {
     try {
       // from-image hornea la orientación y deja fuera el resto del EXIF.
@@ -37,7 +56,7 @@ async function decodificar(file: Blob): Promise<ImageBitmap | HTMLImageElement> 
     await img.decode()
     return img
   } catch {
-    throw new ErrorImagen('No hemos podido leer esta imagen. Prueba con una foto JPEG, PNG o WebP.')
+    throw new ErrorImagen('No hemos podido leer esta imagen. Prueba con una foto JPEG, PNG, WebP o HEIC.')
   } finally {
     URL.revokeObjectURL(url)
   }
