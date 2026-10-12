@@ -154,7 +154,7 @@ const HTML_PORTAL = `<!DOCTYPE html>
 </head>
 <body>
 <header>
-  <div class="marca">TRUJILLO MINGORANCE <span class="tag">gateway.edge</span></div>
+  <div class="marca">ATM SOFTWARE LABS <span class="tag">gateway.edge</span></div>
   <div class="presencia"><span class="pulso" aria-hidden="true"></span> Global Edge Anycast</div>
 </header>
 <main>
@@ -162,14 +162,17 @@ const HTML_PORTAL = `<!DOCTYPE html>
     <h1>Edge Gateway Protocol</h1>
     <p class="estado">200 OK — Active</p>
     <dl>
+      <div><dt>Organization</dt><dd>ATM Software Labs · trujillomingorance.com</dd></div>
+      <div><dt>Identity Provider</dt><dd>Microsoft Entra ID (OIDC / OAuth 2.0)</dd></div>
+      <div><dt>Auth Endpoints</dt><dd>/v1/auth/microsoft · /v1/auth/callback/microsoft</dd></div>
       <div><dt>Region</dt><dd>Cloudflare Anycast Network</dd></div>
       <div><dt>Ingress Policy</dt><dd>Restricted / Mutual Auth Only</dd></div>
       <div><dt>Encryption</dt><dd>TLS 1.3 / Strict HSTS</dd></div>
     </dl>
-    <p>Servicio de interconexión perimetral y enrutamiento seguro de servicios para trujillomingorance.com. El tráfico no verificado es analizado y descartado por los cortafuegos del borde.</p>
+    <p>Servicio de interconexión perimetral, Single Sign-On (SSO) y enrutamiento seguro de servicios para ATM Software Labs / trujillomingorance.com. El tráfico no verificado es analizado y descartado por los cortafuegos del borde.</p>
   </article>
 </main>
-<footer>© 2026 Alberto Trujillo Mingorance. All rights reserved.</footer>
+<footer>© 2026 ATM Software Labs · Alberto Trujillo Mingorance. All rights reserved.</footer>
 </body>
 </html>
 `
