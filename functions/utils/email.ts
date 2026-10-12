@@ -83,7 +83,7 @@ function pieHtml(texto: string): string {
     <tr>
       <td width="25%" align="center" style="padding:10px 4px;border-right:1px solid #e5e7eb;font-family:${FUENTE};">
         <div style="font-size:12px;font-weight:700;color:#2563eb;">✨ Gemini AI</div>
-        <div style="font-size:10px;color:#6b7280;margin-top:2px;">Visión 2.0 Flash</div>
+        <div style="font-size:10px;color:#6b7280;margin-top:2px;">Visión Flash</div>
       </td>
       <td width="25%" align="center" style="padding:10px 4px;border-right:1px solid #e5e7eb;font-family:${FUENTE};">
         <div style="font-size:12px;font-weight:700;color:#0284c7;">🛡️ Entra / Copilot</div>
@@ -144,7 +144,7 @@ ${jsonLd || ''}
 <![endif]-->
 <table role="presentation" class="nf-tarjeta" width="480" cellpadding="0" cellspacing="0" bgcolor="#ffffff" style="width:100%;max-width:480px;background-color:#ffffff;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.04);">
 <tr><td align="center" style="padding:40px 32px 16px;font-family:${FUENTE};">
-<img src="${URL_APP}/logo.svg" alt="NutriFit Logo" width="64" height="64" style="display:inline-block;width:64px;height:auto;vertical-align:middle;border:0;outline:none;text-decoration:none;" />
+<img src="${URL_APP}/logo.png" alt="NutriFit" width="64" height="64" style="display:inline-block;width:64px;height:auto;vertical-align:middle;border:0;outline:none;text-decoration:none;" />
 <div style="margin-top:16px;font-size:24px;font-weight:700;letter-spacing:-0.3px;color:${MINT};">NutriFit</div>
 <div style="margin-top:8px;font-size:12px;line-height:1.5;color:#9ca3af;font-family:${FUENTE};text-align:center;">
   <span>NutriFit &lt;<a href="mailto:${REMITENTE.email}" style="color:#9ca3af;text-decoration:none;">${REMITENTE.email}</a>&gt;</span>
@@ -301,6 +301,8 @@ ${pieHtml(PIE_CUENTA)}`,
 }
 
 interface Correo {
+  /** URL HTTPS de baja en un clic (RFC 8058) para recordatorios y resúmenes. */
+  bajaUrl?: string
   para: string
   nombre?: string
   asunto: string
@@ -313,7 +315,8 @@ interface Correo {
 export function cuerpoBrevo(c: Correo): Record<string, unknown> {
   const headers: Record<string, string> = { ...CABECERAS_CORREO }
 
-  headers['X-Entity-Ref-ID'] = `nf-auth-${Date.now()}`
+  headers['X-Entity-Ref-ID'] = `nf-${c.esAuth ? 'auth' : 'aviso'}-${Date.now()}`
+  if (c.bajaUrl) headers['List-Unsubscribe'] = `<${c.bajaUrl}>, <mailto:${RESPONDER_A.email}?subject=baja%20recordatorios>`
 
   return {
     sender: REMITENTE,
@@ -323,7 +326,7 @@ export function cuerpoBrevo(c: Correo): Record<string, unknown> {
     htmlContent: c.html,
     textContent: c.texto,
     headers,
-    tags: c.esAuth ? ['nutrifit', 'auth', 'transaccional'] : ['nutrifit', 'transaccional'],
+    tags: c.esAuth ? ['nutrifit', 'auth', 'transaccional'] : c.bajaUrl ? ['nutrifit', 'recordatorio'] : ['nutrifit', 'transaccional'],
   }
 }
 
@@ -369,4 +372,63 @@ export async function enviarMagicLink(env: Env, email: string, enlace: string, c
 export async function enviarBienvenida(env: Env, email: string, nombre: string, plan: PlanMacros): Promise<boolean> {
   const mensaje = mensajeBienvenida(nombre, plan)
   return enviar(env, { para: email, nombre, ...mensaje })
+}
+
+const PIE_AVISOS =
+  `NutriFit · Recibes este correo porque activaste los recordatorios por email en Ajustes.\n` +
+  `Puedes desactivarlos en un clic con el enlace de baja o desde Ajustes → Recordatorios.\n\n` +
+  DERECHOS
+
+function botonHtml(href: string, texto: string): string {
+  return `<tr><td align="center" style="padding:0 32px 8px;"><a href="${hrefSeguro(href)}" style="background-color:#047857;color:#ffffff;padding:14px 28px;text-decoration:none;border-radius:8px;font-weight:600;display:inline-block;font-family:${FUENTE};">${escaparHtml(texto)}</a></td></tr>`
+}
+
+function jsonLdVer(url: string, nombre: string, descripcion: string): string {
+  const d = { '@context': 'https://schema.org', '@type': 'EmailMessage', description: descripcion, publisher: { '@type': 'Organization', name: 'NutriFit', url: URL_APP }, potentialAction: { '@type': 'ViewAction', url, name: nombre } }
+  return `<script type="application/ld+json">${JSON.stringify(d).replace(/</g, '\\u003c')}</script>`
+}
+
+/** Recordatorio puntual (comida sin registrar, cierre del día…). Resumen arriba para asistentes de IA. */
+export function mensajeRecordatorio(titulo: string, cuerpo: string, url: string, bajaUrl: string): MensajeCorreo {
+  const enlace = url.startsWith('http') ? url : `${URL_APP}${url}`
+  const html = envolver(
+    `<tr><td class="nf-texto" style="padding:16px 32px 8px;font-family:${FUENTE};font-size:22px;line-height:1.3;font-weight:600;color:#111827;">${escaparHtml(titulo)}</td></tr>
+<tr><td class="nf-suave" style="padding:0 32px 24px;font-family:${FUENTE};font-size:16px;line-height:1.5;color:#4b5563;">${escaparHtml(cuerpo)}</td></tr>
+${botonHtml(enlace, 'Registrar ahora')}
+<tr><td class="nf-suave" align="center" style="padding:16px 32px 0;font-family:${FUENTE};font-size:12px;color:#6b7280;"><a href="${hrefSeguro(bajaUrl)}" style="color:#6b7280;text-decoration:underline;">Desactivar recordatorios por email</a></td></tr>
+${pieHtml(PIE_AVISOS)}`,
+    `${titulo}: ${cuerpo}`,
+    jsonLdVer(enlace, 'Registrar ahora', `${titulo}. ${cuerpo}`),
+  )
+  const texto = `${titulo}\n\n${cuerpo}\n\nRegistrar ahora: ${enlace}\n\nDesactivar estos recordatorios: ${bajaUrl}\n\n${PIE_AVISOS}`
+  return { asunto: `${titulo} · NutriFit`, html, texto }
+}
+
+export interface DatosResumen { diasRegistrados: number; adherenciaPct: number; diasEnObjetivo: number; mediaCalorias: number; racha: number; logros: string[]; desde: string; hasta: string }
+
+export function mensajeResumenSemanal(nombre: string | null, r: DatosResumen, bajaUrl: string): MensajeCorreo {
+  const saludo = nombre ? `Hola, ${nombre}` : 'Hola'
+  const resumen = `${r.diasRegistrados} de 7 días registrados (${r.adherenciaPct} %), ${r.diasEnObjetivo} en tu objetivo de calorías y racha de ${r.racha} días.`
+  const celda = (v: string, e: string) => `<td width="25%" align="center" style="padding:14px 4px;font-family:${FUENTE};"><div class="nf-texto" style="font-size:22px;font-weight:600;color:#111827;">${escaparHtml(v)}</div><div style="font-size:12px;color:#6b7280;padding-top:4px;">${escaparHtml(e)}</div></td>`
+  const logros = r.logros.length ? `<tr><td class="nf-suave" style="padding:0 32px 20px;font-family:${FUENTE};font-size:14px;line-height:1.6;color:#4b5563;"><strong>Logros de la semana:</strong> ${r.logros.map(escaparHtml).join(' · ')}</td></tr>` : ''
+  const html = envolver(
+    `<tr><td class="nf-texto" style="padding:16px 32px 8px;font-family:${FUENTE};font-size:22px;font-weight:600;color:#111827;">${escaparHtml(saludo)}, tu semana en NutriFit</td></tr>
+<tr><td class="nf-suave" style="padding:0 32px 20px;font-family:${FUENTE};font-size:16px;line-height:1.5;color:#4b5563;">${escaparHtml(resumen)}</td></tr>
+<tr><td style="padding:0 32px 20px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:12px;"><tr>${celda(`${r.adherenciaPct} %`, 'Constancia')}${celda(String(r.racha), 'Racha')}${celda(String(r.diasEnObjetivo), 'En objetivo')}${celda(r.mediaCalorias ? String(r.mediaCalorias) : '—', 'kcal/día')}</tr></table></td></tr>
+${logros}${botonHtml(`${URL_APP}/logros`, 'Ver mis logros')}
+<tr><td class="nf-suave" align="center" style="padding:16px 32px 0;font-family:${FUENTE};font-size:12px;color:#6b7280;"><a href="${hrefSeguro(bajaUrl)}" style="color:#6b7280;text-decoration:underline;">No recibir más resúmenes</a></td></tr>
+${pieHtml(PIE_AVISOS)}`,
+    resumen,
+    jsonLdVer(`${URL_APP}/logros`, 'Ver mis logros', `Resumen semanal NutriFit: ${resumen}`),
+  )
+  const texto = `${saludo}, tu semana en NutriFit (${r.desde} a ${r.hasta})\n\n${resumen}\n` +
+    `· Constancia: ${r.adherenciaPct} %\n· Racha: ${r.racha} días\n· Días en objetivo: ${r.diasEnObjetivo}\n· Media: ${r.mediaCalorias || '—'} kcal/día\n` +
+    (r.logros.length ? `· Logros: ${r.logros.join(', ')}\n` : '') +
+    `\nVer mis logros: ${URL_APP}/logros\n\nNo recibir más resúmenes: ${bajaUrl}\n\n${PIE_AVISOS}`
+  return { asunto: `Tu semana: ${r.adherenciaPct} % de constancia y racha de ${r.racha} días`, html, texto }
+}
+
+/** Envío de recordatorio/resumen con List-Unsubscribe de un clic. */
+export async function enviarAviso(env: Env, para: string, m: MensajeCorreo, bajaUrl: string): Promise<boolean> {
+  return enviar(env, { para, ...m, bajaUrl })
 }

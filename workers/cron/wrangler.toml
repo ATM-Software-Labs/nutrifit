@@ -1,0 +1,16 @@
+name = "nutrifit-cron"
+main = "index.ts"
+compatibility_date = "2026-09-01"
+workers_dev = false
+
+[triggers]
+crons = ["*/15 * * * *"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "nutrifit-db"
+database_id = "c7f77ed4-a5d0-4c3a-a686-ecc1fb77d1f1"
+
+[vars]
+APP_URL = "https://nutri.trujillomingorance.com"
+# Secretos (wrangler secret put): BREVO_API_KEY, VAPID_PUBLIC_KEY, VAPID_PRIVATE_JWK, VAPID_SUBJECT

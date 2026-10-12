@@ -1,5 +1,6 @@
 /** Ajustes: perfil y objetivos (recalculados al momento), tema, cuenta y enlaces. */
-import { useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
+const SeccionRecordatorios = lazy(() => import('./SeccionRecordatorios.tsx'))
 import { Check, ChevronRight, Download, ExternalLink, FileText, Lock, LogOut, Mail, Monitor, Moon, Shield, Sun } from 'lucide-react'
 import { URL_REPO } from '../lib/config.ts'
 import { clicPrivacidad, clicRecursos, navegar } from '../lib/rutas.ts'
@@ -71,7 +72,7 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
     if (typeof window !== 'undefined') {
       const hash = window.location.hash.toLowerCase()
       const search = window.location.search.toLowerCase()
-      if (hash.includes('notific') || hash.includes('baja') || search.includes('notific') || search.includes('baja')) {
+      if (hash.includes('recordatorio') || hash.includes('notific') || hash.includes('baja') || search.includes('notific') || search.includes('baja')) {
         return 'notificaciones'
       }
       if (hash.includes('dispositivo')) return 'dispositivos'
@@ -86,10 +87,12 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
   }
 
   const [seccionActiva, setSeccionActiva] = useState<SeccionId>(obtenerSeccionInicial)
+  const [movilLista, setMovilLista] = useState(() => typeof window === 'undefined' || !window.location.hash)
 
   useEffect(() => {
     const alCambiarHash = () => {
       setSeccionActiva(obtenerSeccionInicial())
+      if (window.location.hash) setMovilLista(false)
     }
     window.addEventListener('hashchange', alCambiarHash)
     return () => window.removeEventListener('hashchange', alCambiarHash)
@@ -241,35 +244,53 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
     }
   }
 
-  const BotonNav = ({ id, label }: { id: typeof seccionActiva; label: string }) => (
-    <button 
-      onClick={() => setSeccionActiva(id)}
-      className={`text-left px-3 py-2 rounded-xl transition ${seccionActiva === id ? 'bg-mint-500/10 text-mint-700 dark:bg-mint-500/20 dark:text-mint-300 font-semibold' : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800'}`}
+  const BotonNav = ({ id, label }: { id: SeccionId; label: string }) => (
+    <button
+      type="button"
+      onClick={() => { setSeccionActiva(id); setMovilLista(false); history.replaceState(null, '', `/ajustes#${id}`) }}
+      aria-current={seccionActiva === id ? 'page' : undefined}
+      className={`flex items-center justify-between text-left px-4 py-3 lg:px-3 lg:py-2 lg:rounded-xl transition ${seccionActiva === id ? 'lg:bg-mint-500/10 lg:text-mint-700 lg:dark:bg-mint-500/20 lg:dark:text-mint-300 lg:font-semibold' : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800'}`}
     >
       {label}
+      <ChevronRight size={16} className="text-neutral-400 lg:hidden" />
     </button>
   )
+
+  const GRUPOS: { titulo: string; items: { id: SeccionId; label: string }[] }[] = [
+    { titulo: 'Tú', items: [{ id: 'perfil', label: 'Perfil y objetivos' }, { id: 'estrategia', label: 'Ayuno y estrategia' }] },
+    { titulo: 'Hábitos', items: [{ id: 'notificaciones', label: 'Recordatorios y notificaciones' }] },
+    { titulo: 'App', items: [{ id: 'preferencias', label: 'Apariencia, idioma y unidades' }, { id: 'conexiones', label: 'Conexiones y apps' }] },
+    { titulo: 'Privacidad y datos', items: [{ id: 'dispositivos', label: 'Sesiones y dispositivos' }, { id: 'legal', label: 'Privacidad y legal' }, { id: 'peligro', label: 'Exportar o eliminar datos' }] },
+    { titulo: 'Cuenta', items: [{ id: 'cuenta', label: 'Cuenta y sesión' }, { id: 'mas', label: 'Acerca de' }] },
+  ]
 
   return (
     <main className="mx-auto max-w-5xl px-5 pt-3 lg:px-8 lg:pt-2 flex flex-col lg:flex-row gap-4 lg:gap-6">
       <aside className="w-full lg:w-56 shrink-0 lg:sticky lg:top-2 h-max z-10">
         <h1 className="mb-3 text-xl lg:text-2xl font-semibold tracking-tight text-graphite dark:text-neutral-100 hidden lg:block">{t('ajustes.titulo')}</h1>
-        {/* Mobile back button logic can be handled if needed, for now just show pills on mobile */}
-        <nav className="flex lg:flex-col gap-1 text-sm font-medium overflow-x-auto pb-2 lg:pb-0 scrollbar-hide snap-x" aria-label="Ajustes">
-          <BotonNav id="perfil" label="Perfil y Objetivos" />
-          <BotonNav id="preferencias" label="Preferencias" />
-          <BotonNav id="notificaciones" label={t('ajustes.notificaciones')} />
-          <BotonNav id="estrategia" label="Estrategia y Ayuno" />
-          <BotonNav id="conexiones" label="Conexiones y Apps" />
-          <BotonNav id="dispositivos" label="Dispositivos" />
-          <BotonNav id="legal" label={t('ajustes.legal')} />
-          <BotonNav id="cuenta" label="Cuenta" />
-          <BotonNav id="mas" label="Más" />
-          <BotonNav id="peligro" label="Zona Crítica" />
+        {/* Escritorio: barra lateral de secciones. Móvil: lista agrupada → subpantalla con «volver». */}
+        <nav className={`${movilLista ? 'flex' : 'hidden'} lg:flex flex-col gap-4 lg:gap-3 text-sm font-medium`} aria-label="Ajustes">
+          {GRUPOS.map((g) => (
+            <div key={g.titulo}>
+              <p className="etiqueta mb-1.5 px-3 lg:mb-1">{g.titulo}</p>
+              <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-card divide-y divide-neutral-100 dark:divide-neutral-800 dark:border-neutral-800 dark:bg-card-dark lg:rounded-none lg:border-0 lg:bg-transparent lg:divide-y-0 lg:dark:bg-transparent flex flex-col lg:gap-0.5">
+                {g.items.map((it) => <BotonNav key={it.id} id={it.id} label={it.label} />)}
+              </div>
+            </div>
+          ))}
+          <button type="button" onClick={() => onSalir()} className="lg:hidden flex items-center justify-center gap-2 rounded-2xl border border-red-200 px-4 py-3 text-sm font-semibold text-red-600 hover:bg-red-50 dark:border-red-900/60 dark:text-red-400 dark:hover:bg-red-950/30">
+            <LogOut size={16} /> {t('ajustes.cerrar')}
+          </button>
+          <p className="lg:hidden text-center text-xs text-neutral-400">NutriFit v{__APP_VERSION__}</p>
         </nav>
+        {!movilLista && (
+          <button type="button" onClick={() => { setMovilLista(true); history.replaceState(null, '', '/ajustes') }} className="lg:hidden mb-1 inline-flex items-center gap-1 rounded-lg px-1 py-1 text-sm font-medium text-mint-700 dark:text-mint-400">
+            <ChevronRight size={16} className="rotate-180" /> Todos los ajustes
+          </button>
+        )}
       </aside>
       
-      <div className="flex-1 pb-6 min-w-0">
+      <div className={`${movilLista ? 'hidden' : ''} lg:block flex-1 pb-6 min-w-0`}>
         {seccionActiva === 'perfil' && (
         <Seccion id="perfil" titulo={t('ajustes.perfil')}>
           <Input label={t('ajustes.nombre')} value={nombre} maxLength={60} onChange={(e) => setNombre(e.target.value)} />
@@ -383,6 +404,9 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
         {seccionActiva === 'notificaciones' && (
           <Seccion id="notificaciones" titulo={t('ajustes.notificaciones')}>
             <div className="space-y-4">
+              <Suspense fallback={<div className="tarjeta h-40 animate-pulse" />}>
+                <SeccionRecordatorios />
+              </Suspense>
               {bajaComunicaciones ? (
                 <div className="rounded-2xl border border-amber-200 bg-amber-50/70 p-4 dark:border-amber-900/40 dark:bg-amber-950/20 text-sm text-amber-800 dark:text-amber-200 flex items-start gap-3">
                   <Mail className="size-5 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
@@ -550,6 +574,21 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
               <span className="flex-1">{t('ajustes.codigo')}</span>
               <span className="text-xs text-neutral-500 dark:text-neutral-400">MIT</span>
             </a>
+            <a href="/recursos" onClick={clicRecursos} className="flex items-center gap-3 px-4 py-3.5 text-[15px] hover:bg-neutral-50 dark:hover:bg-neutral-900">
+              <FileText size={18} className="text-neutral-500 dark:text-neutral-400" />
+              <span className="flex-1">Centro legal y recursos</span>
+              <ChevronRight size={16} className="text-neutral-400" />
+            </a>
+            <a href="mailto:soporte@trujillomingorance.com" className="flex items-center gap-3 px-4 py-3.5 text-[15px] hover:bg-neutral-50 dark:hover:bg-neutral-900">
+              <Mail size={18} className="text-neutral-500 dark:text-neutral-400" />
+              <span className="flex-1">Soporte</span>
+              <span className="text-xs text-neutral-500 dark:text-neutral-400">soporte@trujillomingorance.com</span>
+            </a>
+            <div className="flex items-center gap-3 px-4 py-3.5 text-[15px]">
+              <Shield size={18} className="text-neutral-500 dark:text-neutral-400" />
+              <span className="flex-1">Versión</span>
+              <span className="cifra text-xs text-neutral-500 dark:text-neutral-400">v{__APP_VERSION__}</span>
+            </div>
           </div>
         </Seccion>
         )}
@@ -715,6 +754,7 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
           <Button variant="outline" block icon={<LogOut size={16} />} onClick={() => onSalir()} className="border-red-200 text-red-600 hover:bg-red-50 dark:border-red-900/60 dark:text-red-400 dark:hover:bg-red-950/30">
             {t('ajustes.cerrar')}
           </Button>
+          <p className="text-xs text-neutral-500 dark:text-neutral-400">Al cerrar sesión podrás elegir salir solo aquí o en todos tus dispositivos (móvil, PC y app).</p>
         </Seccion>
         )}
 

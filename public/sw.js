@@ -140,3 +140,32 @@ async function redPrimero(req, nombreCache) {
     return new Response(JSON.stringify({ error: 'Sin conexión' }), { status: 503, headers: { 'Content-Type': 'application/json' } })
   }
 }
+
+/* ── Web Push: recordatorios de NutriFit (payload cifrado RFC 8291) ── */
+self.addEventListener('push', (event) => {
+  let d = {}
+  try { d = event.data ? event.data.json() : {} } catch { d = { cuerpo: event.data ? event.data.text() : '' } }
+  const titulo = d.titulo || 'NutriFit'
+  event.waitUntil(
+    self.registration.showNotification(titulo, {
+      body: d.cuerpo || '',
+      icon: '/icons/icon-192.png',
+      badge: '/icons/icon-192.png',
+      tag: d.etiqueta || 'nutrifit',
+      renotify: false,
+      lang: 'es',
+      data: { url: d.url || '/' },
+    }),
+  )
+})
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+  const destino = new URL((event.notification.data && event.notification.data.url) || '/', self.location.origin).href
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((ventanas) => {
+      for (const v of ventanas) if (v.url.startsWith(self.location.origin) && 'focus' in v) { v.navigate(destino).catch(() => {}); return v.focus() }
+      return self.clients.openWindow(destino)
+    }),
+  )
+})

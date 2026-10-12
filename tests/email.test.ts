@@ -35,7 +35,7 @@ test('el pie legal y el texto plano llevan los enlaces completos', () => {
   const m = mensajeMagicLink(ENLACE, CODIGO)
   assert.match(m.html, /NutriFit · Desarrollado en Barcelona, España/)
   assert.match(m.html, /<meta http-equiv="Content-Language" content="es" \/>/)
-  assert.match(m.html, /src="https:\/\/nutri\.trujillomingorance\.com\/logo\.svg"/)
+  assert.match(m.html, /src="https:\/\/nutri\.trujillomingorance\.com\/logo\.png"/)
   assert.match(m.html, /Correo transaccional de seguridad solicitado por el usuario/)
   assert.match(m.html, /Sin publicidad ni cookies comerciales/)
   assert.match(m.html, /https:\/\/nutri\.trujillomingorance\.com\/privacidad/)
@@ -70,4 +70,20 @@ test('un nombre con HTML no se interpreta, y la bienvenida sigue siendo transacc
   assert.match(m.html, /No enviamos comunicaciones comerciales/)
   assert.ok(m.texto.includes('2000 kcal'))
   assert.ok(m.texto.includes('https://nutri.trujillomingorance.com/privacidad'))
+})
+
+import { cuerpoBrevo as cuerpoBrevoAviso, mensajeRecordatorio, mensajeResumenSemanal } from '../functions/utils/email.ts'
+
+test('recordatorio y resumen: texto plano, JSON-LD ViewAction y baja en un clic', () => {
+  const baja = 'https://nutri.trujillomingorance.com/api/recordatorios/baja?t=' + 'a'.repeat(64)
+  const r = mensajeRecordatorio('¿Ya has comido?', 'Haz una foto al plato.', '/', baja)
+  assert.match(r.html, /"@type":"ViewAction"/)
+  assert.match(r.html, /lang="es"/)
+  assert.match(r.texto, /Desactivar estos recordatorios: https:\/\/nutri/)
+  const s = mensajeResumenSemanal('Alberto', { diasRegistrados: 5, adherenciaPct: 71, diasEnObjetivo: 3, mediaCalorias: 2100, racha: 5, logros: ['Una semana'], desde: '2026-10-05', hasta: '2026-10-11' }, baja)
+  assert.match(s.asunto, /71 %/)
+  assert.match(s.texto, /5 de 7 días registrados/)
+  const c = cuerpoBrevoAviso({ para: 'a@b.c', ...s, bajaUrl: baja }) as { headers: Record<string, string> }
+  assert.equal(c.headers['List-Unsubscribe'], `<${baja}>, <mailto:soporte@trujillomingorance.com?subject=baja%20recordatorios>`)
+  assert.equal(c.headers['List-Unsubscribe-Post'], 'List-Unsubscribe=One-Click')
 })

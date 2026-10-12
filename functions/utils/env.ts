@@ -31,6 +31,10 @@ export interface Env {
   AUTH_SECRET?: string
   TURNSTILE_SECRET_KEY?: string
   BREVO_API_KEY?: string
+  /** Web Push (VAPID). Pública en base64url, privada como JWK JSON. */
+  VAPID_PUBLIC_KEY?: string
+  VAPID_PRIVATE_JWK?: string
+  VAPID_SUBJECT?: string
   GEMINI_API_KEY?: string
   /** Groq Vision (llama-3.2-11b y, en el mismo plazo, llama-3.2-90b). Sin clave se salta ese paso. */
   GROQ_API_KEY?: string

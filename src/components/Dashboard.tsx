@@ -149,6 +149,7 @@ export default function Dashboard({
       actualizar((r) => reemplazarComida(r, idTemporal, comida))
       toast({ tipo: 'exito', mensaje: `${comida.descripcion} añadido` })
       void refrescarLogros()
+      if (comida.fecha === hoyISO()) void import('../lib/notificaciones.ts').then((m) => m.cancelarRecordatorioDeHoy(comida.tipo_comida))
     } catch (e) {
       actualizar((r) => sinComida(r, idTemporal))
       toast({ tipo: 'error', mensaje: e instanceof Error ? e.message : 'No se pudo guardar la comida.' })

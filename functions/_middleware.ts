@@ -55,6 +55,7 @@ export const RUTAS_TURNSTILE = new Set([
 /** Rutas con Turnstile que además requieren sesión: se comprueba ANTES de gastar el token. */
 const RUTAS_SESION_PREVIA = new Set(['/api/usuarios/perfil', '/api/comidas/analizar', '/api/comidas/analizar-texto', '/api/alimentos/etiqueta', '/api/alimentos/escanear', '/api/alimentos/vision-ticket'])
 /** Foto y texto de una comida: 20 / hora por usuario (el tope diario sigue en el handler). */
+const RUTA_BAJA = '/api/recordatorios/baja'
 const RUTAS_ANALISIS_COMIDA = new Set(['/api/comidas/analizar', '/api/comidas/analizar-texto'])
 /** La etiqueta no es el análisis de comidas: se queda el tope corto por IP. */
 const RUTA_ETIQUETA = '/api/alimentos/etiqueta'
@@ -261,7 +262,9 @@ export const onRequest: Handler = async (ctx) => {
       await exigirLimite(env, await claveLimite('login:ip', datos.ip), 50, 900, MENSAJE_LOGIN, OPCIONES_PICO)
     }
 
-    if (ESCRITURA.has(request.method)) {
+    if (ESCRITURA.has(request.method) && url.pathname === RUTA_BAJA) {
+      // Baja en un clic (RFC 8058): la hace el cliente de correo sin Origin; el token de baja es la credencial.
+    } else if (ESCRITURA.has(request.method)) {
       if (datos.sesion?.via === 'bearer') {
         // Sin CSRF posible: la credencial no viaja sola en peticiones cruzadas.
       } else if (originApp) {

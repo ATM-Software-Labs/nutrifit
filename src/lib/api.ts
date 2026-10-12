@@ -53,6 +53,8 @@ interface Opciones {
   prioridad?: 'alta' | 'normal'
 }
 
+export const pedirApi = <T,>(ruta: string, o: { method?: string; body?: unknown } = {}) => pedir<T>(ruta, o)
+
 async function pedir<T>(ruta: string, o: Opciones = {}): Promise<T> {
   const res = await enviar(ruta, o, 'application/json')
   if (res.status === 304) return { ok: true, sinCambios: true } as T

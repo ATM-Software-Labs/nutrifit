@@ -1,96 +1,76 @@
+/**
+ * Recordatorios en el dispositivo.
+ * · Web/PWA: los envía el servidor por Web Push (Worker nutrifit-cron) solo si la comida falta,
+ *   así que aquí no se programa nada ni se pide permiso al arrancar.
+ * · App Android: notificaciones locales de un solo uso para los próximos 7 días, con id por
+ *   fecha y comida; al registrar una comida se cancela la de hoy.
+ */
 import { LocalNotifications } from '@capacitor/local-notifications'
 import { esNativa } from './plataforma.ts'
+import type { PrefRecordatorios } from './push.ts'
 
 export async function solicitarPermisoNotificaciones() {
   if (esNativa) {
     try {
-      const perm = await LocalNotifications.requestPermissions()
-      return perm.display === 'granted'
+      return (await LocalNotifications.requestPermissions()).display === 'granted'
     } catch {
       return false
     }
-  } else {
-    if (!('Notification' in window)) return false
-    if (Notification.permission === 'granted') return true
-    const perm = await Notification.requestPermission()
-    return perm === 'granted'
   }
+  if (!('Notification' in window)) return false
+  if (Notification.permission === 'granted') return true
+  return (await Notification.requestPermission()) === 'granted'
 }
 
-export async function programarNotificacionesDiarias() {
-  const nivel = localStorage.getItem('nf:nivelNotificaciones') || 'medio' // 'bajo', 'medio', 'alto'
-  
-  if (esNativa) {
-    const permitido = await solicitarPermisoNotificaciones()
-    if (!permitido) return
+const CLAVES = ['desayuno', 'comida', 'cena', 'snack', 'cierre'] as const
+const TEXTO: Record<(typeof CLAVES)[number], [string, string]> = {
+  desayuno: ['¿Qué has desayunado?', 'Apúntalo en 10 segundos y empieza el día con tu racha.'],
+  comida: ['¿Ya has comido?', 'Haz una foto al plato o búscalo y sigue con tus macros al día.'],
+  cena: ['Falta la cena', 'Regístrala ahora para cerrar bien el día.'],
+  snack: ['¿Algo entre horas?', 'Si has picoteado, apúntalo para que cuadren tus calorías.'],
+  cierre: ['Cierra tu día', 'Revisa lo que has comido hoy y mantén tu racha.'],
+}
 
-    const pendientes = await LocalNotifications.getPending()
-    if (pendientes.notifications.length > 0) {
-      await LocalNotifications.cancel({ notifications: pendientes.notifications })
+/** id estable: AAMMDD * 10 + índice de la comida (cabe en un int de Java). */
+export function idNotificacion(fecha: Date, clave: (typeof CLAVES)[number]): number {
+  const n = (fecha.getFullYear() % 100) * 10000 + (fecha.getMonth() + 1) * 100 + fecha.getDate()
+  return n * 10 + CLAVES.indexOf(clave)
+}
+
+export async function programarRecordatoriosNativos(p: PrefRecordatorios, registradasHoy: string[] = []): Promise<void> {
+  if (!esNativa) return
+  const pendientes = await LocalNotifications.getPending()
+  if (pendientes.notifications.length) await LocalNotifications.cancel({ notifications: pendientes.notifications })
+  if (!p.activo || !(await solicitarPermisoNotificaciones())) return
+  const ahora = new Date()
+  const lista = []
+  for (let d = 0; d < 7; d++) {
+    for (const k of CLAVES) {
+      const hhmm = p[k]
+      if (!hhmm || (d === 0 && registradasHoy.includes(k))) continue
+      const [h, m] = hhmm.split(':').map(Number)
+      const at = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate() + d, h, m)
+      if (at <= ahora) continue
+      lista.push({ id: idNotificacion(at, k), title: TEXTO[k][0], body: TEXTO[k][1], schedule: { at, allowWhileIdle: true } })
     }
+  }
+  if (lista.length) await LocalNotifications.schedule({ notifications: lista })
+}
 
-    const notificaciones = []
+/** Al registrar una comida en la app nativa: cancela el aviso de hoy de esa comida. */
+export async function cancelarRecordatorioDeHoy(tipo: string): Promise<void> {
+  if (!esNativa || !(CLAVES as readonly string[]).includes(tipo)) return
+  await LocalNotifications.cancel({ notifications: [{ id: idNotificacion(new Date(), tipo as (typeof CLAVES)[number]) }] }).catch(() => {})
+}
 
-    if (nivel !== 'bajo') {
-      const comidas = [
-        { id: 101, titulo: '¡Hora de desayunar!', cuerpo: 'No te saltes la primera comida del día.', hora: 9 },
-        { id: 102, titulo: '¡Hora de comer!', cuerpo: 'Registra tu comida para mantener tus macros bajo control.', hora: 14 },
-        { id: 103, titulo: '¡Hora de cenar!', cuerpo: 'Una cena ligera ayuda a descansar mejor.', hora: 21 },
-      ]
-      for (const c of comidas) {
-        notificaciones.push({
-          id: c.id,
-          title: c.titulo,
-          body: c.cuerpo,
-          schedule: { on: { hour: c.hora, minute: 0 }, allowWhileIdle: true },
-        })
-      }
-
-      let idAgua = 200
-      const intervaloAgua = nivel === 'alto' ? 1 : 2
-      for (let hora = 9; hora <= 21; hora += intervaloAgua) {
-        notificaciones.push({
-          id: idAgua++,
-          title: '¡Hora de hidratarse!',
-          body: 'Recuerda beber al menos 250ml de agua.',
-          schedule: { on: { hour: hora, minute: 30 }, allowWhileIdle: true },
-        })
-      }
-    }
-
-    if (notificaciones.length > 0) {
-      await LocalNotifications.schedule({ notifications: notificaciones })
-    }
-  } else {
-    // Para la web, no podemos usar LocalNotifications.
-    // Simplemente programamos un temporizador en memoria si la pestaña está abierta.
-    // (En un entorno real se usaría un Push API + Service Worker)
-    const permitido = await solicitarPermisoNotificaciones()
-    if (!permitido || nivel === 'bajo') return
-
-    
-    
-    // Función simple para avisar cuando es hora, se comprueba cada minuto
-    setInterval(() => {
-      const d = new Date()
-      const m = d.getMinutes()
-      const h = d.getHours()
-      const sec = d.getSeconds()
-      
-      // Solo lanzar en el primer segundo del minuto para no duplicar
-      if (sec !== 0) return
-
-      if (nivel !== 'bajo') {
-        if (h === 9 && m === 0) new Notification('¡Hora de desayunar!', { body: 'No te saltes la primera comida del día.' })
-        if (h === 14 && m === 0) new Notification('¡Hora de comer!', { body: 'Registra tu comida para mantener tus macros bajo control.' })
-        if (h === 21 && m === 0) new Notification('¡Hora de cenar!', { body: 'Una cena ligera ayuda a descansar mejor.' })
-        
-        const intervaloAgua = nivel === 'alto' ? 1 : 2
-        // If it's time for water: every 1 or 2 hours, at minute 30
-        if (h >= 9 && h <= 21 && ((h - 9) % intervaloAgua === 0) && m === 30) {
-          new Notification('¡Hora de hidratarse!', { body: 'Recuerda beber al menos 250ml de agua.' })
-        }
-      }
-    }, 1000)
+/** Arranque: en la app nativa reprograma con las preferencias del servidor. En web no hace nada. */
+export async function programarNotificacionesDiarias(): Promise<void> {
+  if (!esNativa) return
+  try {
+    const { leerRecordatorios } = await import('./push.ts')
+    const r = await leerRecordatorios()
+    await programarRecordatoriosNativos(r.preferencias)
+  } catch {
+    /* sin red o sin sesión: se reprograma en el siguiente arranque */
   }
 }
