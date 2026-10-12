@@ -22,7 +22,7 @@ export function CelebracionLogro() {
   }, [actual])
   if (!actual) return null
   return (
-    <div role="status" aria-live="polite" className="pointer-events-none fixed inset-x-0 top-[max(1rem,env(safe-area-inset-top))] z-[70] flex justify-center px-4">
+    <div role="status" aria-live="polite" className="pointer-events-none fixed inset-x-0 top-[max(1rem,env(safe-area-inset-top))] z-[110] flex justify-center px-4">
       <button type="button" onClick={() => setCola((c) => c.slice(1))} className="pointer-events-auto flex items-center gap-3 rounded-2xl border border-mint-200 bg-white/95 px-4 py-3 shadow-xl backdrop-blur dark:border-mint-900 dark:bg-neutral-900/95 motion-safe:animate-[nf-logro_600ms_cubic-bezier(.2,1.4,.4,1)]">
         <span className={`relative grid h-11 w-11 place-items-center rounded-full ${COLOR_NIVEL[actual.nivel]}`}>
           <span className="absolute inset-0 rounded-full ring-2 ring-mint-400/60 motion-safe:animate-ping" aria-hidden="true" />

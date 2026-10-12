@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Bell } from 'lucide-react'
 import { pedirApi } from '../lib/api.ts'
 
@@ -17,6 +18,20 @@ export function CentroNotificaciones({ alinear = 'derecha' }: { alinear?: 'derec
   const [abierto, setAbierto] = useState(false)
   const [lista, setLista] = useState<Notif[]>([])
   const [noLeidas, setNoLeidas] = useState(0)
+  const botonRef = useRef<HTMLButtonElement>(null)
+  const [pos, setPos] = useState<{ top: number; left?: number; right?: number }>({ top: 0 })
+  const recolocar = useCallback(() => {
+    const r = botonRef.current?.getBoundingClientRect()
+    if (!r) return
+    setPos(alinear === 'derecha' ? { top: r.bottom + 8, right: Math.max(8, window.innerWidth - r.right) } : { top: r.bottom + 8, left: Math.max(8, r.left) })
+  }, [alinear])
+  useEffect(() => {
+    if (!abierto) return
+    recolocar()
+    window.addEventListener('resize', recolocar)
+    window.addEventListener('scroll', recolocar, true)
+    return () => { window.removeEventListener('resize', recolocar); window.removeEventListener('scroll', recolocar, true) }
+  }, [abierto, recolocar])
   const cargar = useCallback(() => {
     pedirApi<{ notificaciones: Notif[]; noLeidas: number }>('/api/notificaciones').then((r) => { setLista(r.notificaciones); setNoLeidas(r.noLeidas) }).catch(() => {})
   }, [])
@@ -36,14 +51,14 @@ export function CentroNotificaciones({ alinear = 'derecha' }: { alinear?: 'derec
   }
   return (
     <div className="relative">
-      <button type="button" onClick={abrir} aria-label={noLeidas ? `Notificaciones, ${noLeidas} sin leer` : 'Notificaciones'} aria-expanded={abierto} className="relative rounded-full p-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800">
+      <button ref={botonRef} type="button" onClick={abrir} aria-label={noLeidas ? `Notificaciones, ${noLeidas} sin leer` : 'Notificaciones'} aria-expanded={abierto} className="relative rounded-full p-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800">
         <Bell size={20} strokeWidth={1.75} />
         {noLeidas > 0 && <span className="cifra absolute right-0.5 top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-mint-600 px-1 text-[10px] font-semibold text-white">{noLeidas > 9 ? '9+' : noLeidas}</span>}
       </button>
-      {abierto && (
+      {abierto && createPortal(
         <>
-          <div className="fixed inset-0 z-40" onClick={() => setAbierto(false)} aria-hidden="true" />
-          <div role="dialog" aria-label="Notificaciones" className={`absolute ${alinear === 'derecha' ? 'right-0' : 'left-0'} z-50 mt-2 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-lg dark:border-neutral-800 dark:bg-neutral-900`}>
+          <div className="fixed inset-0 z-[90]" onClick={() => setAbierto(false)} aria-hidden="true" />
+          <div role="dialog" aria-label="Notificaciones" style={pos} className={`fixed z-[100] w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-lg dark:border-neutral-800 dark:bg-neutral-900`}>
             <p className="border-b border-neutral-100 px-4 py-3 text-sm font-semibold dark:border-neutral-800">Notificaciones</p>
             {lista.length === 0 ? (
               <p className="px-4 py-8 text-center text-sm text-neutral-500">Aún no tienes notificaciones.</p>
@@ -62,7 +77,8 @@ export function CentroNotificaciones({ alinear = 'derecha' }: { alinear?: 'derec
             )}
             <a href="/ajustes#notificaciones" onClick={() => setAbierto(false)} className="block border-t border-neutral-100 px-4 py-2.5 text-center text-xs font-medium text-mint-700 dark:border-neutral-800 dark:text-mint-400">Configurar avisos</a>
           </div>
-        </>
+        </>,
+        document.body,
       )}
     </div>
   )
