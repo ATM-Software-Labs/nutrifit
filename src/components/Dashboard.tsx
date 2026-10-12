@@ -5,7 +5,7 @@
  * panel en 2–3 columnas con «Añadir comida» siempre visible.
  */
 import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
-import { ChartColumn, Droplet, House, Plus, User } from 'lucide-react'
+import { ChartColumn, Droplet, House, Plus, Scale, User } from 'lucide-react'
 import { Logo } from './Logo.tsx'
 import { DialogoSalir } from './DialogoSalir.tsx'
 import { TarjetaRacha } from './TarjetaRacha.tsx'
@@ -411,7 +411,7 @@ export default function Dashboard({
           <span className="text-[10px] font-medium">Agua</span>
         </button>
         <button type="button" onClick={() => navegar('/peso')} className={`flex flex-col items-center gap-1 p-2 transition-colors ${vista === 'peso' ? 'text-mint-600 dark:text-mint-400' : 'text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200'}`}>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={vista === 'peso' ? 2 : 1.75} strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          <Scale size={24} strokeWidth={vista === 'peso' ? 2 : 1.75} />
           <span className="text-[10px] font-medium">Peso</span>
         </button>
         <button type="button" onClick={() => navegar('/profile')} className={`flex flex-col items-center gap-1 p-2 transition-colors ${vista === 'profile' ? 'text-mint-600 dark:text-mint-400' : 'text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200'}`}>

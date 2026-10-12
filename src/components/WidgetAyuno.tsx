@@ -1,3 +1,4 @@
+import { Utensils } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 export function WidgetAyuno() {
@@ -87,7 +88,7 @@ export function WidgetAyuno() {
           {esFasting ? (
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-mint-600"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
           ) : (
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-500"><path d="M12 2v20"></path><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+            <Utensils size={16} className="text-emerald-500" aria-hidden="true" />
           )}
           {estadoTexto}
         </h3>
