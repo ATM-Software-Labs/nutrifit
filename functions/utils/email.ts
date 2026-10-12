@@ -53,63 +53,23 @@ function hrefSeguro(enlace: string): string {
 const AVISO_SEGURIDAD = (caduca: string) =>
   `Este código caduca en ${caduca} y es de un solo uso. Si no has sido tú, puedes ignorar este correo de forma segura; nadie puede acceder sin este enlace.`
 
-const FRASE_NO_COMERCIAL =
-  'No enviamos comunicaciones comerciales ni publicidad sin tu consentimiento expreso.'
+/** Una línea: por qué recibes este correo. */
+export const PIE_ACCESO = 'Recibes este correo porque pediste entrar en NutriFit.'
+const PIE_CUENTA = 'Recibes este correo porque creaste tu cuenta en NutriFit.'
+const PIE_AVISOS = 'Recibes este correo porque activaste los avisos por email en NutriFit.'
 
-const DERECHOS =
-  `Tus derechos: Conforme al RGPD y la LOPDGDD, puedes consultar nuestra Política de Privacidad (${URL_PRIVACIDAD}), descargar tus datos o solicitar la baja y supresión íntegra de tu cuenta desde Ajustes en la app o contactando a ${RESPONDER_A.email}.`
+/** Pie en texto plano: motivo, enlaces y soporte (RGPD conciso). */
+function pieTexto(porque: string, bajaUrl?: string): string {
+  return `—\n${porque}\nGestionar notificaciones: ${URL_AJUSTES}#notificaciones · Darme de baja: ${bajaUrl ?? `${URL_AJUSTES}#notificaciones`} · Privacidad: ${URL_PRIVACIDAD}\nSoporte y derechos RGPD: ${RESPONDER_A.email}`
+}
 
-/** Pie del correo de acceso. La segunda frase solo es cierta en ese envío. */
-export const PIE_ACCESO =
-  `NutriFit · Desarrollado en Barcelona, España.\n` +
-  `Correo transaccional de seguridad solicitado por el usuario. Sin publicidad ni cookies comerciales.\n\n` +
-  DERECHOS
-
-const PIE_CUENTA =
-  `NutriFit · Desarrollado en Barcelona, España.\n` +
-  `Este es un correo transaccional sobre la configuración de tu cuenta. ${FRASE_NO_COMERCIAL}\n\n` +
-  DERECHOS
-
-function pieHtml(texto: string): string {
-  const html = escaparHtml(texto)
-    .replaceAll(URL_PRIVACIDAD, `<a href="${URL_PRIVACIDAD}" style="color:#6b7280;text-decoration:underline;">${URL_PRIVACIDAD}</a>`)
-    .replaceAll(RESPONDER_A.email, `<a href="mailto:${RESPONDER_A.email}" style="color:#6b7280;text-decoration:underline;">${RESPONDER_A.email}</a>`)
-    .replaceAll('\n\n', '<br /><br />')
-    .replaceAll('\n', '<br />')
-  return `<!-- Widgets tecnologicos -->
-<tr><td align="center" style="padding:24px 24px 0;">
-  <!--[if mso]><table role="presentation" width="432" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:12px;background-color:#f9fafb;">
-    <tr>
-      <td width="25%" align="center" style="padding:10px 4px;border-right:1px solid #e5e7eb;font-family:${FUENTE};">
-        <div style="font-size:12px;font-weight:700;color:#2563eb;">✨ Gemini AI</div>
-        <div style="font-size:10px;color:#6b7280;margin-top:2px;">Visión Flash</div>
-      </td>
-      <td width="25%" align="center" style="padding:10px 4px;border-right:1px solid #e5e7eb;font-family:${FUENTE};">
-        <div style="font-size:12px;font-weight:700;color:#0284c7;">🛡️ Entra / Copilot</div>
-        <div style="font-size:10px;color:#6b7280;margin-top:2px;">SSO Universal</div>
-      </td>
-      <td width="25%" align="center" style="padding:10px 4px;border-right:1px solid #e5e7eb;font-family:${FUENTE};">
-        <div style="font-size:12px;font-weight:700;color:#ea580c;">⚡ Cloudflare</div>
-        <div style="font-size:10px;color:#6b7280;margin-top:2px;">Borde Anycast D1</div>
-      </td>
-      <td width="25%" align="center" style="padding:10px 4px;font-family:${FUENTE};">
-        <div style="font-size:12px;font-weight:700;color:#059669;">🥗 Food Facts</div>
-        <div style="font-size:10px;color:#6b7280;margin-top:2px;">Open Database</div>
-      </td>
-    </tr>
-  </table>
-  <!--[if mso]></td></tr></table><![endif]-->
-</td></tr>
-<tr><td align="center" style="padding:18px 32px 4px;">
-  <!-- Boton directo de baja / unsubscribe -->
-  <a href="${URL_AJUSTES}#notificaciones" style="display:inline-block;padding:9px 20px;background-color:#f3f4f6;border:1px solid #d1d5db;border-radius:8px;font-family:${FUENTE};font-size:12px;font-weight:600;color:#374151;text-decoration:none;">
-    Darse de baja / Unsubscribe
-  </a>
-</td></tr>
-<tr><td style="padding:24px 32px 0;"><hr style="border:none;border-top:1px solid #e5e7eb;margin:0;" /></td></tr>
-<tr><td class="nf-suave" align="center" style="padding:20px 32px 10px;font-size:11px;line-height:1.5;color:#6b7280;text-align:center;">${html}</td></tr>
-<tr><td class="nf-suave" align="center" style="padding:0 32px 24px;font-size:12px;line-height:1.5;color:#9ca3af;text-align:center;"><a href="${URL_AJUSTES}#notificaciones" style="color:#9ca3af;text-decoration:underline;">Gestionar notificaciones</a> · <a href="${URL_AJUSTES}#notificaciones" style="color:#9ca3af;text-decoration:underline;">Darme de baja</a></td></tr>`
+/** Pie corto: una línea de motivo, una de enlaces (con la única baja) y el soporte. */
+function pieHtml(porque: string, bajaUrl?: string): string {
+  const enlace = (href: string, t: string) => `<a href="${hrefSeguro(href)}" style="color:#6b7280;text-decoration:underline;">${t}</a>`
+  return `<tr><td style="padding:28px 32px 0;"><hr style="border:none;border-top:1px solid #e5e7eb;margin:0;" /></td></tr>
+<tr><td class="nf-suave" align="center" style="padding:16px 32px 4px;font-family:${FUENTE};font-size:12px;line-height:1.5;color:#6b7280;text-align:center;">${escaparHtml(porque)}</td></tr>
+<tr><td class="nf-suave" align="center" style="padding:0 32px 4px;font-family:${FUENTE};font-size:12px;line-height:1.5;color:#6b7280;text-align:center;">${enlace(`${URL_AJUSTES}#notificaciones`, 'Gestionar notificaciones')} · ${enlace(bajaUrl ?? `${URL_AJUSTES}#notificaciones`, 'Darme de baja')} · ${enlace(URL_PRIVACIDAD, 'Privacidad')}</td></tr>
+<tr><td class="nf-suave" align="center" style="padding:0 32px 28px;font-family:${FUENTE};font-size:11px;line-height:1.5;color:#9ca3af;text-align:center;">Soporte y derechos RGPD: <a href="mailto:${RESPONDER_A.email}" style="color:#9ca3af;text-decoration:underline;">${RESPONDER_A.email}</a></td></tr>`
 }
 
 function envolver(cuerpo: string, preheader: string, jsonLd?: string): string {
@@ -135,7 +95,7 @@ function envolver(cuerpo: string, preheader: string, jsonLd?: string): string {
 ${jsonLd || ''}
 </head>
 <body class="nf-body" style="margin:0;padding:0;background-color:#f6f8fa;font-family:${FUENTE};color:#111827;">
-<span style="display:none;font-size:1px;color:#f6f8fa;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;">${escaparHtml(preheader)}</span>
+<span style="display:none;font-size:1px;color:#f6f8fa;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;">${escaparHtml(preheader)}${'&#847;&zwnj;&nbsp;'.repeat(40)}</span>
 <table role="presentation" class="nf-fondo" width="100%" cellpadding="0" cellspacing="0" bgcolor="#f6f8fa" style="background-color:#f6f8fa;">
 <tr><td align="center" style="padding:48px 16px;">
 <!--[if mso]>
@@ -144,13 +104,8 @@ ${jsonLd || ''}
 <![endif]-->
 <table role="presentation" class="nf-tarjeta" width="480" cellpadding="0" cellspacing="0" bgcolor="#ffffff" style="width:100%;max-width:480px;background-color:#ffffff;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.04);">
 <tr><td align="center" style="padding:40px 32px 16px;font-family:${FUENTE};">
-<img src="${URL_APP}/logo.png" alt="NutriFit" width="64" height="64" style="display:inline-block;width:64px;height:auto;vertical-align:middle;border:0;outline:none;text-decoration:none;" />
+<img src="${URL_APP}/logo.png" alt="" width="64" height="64" style="display:inline-block;width:64px;height:auto;vertical-align:middle;border:0;outline:none;text-decoration:none;" />
 <div style="margin-top:16px;font-size:24px;font-weight:700;letter-spacing:-0.3px;color:${MINT};">NutriFit</div>
-<div style="margin-top:8px;font-size:12px;line-height:1.5;color:#9ca3af;font-family:${FUENTE};text-align:center;">
-  <span>NutriFit &lt;<a href="mailto:${REMITENTE.email}" style="color:#9ca3af;text-decoration:none;">${REMITENTE.email}</a>&gt;</span>
-  <span style="margin:0 6px;color:#d1d5db;">·</span>
-  <a href="${URL_AJUSTES}#notificaciones" style="color:#059669;text-decoration:underline;font-weight:600;">Darse de baja / Unsubscribe</a>
-</div>
 </td></tr>
 ${cuerpo}
 </table>
@@ -255,16 +210,13 @@ ${pieHtml(PIE_ACCESO)}`,
       `Si no has solicitado este código, es posible que otra persona esté intentando acceder a la cuenta de NutriFit${cuentaPlano}. No reenvíes ni des este código a nadie.\n\n` +
       `${aviso}\n\n` +
       `Atentamente,\nEl equipo de NutriFit\n\n` +
-      `Este correo no admite respuestas directas. Para soporte: ${RESPONDER_A.email}\n` +
-      `NutriFit · Seguridad transaccional\n${URL_APP}\n\n` +
-      `Para gestionar tus notificaciones o darte de baja: ${URL_AJUSTES}`
+      pieTexto(PIE_ACCESO)
     : `Código de acceso a NutriFit\n\n` +
       `Hemos recibido una solicitud para acceder a tu cuenta de NutriFit${cuentaPlano}.\n\n` +
       `Acceder a mi cuenta:\n${enlace}\n\n` +
       `${aviso}\n\n` +
       `Atentamente,\nEl equipo de NutriFit\n\n` +
-      `NutriFit · Seguridad transaccional\n${URL_APP}\n\n` +
-      `Para gestionar tus notificaciones: ${URL_AJUSTES}`;
+      pieTexto(PIE_ACCESO)
 
   return {
     asunto: cifras ? `${cifras} es tu código de verificación de NutriFit` : 'Tu enlace para entrar en NutriFit',
@@ -296,7 +248,7 @@ ${pieHtml(PIE_CUENTA)}`,
     `Hola, ${nombre}.\n\nHemos calculado tus objetivos diarios:\n` +
     `· Calorías: ${plan.calorias} kcal\n· Proteína: ${plan.proteinas} g\n· Carbohidratos: ${plan.carbohidratos} g\n· Grasas: ${plan.grasas} g\n\n` +
     `Empezar a registrar: ${URL_APP}\n\n` +
-    `${PIE_CUENTA}\n\nPara gestionar tus notificaciones o darte de baja: ${URL_AJUSTES}`
+    pieTexto(PIE_CUENTA)
   return { asunto: `${nombre}, tu plan NutriFit está listo`, html, texto }
 }
 
@@ -315,13 +267,18 @@ interface Correo {
 export function cuerpoBrevo(c: Correo): Record<string, unknown> {
   const headers: Record<string, string> = { ...CABECERAS_CORREO }
 
+  // Brevo no documenta cómo desactivar el seguimiento por mensaje; estas cabeceras lo piden
+  // y el consentimiento false anonimiza los clics. El apagado real es en la cuenta.
+  headers['X-Mailin-Track'] = '0'
+  headers['X-Mailin-Track-Clicks'] = '0'
+  headers['X-Mailin-Track-Opens'] = '0'
   headers['X-Entity-Ref-ID'] = `nf-${c.esAuth ? 'auth' : 'aviso'}-${Date.now()}`
   if (c.bajaUrl) headers['List-Unsubscribe'] = `<${c.bajaUrl}>, <mailto:${RESPONDER_A.email}?subject=baja%20recordatorios>`
 
   return {
     sender: REMITENTE,
     replyTo: RESPONDER_A,
-    to: [{ email: c.para, ...(c.nombre ? { name: c.nombre } : {}) }],
+    to: [{ email: c.para, ...(c.nombre ? { name: c.nombre } : {}), contactPixelTrackingConsent: false }],
     subject: c.asunto,
     htmlContent: c.html,
     textContent: c.texto,
@@ -374,11 +331,6 @@ export async function enviarBienvenida(env: Env, email: string, nombre: string, 
   return enviar(env, { para: email, nombre, ...mensaje })
 }
 
-const PIE_AVISOS =
-  `NutriFit · Recibes este correo porque activaste los recordatorios por email en Ajustes.\n` +
-  `Puedes desactivarlos en un clic con el enlace de baja o desde Ajustes → Recordatorios.\n\n` +
-  DERECHOS
-
 function botonHtml(href: string, texto: string): string {
   return `<tr><td align="center" style="padding:0 32px 8px;"><a href="${hrefSeguro(href)}" style="background-color:#047857;color:#ffffff;padding:14px 28px;text-decoration:none;border-radius:8px;font-weight:600;display:inline-block;font-family:${FUENTE};">${escaparHtml(texto)}</a></td></tr>`
 }
@@ -395,12 +347,11 @@ export function mensajeRecordatorio(titulo: string, cuerpo: string, url: string,
     `<tr><td class="nf-texto" style="padding:16px 32px 8px;font-family:${FUENTE};font-size:22px;line-height:1.3;font-weight:600;color:#111827;">${escaparHtml(titulo)}</td></tr>
 <tr><td class="nf-suave" style="padding:0 32px 24px;font-family:${FUENTE};font-size:16px;line-height:1.5;color:#4b5563;">${escaparHtml(cuerpo)}</td></tr>
 ${botonHtml(enlace, 'Registrar ahora')}
-<tr><td class="nf-suave" align="center" style="padding:16px 32px 0;font-family:${FUENTE};font-size:12px;color:#6b7280;"><a href="${hrefSeguro(bajaUrl)}" style="color:#6b7280;text-decoration:underline;">Desactivar recordatorios por email</a></td></tr>
-${pieHtml(PIE_AVISOS)}`,
+${pieHtml(PIE_AVISOS, bajaUrl)}`,
     `${titulo}: ${cuerpo}`,
     jsonLdVer(enlace, 'Registrar ahora', `${titulo}. ${cuerpo}`),
   )
-  const texto = `${titulo}\n\n${cuerpo}\n\nRegistrar ahora: ${enlace}\n\nDesactivar estos recordatorios: ${bajaUrl}\n\n${PIE_AVISOS}`
+  const texto = `${titulo}\n\n${cuerpo}\n\nRegistrar ahora: ${enlace}\n\n${pieTexto(PIE_AVISOS, bajaUrl)}`
   return { asunto: `${titulo} · NutriFit`, html, texto }
 }
 
@@ -416,15 +367,14 @@ export function mensajeResumenSemanal(nombre: string | null, r: DatosResumen, ba
 <tr><td class="nf-suave" style="padding:0 32px 20px;font-family:${FUENTE};font-size:16px;line-height:1.5;color:#4b5563;">${escaparHtml(resumen)}</td></tr>
 <tr><td style="padding:0 32px 20px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:12px;"><tr>${celda(`${r.adherenciaPct} %`, 'Constancia')}${celda(String(r.racha), 'Racha')}${celda(String(r.diasEnObjetivo), 'En objetivo')}${celda(r.mediaCalorias ? String(r.mediaCalorias) : '—', 'kcal/día')}</tr></table></td></tr>
 ${logros}${botonHtml(`${URL_APP}/logros`, 'Ver mis logros')}
-<tr><td class="nf-suave" align="center" style="padding:16px 32px 0;font-family:${FUENTE};font-size:12px;color:#6b7280;"><a href="${hrefSeguro(bajaUrl)}" style="color:#6b7280;text-decoration:underline;">No recibir más resúmenes</a></td></tr>
-${pieHtml(PIE_AVISOS)}`,
+${pieHtml(PIE_AVISOS, bajaUrl)}`,
     resumen,
     jsonLdVer(`${URL_APP}/logros`, 'Ver mis logros', `Resumen semanal NutriFit: ${resumen}`),
   )
   const texto = `${saludo} tu semana en NutriFit (${r.desde} a ${r.hasta})\n\n${resumen}\n` +
     `· Constancia: ${r.adherenciaPct} %\n· Racha: ${r.racha} días\n· Días en objetivo: ${r.diasEnObjetivo}\n· Media: ${r.mediaCalorias || '—'} kcal/día\n` +
     (r.logros.length ? `· Logros: ${r.logros.join(', ')}\n` : '') +
-    `\nVer mis logros: ${URL_APP}/logros\n\nNo recibir más resúmenes: ${bajaUrl}\n\n${PIE_AVISOS}`
+    `\nVer mis logros: ${URL_APP}/logros\n\n${pieTexto(PIE_AVISOS, bajaUrl)}`
   return { asunto: `Tu semana: ${r.adherenciaPct} % de constancia y racha de ${r.racha} días`, html, texto }
 }
 
