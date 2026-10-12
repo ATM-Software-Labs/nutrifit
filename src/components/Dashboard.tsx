@@ -7,6 +7,9 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import { ChartColumn, Droplet, House, Plus, User } from 'lucide-react'
 import { Logo } from './Logo.tsx'
+import { DialogoSalir } from './DialogoSalir.tsx'
+import { FotoAvatar } from './ui/Avatar.tsx'
+import { LogOut, Settings } from 'lucide-react'
 import { BarreraEscanner } from './BarreraEscanner.tsx'
 import { AnilloCalorias } from './AnilloCalorias.tsx'
 import { BarraMacro } from './BarrasMacros.tsx'
@@ -87,10 +90,13 @@ export default function Dashboard({
   usuario: Usuario
   vista?: 'hoy' | 'historial' | 'profile' | 'ajustes' | 'peso' | 'agua'
   onUsuario: (u: Usuario) => void
-  onSalir: () => void
+  onSalir: (todos?: boolean) => Promise<void> | void
 }) {
   const [fecha, setFecha] = useState(hoyISO)
   const [hoja, setHoja] = useState<Hoja>(null)
+  const [salirAbierto, setSalirAbierto] = useState(false)
+  const [menuCuenta, setMenuCuenta] = useState(false)
+  const pedirSalir = useCallback(() => { setMenuCuenta(false); setSalirAbierto(true) }, [])
   const [quemadas, setQuemadas] = useState(0)
   const [sumarQuemadas, setSumarQuemadas] = useState(false)
   const { resumen, error, actualizar, recargar } = useResumen(fecha)
@@ -284,8 +290,9 @@ export default function Dashboard({
         onAgua={() => navegar('/agua')}
         onAjustes={() => navegar('/ajustes')}
         onPerfil={() => navegar('/profile')}
-        onSalir={onSalir}
+        onSalir={pedirSalir}
       />
+      <DialogoSalir abierto={salirAbierto} onClose={() => setSalirAbierto(false)} onSalir={async (todos) => { await onSalir(todos); setSalirAbierto(false) }} />
       <div className="mx-auto w-full pb-24 lg:mx-0 lg:min-w-0 lg:flex-1 lg:h-dvh lg:overflow-y-auto lg:pb-8 lg:pr-2">
       <header className="sticky top-0 z-30 border-b border-transparent bg-bg/80 px-5 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-md dark:bg-bg-dark/80 lg:hidden">
         {vista === 'hoy' ? (
@@ -295,6 +302,22 @@ export default function Dashboard({
               <span className="text-lg font-semibold tracking-tight">
                 Nutri<span className="text-mint-700 dark:text-mint-400">Fit</span>
               </span>
+            </div>
+            <div className="relative">
+              <button type="button" aria-label="Menú de cuenta" aria-haspopup="menu" aria-expanded={menuCuenta} onClick={() => setMenuCuenta((v) => !v)} className="rounded-full ring-offset-2 focus-visible:ring-2 focus-visible:ring-mint-500">
+                <FotoAvatar url={usuario.avatar_url || null} nombre={usuario.nombre || usuario.email || 'NutriFit'} />
+              </button>
+              {menuCuenta && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setMenuCuenta(false)} aria-hidden="true" />
+                  <div role="menu" className="absolute right-0 z-50 mt-2 w-60 overflow-hidden rounded-2xl border border-neutral-200 bg-white p-1.5 shadow-lg dark:border-neutral-800 dark:bg-neutral-900">
+                    <p className="truncate px-3 py-2 text-xs text-neutral-500 dark:text-neutral-400">{usuario.email}</p>
+                    <button role="menuitem" type="button" onClick={() => { setMenuCuenta(false); navegar('/profile') }} className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800"><User size={16} /> Mi perfil</button>
+                    <button role="menuitem" type="button" onClick={() => { setMenuCuenta(false); navegar('/ajustes') }} className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800"><Settings size={16} /> Ajustes</button>
+                    <button role="menuitem" type="button" onClick={pedirSalir} className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40"><LogOut size={16} /> Cerrar sesión</button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         ) : (
@@ -317,7 +340,7 @@ export default function Dashboard({
         </Suspense>
       ) : vista === 'ajustes' ? (
         <Suspense fallback={<div className="p-10"><Esqueleto alto="h-64" /></div>}>
-          <Ajustes usuario={usuario} onClose={() => navegar('/')} onUsuario={(u) => { onUsuario(u); recargar() }} onSalir={onSalir} enPagina={true} />
+          <Ajustes usuario={usuario} onClose={() => navegar('/')} onUsuario={(u) => { onUsuario(u); recargar() }} onSalir={pedirSalir} enPagina={true} />
         </Suspense>
       ) : vista === 'peso' ? (
         <Suspense fallback={<div className="p-10"><Esqueleto alto="h-64" /></div>}>

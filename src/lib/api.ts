@@ -151,6 +151,7 @@ export const api = {
   solicitarEnlace: (email: string, turnstile: string) =>
     pedir<{ ok: true; mensaje: string }>('/api/auth/solicitar', { method: 'POST', body: { email, cliente: esNativa ? 'app' : 'web' }, turnstile }),
   salir: () => pedir<{ ok: true }>('/api/auth/salir', { method: 'POST' }),
+  salirTodo: () => pedir<{ ok: true }>('/api/auth/salir-todo', { method: 'POST' }),
   /** Código de 6 cifras del email. Web → cookie; app → token Bearer en la respuesta. */
   entrarConCodigo: (email: string, codigo: string, turnstile: string) =>
     pedir<Entrada & { token?: string }>('/api/auth/codigo', {

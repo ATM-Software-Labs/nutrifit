@@ -234,7 +234,7 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
       localStorage.removeItem('nf:last_synced_hash')
       localStorage.removeItem(CLAVE_PESO_OBJETIVO)
       indexedDB.deleteDatabase('nutrifit-local')
-      onSalir()
+      window.location.assign('/')
     } catch (e) {
       toast({ tipo: 'error', mensaje: e instanceof Error ? e.message : 'No se pudo eliminar la cuenta.' })
       setBorrando(false)
@@ -712,7 +712,7 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
           <Button variant="outline" block icon={<Download size={16} />} loading={exportando} onClick={() => void descargarDatos()}>
             {t('ajustes.descargar')}
           </Button>
-          <Button variant="outline" block icon={<LogOut size={16} />} onClick={onSalir}>
+          <Button variant="outline" block icon={<LogOut size={16} />} onClick={() => onSalir()} className="border-red-200 text-red-600 hover:bg-red-50 dark:border-red-900/60 dark:text-red-400 dark:hover:bg-red-950/30">
             {t('ajustes.cerrar')}
           </Button>
         </Seccion>

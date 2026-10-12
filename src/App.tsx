@@ -198,9 +198,9 @@ export default function App() {
     return () => window.removeEventListener('nf:actualizacion', f)
   }, [toast])
 
-  const salir = useCallback(async () => {
+  const salir = useCallback(async (todos = false) => {
     try {
-      await api.salir()
+      await (todos ? api.salirTodo() : api.salir())
     } catch {
       /* da igual: borramos el estado local */
     }
