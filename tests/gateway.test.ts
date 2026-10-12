@@ -332,6 +332,27 @@ test('GET /nutrifit/auth/google vuelve a la PWA y no reenvía el canje', async (
   assert.equal(barra.headers.get('location'), 'https://nutri.trujillomingorance.com/api/auth/google')
 })
 
+test('GET /nutrifit/auth/microsoft y /v1/auth/callback/microsoft redirigen a la PWA', async () => {
+  let llamadas = 0
+  const auth = await atender(new Request('https://api.trujillomingorance.com/nutrifit/auth/microsoft', {
+    headers: { origin: 'https://nutri.trujillomingorance.com' },
+  }), env(), ctx, async () => {
+    llamadas += 1
+    return new Response('no')
+  })
+  assert.equal(llamadas, 0)
+  assert.equal(auth.status, 302)
+  assert.equal(auth.headers.get('location'), 'https://nutri.trujillomingorance.com/api/auth/microsoft')
+
+  const callback = await atender(new Request('https://api.trujillomingorance.com/v1/auth/callback/microsoft?code=123&state=abc'), env(), ctx, async () => {
+    llamadas += 1
+    return new Response('no')
+  })
+  assert.equal(llamadas, 0)
+  assert.equal(callback.status, 302)
+  assert.equal(callback.headers.get('location'), 'https://nutri.trujillomingorance.com/api/auth/callback/microsoft?code=123&state=abc')
+})
+
 test('sin PAGES_ORIGIN /nutrifit no sale a la red y una ruta fuera de /nutrifit es 404', async () => {
   const auth = await atender(new Request('https://api.trujillomingorance.com/nutrifit/auth'), env(), ctx)
   assert.equal(auth.status, 502)

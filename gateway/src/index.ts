@@ -82,6 +82,25 @@ export async function atender(request: Request, env: GatewayEnv, ctx: ContextoGa
     }))
   }
 
+  // Rutas de autenticación unificada para Microsoft Entra ID
+  if (request.method === 'GET' && (ruta === '/nutrifit/auth/microsoft' || ruta === '/v1/auth/microsoft')) {
+    const destino = new URL('/api/auth/microsoft', URL_PAGINA)
+    destino.search = url.search
+    return cerrar(request, new Response(null, {
+      status: 302,
+      headers: { Location: destino.toString(), 'Cache-Control': 'no-store' },
+    }))
+  }
+
+  if (request.method === 'GET' && (ruta === '/v1/auth/callback/microsoft' || ruta === '/nutrifit/auth/callback/microsoft')) {
+    const destino = new URL('/api/auth/callback/microsoft', URL_PAGINA)
+    destino.search = url.search
+    return cerrar(request, new Response(null, {
+      status: 302,
+      headers: { Location: destino.toString(), 'Cache-Control': 'no-store' },
+    }))
+  }
+
   if (ruta === '/nutrifit/vision') {
     if (request.method !== 'POST') return cerrar(request, respuestaJson(405, { ok: false, error: 'Método no permitido.' }))
     return cerrar(request, await analizarConLimite(request, env, ctx))
