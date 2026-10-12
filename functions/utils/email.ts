@@ -407,12 +407,12 @@ ${pieHtml(PIE_AVISOS)}`,
 export interface DatosResumen { diasRegistrados: number; adherenciaPct: number; diasEnObjetivo: number; mediaCalorias: number; racha: number; logros: string[]; desde: string; hasta: string }
 
 export function mensajeResumenSemanal(nombre: string | null, r: DatosResumen, bajaUrl: string): MensajeCorreo {
-  const saludo = nombre ? `Hola, ${nombre}` : 'Hola'
+  const saludo = nombre ? `${nombre}, así fue` : "Así fue"
   const resumen = `${r.diasRegistrados} de 7 días registrados (${r.adherenciaPct} %), ${r.diasEnObjetivo} en tu objetivo de calorías y racha de ${r.racha} días.`
   const celda = (v: string, e: string) => `<td width="25%" align="center" style="padding:14px 4px;font-family:${FUENTE};"><div class="nf-texto" style="font-size:22px;font-weight:600;color:#111827;">${escaparHtml(v)}</div><div style="font-size:12px;color:#6b7280;padding-top:4px;">${escaparHtml(e)}</div></td>`
   const logros = r.logros.length ? `<tr><td class="nf-suave" style="padding:0 32px 20px;font-family:${FUENTE};font-size:14px;line-height:1.6;color:#4b5563;"><strong>Logros de la semana:</strong> ${r.logros.map(escaparHtml).join(' · ')}</td></tr>` : ''
   const html = envolver(
-    `<tr><td class="nf-texto" style="padding:16px 32px 8px;font-family:${FUENTE};font-size:22px;font-weight:600;color:#111827;">${escaparHtml(saludo)}, tu semana en NutriFit</td></tr>
+    `<tr><td class="nf-texto" style="padding:16px 32px 8px;font-family:${FUENTE};font-size:22px;font-weight:600;color:#111827;">${escaparHtml(saludo)} tu semana en NutriFit</td></tr>
 <tr><td class="nf-suave" style="padding:0 32px 20px;font-family:${FUENTE};font-size:16px;line-height:1.5;color:#4b5563;">${escaparHtml(resumen)}</td></tr>
 <tr><td style="padding:0 32px 20px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:12px;"><tr>${celda(`${r.adherenciaPct} %`, 'Constancia')}${celda(String(r.racha), 'Racha')}${celda(String(r.diasEnObjetivo), 'En objetivo')}${celda(r.mediaCalorias ? String(r.mediaCalorias) : '—', 'kcal/día')}</tr></table></td></tr>
 ${logros}${botonHtml(`${URL_APP}/logros`, 'Ver mis logros')}
@@ -421,7 +421,7 @@ ${pieHtml(PIE_AVISOS)}`,
     resumen,
     jsonLdVer(`${URL_APP}/logros`, 'Ver mis logros', `Resumen semanal NutriFit: ${resumen}`),
   )
-  const texto = `${saludo}, tu semana en NutriFit (${r.desde} a ${r.hasta})\n\n${resumen}\n` +
+  const texto = `${saludo} tu semana en NutriFit (${r.desde} a ${r.hasta})\n\n${resumen}\n` +
     `· Constancia: ${r.adherenciaPct} %\n· Racha: ${r.racha} días\n· Días en objetivo: ${r.diasEnObjetivo}\n· Media: ${r.mediaCalorias || '—'} kcal/día\n` +
     (r.logros.length ? `· Logros: ${r.logros.join(', ')}\n` : '') +
     `\nVer mis logros: ${URL_APP}/logros\n\nNo recibir más resúmenes: ${bajaUrl}\n\n${PIE_AVISOS}`

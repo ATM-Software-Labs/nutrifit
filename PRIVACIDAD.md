@@ -42,6 +42,14 @@ No se comercializan datos personales, no se inserta publicidad ni se utilizan pl
 
 Cuando inicias sesión en un ordenador escaneando un código QR desde el móvil, se genera una solicitud temporal con una validez máxima de 2 minutos. Dicha solicitud contiene un identificador único anonimizado, un código de verificación de 4 caracteres, el navegador aproximado y la ubicación geográfica estimada (ciudad y país, provistas por Cloudflare a nivel de red sin persistir tu dirección IP). Esta información se visualiza exclusivamente en tu móvil para autorizar el acceso antes de pulsar «Aprobar» y se purga de forma inmediata tras su uso o caducidad.
 
+### Recordatorios, notificaciones y logros
+
+- **Notificaciones push (opcional):** si activas los recordatorios, tu navegador genera una suscripción Web Push (una URL del servicio de notificaciones de tu navegador —Google, Apple o Mozilla— y dos claves públicas de cifrado). La guardamos en nuestra base de datos asociada a tu cuenta solo para enviarte los avisos que hayas elegido. Su contenido viaja cifrado de extremo a extremo (RFC 8291): el servicio del navegador no puede leerlo. Se borra al desactivar los recordatorios, al cerrar la cuenta o cuando el navegador la invalida.
+- **Preferencias de avisos:** horas elegidas, zona horaria, horas de silencio, máximo diario y canales por tipo (push, correo, app). Guardamos un registro de cada aviso enviado (fecha, tipo y canal) durante 30 días para no repetirlo, y las notificaciones del centro de la app durante 60 días.
+- **Correos de recordatorio y resumen:** solo si los activas. Llevan cabecera `List-Unsubscribe` y un enlace de baja en un clic que desactiva todos los correos no esenciales; los de acceso y seguridad de la cuenta siguen llegando.
+- **Aviso de acceso nuevo:** para protegerte, guardamos una huella cifrada (SHA-256) del tipo de navegador, sistema operativo y país de cada inicio de sesión. No guardamos tu IP. Si entras desde uno nuevo, te avisamos.
+- **Rachas y logros:** se calculan a partir de tus registros; guardamos qué logros has desbloqueado y cuándo.
+
 ### Cookies y almacenamiento local
 
 - **Cookie técnica obligatoria:** cookie `__Host-nf_session`, configurada con directivas HttpOnly, Secure y SameSite=Lax con expiración a 30 días, destinada exclusivamente al mantenimiento de la sesión autenticada. Su identificador se guarda cifrado y queda invalidado al cerrar sesión. En la aplicación móvil se emplea un token de sesión en almacenamiento seguro local.

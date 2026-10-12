@@ -43,7 +43,7 @@ if (ruta === '/vincular') {
     guardarVinculoPendiente(id) // por si hay que entrar antes (enlace mágico en otra pestaña)
   }
   history.replaceState(null, '', '/vincular')
-} else if (!entraEnPrivacidad && !entraEnRecursos && ruta !== '/descargar' && ruta !== '/' && ruta !== '/historial' && ruta !== '/profile' && ruta !== '/ajustes' && ruta !== '/peso' && ruta !== '/agua') {
+} else if (!entraEnPrivacidad && !entraEnRecursos && ruta !== '/descargar' && ruta !== '/' && ruta !== '/historial' && ruta !== '/profile' && ruta !== '/ajustes' && ruta !== '/peso' && ruta !== '/agua' && ruta !== '/logros') {
   history.replaceState(null, '', '/') // ruta desconocida → Hoy
 }
 

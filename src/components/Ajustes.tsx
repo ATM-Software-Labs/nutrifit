@@ -98,11 +98,11 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
     return () => window.removeEventListener('hashchange', alCambiarHash)
   }, [])
 
-  const [resumenSemanal, setResumenSemanal] = useState(() => {
+  const [, setResumenSemanal] = useState(() => {
     if (typeof window === 'undefined') return true
     return localStorage.getItem('nf:pref:resumen') !== 'false'
   })
-  const [recordatoriosHabitos, setRecordatoriosHabitos] = useState(() => {
+  const [, setRecordatoriosHabitos] = useState(() => {
     if (typeof window === 'undefined') return true
     return localStorage.getItem('nf:pref:habitos') !== 'false'
   })
@@ -114,28 +114,6 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
     if (typeof window === 'undefined') return false
     return localStorage.getItem('nf:pref:baja') === 'true' || (window.location.hash.toLowerCase().includes('baja'))
   })
-
-  function conmutarResumen() {
-    const sig = !resumenSemanal
-    setResumenSemanal(sig)
-    localStorage.setItem('nf:pref:resumen', String(sig))
-    if (sig) {
-      setBajaComunicaciones(false)
-      localStorage.setItem('nf:pref:baja', 'false')
-    }
-    toast({ tipo: 'exito', mensaje: sig ? 'Resumen semanal activado' : 'Resumen semanal desactivado' })
-  }
-
-  function conmutarHabitos() {
-    const sig = !recordatoriosHabitos
-    setRecordatoriosHabitos(sig)
-    localStorage.setItem('nf:pref:habitos', String(sig))
-    if (sig) {
-      setBajaComunicaciones(false)
-      localStorage.setItem('nf:pref:baja', 'false')
-    }
-    toast({ tipo: 'exito', mensaje: sig ? 'Recordatorios activados' : 'Recordatorios desactivados' })
-  }
 
   function conmutarNovedades() {
     const sig = !novedades
@@ -447,41 +425,7 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
                   </div>
                 </div>
 
-                <div className="p-4 flex items-center justify-between gap-4">
-                  <div className="space-y-0.5">
-                    <span className="text-sm font-semibold text-graphite dark:text-neutral-100">Resumen Semanal de Progreso</span>
-                    <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                      Informe semanal con tus calorías medias, balance de macronutrientes y evolución de peso.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={resumenSemanal}
-                    onClick={conmutarResumen}
-                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${resumenSemanal ? 'bg-mint' : 'bg-neutral-300 dark:bg-neutral-700'}`}
-                  >
-                    <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${resumenSemanal ? 'translate-x-5' : 'translate-x-0'}`} />
-                  </button>
-                </div>
 
-                <div className="p-4 flex items-center justify-between gap-4">
-                  <div className="space-y-0.5">
-                    <span className="text-sm font-semibold text-graphite dark:text-neutral-100">Recordatorios de Hábitos y Agua</span>
-                    <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                      Avisos para registrar el consumo diario de agua y comidas para no perder tus rachas.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={recordatoriosHabitos}
-                    onClick={conmutarHabitos}
-                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${recordatoriosHabitos ? 'bg-mint' : 'bg-neutral-300 dark:bg-neutral-700'}`}
-                  >
-                    <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${recordatoriosHabitos ? 'translate-x-5' : 'translate-x-0'}`} />
-                  </button>
-                </div>
 
                 <div className="p-4 flex items-center justify-between gap-4">
                   <div className="space-y-0.5">
