@@ -1,3 +1,5 @@
+import { navegar } from '../lib/rutas.ts'
+import { Trophy } from 'lucide-react'
 /** Navegación lateral de escritorio (≥ lg). En móvil no se renderiza (hidden). */
 import { useState, type ReactNode } from 'react'
 import { ChartColumn, Download, Droplet, House, LogOut, Plus, Scale, Settings, User } from 'lucide-react'
@@ -53,7 +55,7 @@ export function BarraLateral({
   onSalir,
 }: {
   usuario: Usuario
-  vista: 'hoy' | 'historial' | 'profile' | 'ajustes' | 'peso' | 'agua'
+  vista: 'hoy' | 'historial' | 'profile' | 'ajustes' | 'peso' | 'agua' | 'logros'
   onHoy: () => void
   onHistorial: () => void
   onAnadir: () => void
@@ -83,6 +85,9 @@ export function BarraLateral({
           </Item>
           <Item icono={<ChartColumn {...i} />} activo={vista === 'historial'} onClick={onHistorial}>
             {t('nav.historial')}
+          </Item>
+          <Item icono={<Trophy {...i} />} activo={vista === 'logros'} onClick={() => navegar('/logros')}>
+            Logros
           </Item>
         </ul>
         <p className="etiqueta mb-2 mt-7 px-3">Registrar</p>

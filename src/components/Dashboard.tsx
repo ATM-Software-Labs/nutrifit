@@ -8,8 +8,11 @@ import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import { ChartColumn, Droplet, House, Plus, User } from 'lucide-react'
 import { Logo } from './Logo.tsx'
 import { DialogoSalir } from './DialogoSalir.tsx'
+import { TarjetaRacha } from './TarjetaRacha.tsx'
+import { CelebracionLogro } from './CelebracionLogro.tsx'
+import { refrescarLogros } from '../lib/logros.ts'
 import { FotoAvatar } from './ui/Avatar.tsx'
-import { LogOut, Settings } from 'lucide-react'
+import { LogOut, Settings, Trophy } from 'lucide-react'
 import { BarreraEscanner } from './BarreraEscanner.tsx'
 import { AnilloCalorias } from './AnilloCalorias.tsx'
 import { BarraMacro } from './BarrasMacros.tsx'
@@ -51,6 +54,7 @@ const EscanerBarcodeModal = lazy(async () => {
 })
 const PaginaPeso = lazy(() => import('./PaginaPeso.tsx'))
 const PaginaAgua = lazy(() => import('./PaginaAgua.tsx'))
+const PaginaLogros = lazy(() => import('./PaginaLogros.tsx'))
 
 type Hoja =
   | null
@@ -88,7 +92,7 @@ export default function Dashboard({
   onSalir,
 }: {
   usuario: Usuario
-  vista?: 'hoy' | 'historial' | 'profile' | 'ajustes' | 'peso' | 'agua'
+  vista?: 'hoy' | 'historial' | 'profile' | 'ajustes' | 'peso' | 'agua' | 'logros'
   onUsuario: (u: Usuario) => void
   onSalir: (todos?: boolean) => Promise<void> | void
 }) {
@@ -144,6 +148,7 @@ export default function Dashboard({
       const { comida } = await api.guardarComida({ ...nueva, imagen_url: imagen })
       actualizar((r) => reemplazarComida(r, idTemporal, comida))
       toast({ tipo: 'exito', mensaje: `${comida.descripcion} añadido` })
+      void refrescarLogros()
     } catch (e) {
       actualizar((r) => sinComida(r, idTemporal))
       toast({ tipo: 'error', mensaje: e instanceof Error ? e.message : 'No se pudo guardar la comida.' })
@@ -243,6 +248,8 @@ export default function Dashboard({
               </div>
             </section>
 
+            <TarjetaRacha />
+
             <div className="hidden lg:block">
               <AnadirRapido
                 onTexto={(comida) => setHoja({ tipo: 'texto', comida })}
@@ -292,6 +299,7 @@ export default function Dashboard({
         onPerfil={() => navegar('/profile')}
         onSalir={pedirSalir}
       />
+      <CelebracionLogro />
       <DialogoSalir abierto={salirAbierto} onClose={() => setSalirAbierto(false)} onSalir={async (todos) => { await onSalir(todos); setSalirAbierto(false) }} />
       <div className="mx-auto w-full pb-24 lg:mx-0 lg:min-w-0 lg:flex-1 lg:h-dvh lg:overflow-y-auto lg:pb-8 lg:pr-2">
       <header className="sticky top-0 z-30 border-b border-transparent bg-bg/80 px-5 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-md dark:bg-bg-dark/80 lg:hidden">
@@ -314,6 +322,7 @@ export default function Dashboard({
                     <p className="truncate px-3 py-2 text-xs text-neutral-500 dark:text-neutral-400">{usuario.email}</p>
                     <button role="menuitem" type="button" onClick={() => { setMenuCuenta(false); navegar('/profile') }} className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800"><User size={16} /> Mi perfil</button>
                     <button role="menuitem" type="button" onClick={() => { setMenuCuenta(false); navegar('/ajustes') }} className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800"><Settings size={16} /> Ajustes</button>
+                    <button role="menuitem" type="button" onClick={() => { setMenuCuenta(false); navegar('/logros') }} className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800"><Trophy size={16} /> Logros</button>
                     <button role="menuitem" type="button" onClick={pedirSalir} className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40"><LogOut size={16} /> Cerrar sesión</button>
                   </div>
                 </>
@@ -326,7 +335,7 @@ export default function Dashboard({
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-graphite dark:text-neutral-100"><path d="m15 18-6-6 6-6"/></svg>
             </button>
             <span className="text-lg font-semibold tracking-tight text-graphite dark:text-neutral-100">
-              {vista === 'ajustes' ? 'Ajustes' : vista === 'profile' ? 'Mi Perfil' : vista === 'peso' ? 'Control de Peso' : vista === 'agua' ? 'Hidratación' : 'Historial'}
+              {vista === 'ajustes' ? 'Ajustes' : vista === 'profile' ? 'Mi Perfil' : vista === 'peso' ? 'Control de Peso' : vista === 'agua' ? 'Hidratación' : vista === 'logros' ? 'Logros' : 'Historial'}
             </span>
           </div>
         )}
@@ -345,6 +354,10 @@ export default function Dashboard({
       ) : vista === 'peso' ? (
         <Suspense fallback={<div className="p-10"><Esqueleto alto="h-64" /></div>}>
           <PaginaPeso usuario={usuario} />
+        </Suspense>
+      ) : vista === 'logros' ? (
+        <Suspense fallback={<div className="p-10"><Esqueleto alto="h-64" /></div>}>
+          <PaginaLogros />
         </Suspense>
       ) : vista === 'agua' ? (
         <Suspense fallback={<div className="p-10"><Esqueleto alto="h-64" /></div>}>
