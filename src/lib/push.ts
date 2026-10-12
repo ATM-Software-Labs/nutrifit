@@ -14,6 +14,7 @@ export interface PrefRecordatorios {
   silencio_desde: string
   silencio_hasta: string
   max_dia: number
+  canales?: Record<string, { push: boolean; email: boolean; app: boolean }>
 }
 export interface EstadoRecordatorios {
   preferencias: PrefRecordatorios

@@ -1,5 +1,6 @@
 import { navegar } from '../lib/rutas.ts'
 import { Trophy } from 'lucide-react'
+import { CentroNotificaciones } from './CentroNotificaciones.tsx'
 /** Navegación lateral de escritorio (≥ lg). En móvil no se renderiza (hidden). */
 import { useState, type ReactNode } from 'react'
 import { ChartColumn, Download, Droplet, House, LogOut, Plus, Scale, Settings, User } from 'lucide-react'
@@ -102,7 +103,7 @@ export function BarraLateral({
             {t('nav.agua')}
           </Item>
         </ul>
-        <p className="etiqueta mb-2 mt-7 px-3">Cuenta</p>
+        <div className="mt-7 flex items-center justify-between px-1"><p className="etiqueta px-2">Cuenta</p><CentroNotificaciones alinear="izquierda" /></div>
         <ul className="space-y-1">
           <Item icono={<User {...i} />} activo={vista === 'profile'} onClick={onPerfil}>
             {t('nav.perfil')}

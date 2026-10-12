@@ -3,11 +3,16 @@
  * y resumen (List-Unsubscribe-Post, RFC 8058). No necesita sesión: el token es la credencial.
  */
 import type { Handler } from '../../utils/env.ts'
+import { CANALES_POR_DEFECTO, TIPOS_AVISO, canalesDe } from '../../utils/recordatorios.ts'
 
 async function baja(env: Parameters<Handler>[0]['env'], url: string): Promise<boolean> {
   const t = new URL(url).searchParams.get('t') ?? ''
   if (!/^[a-f0-9]{64}$/.test(t)) return false
-  const r = await env.DB.prepare('UPDATE recordatorios_pref SET email = 0, resumen_semanal = 0, actualizado_en = CURRENT_TIMESTAMP WHERE baja_token = ?1').bind(t).run()
+  const fila = await env.DB.prepare('SELECT canales_json FROM recordatorios_pref WHERE baja_token = ?1').bind(t).first<{ canales_json: string | null }>()
+  if (!fila) return false
+  // Baja de TODOS los correos no esenciales (los de acceso y seguridad de la cuenta siguen).
+  const canales = Object.fromEntries(TIPOS_AVISO.map((k) => [k, { ...canalesDe({ email: 0, canales_json: fila.canales_json }, k), email: k === 'seguridad' ? CANALES_POR_DEFECTO.seguridad.email : false }]))
+  const r = await env.DB.prepare('UPDATE recordatorios_pref SET email = 0, resumen_semanal = 0, canales_json = ?2, actualizado_en = CURRENT_TIMESTAMP WHERE baja_token = ?1').bind(t, JSON.stringify(canales)).run()
   return (r.meta?.changes ?? 0) > 0
 }
 

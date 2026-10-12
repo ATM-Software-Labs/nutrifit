@@ -1,0 +1,19 @@
+name: Recordatorios (cron)
+# Sustituto del Cron Trigger de nutrifit-cron mientras la cuenta de Cloudflare
+# tenga ocupados sus 5 crons gratuitos. Llama a /api/interno/cron cada 15 min.
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+permissions: {}
+jobs:
+  ronda:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Disparar ronda de recordatorios
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          curl -fsS -m 60 -X POST -H "x-cron-secret: $CRON_SECRET" -H 'content-type: application/json' \
+            https://nutri.trujillomingorance.com/api/interno/cron

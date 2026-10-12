@@ -1,3 +1,4 @@
+import { avisarAccesoNuevo } from '../../utils/avisoAcceso.ts'
 /**
  * POST /api/auth/codigo  { email, codigo, cliente?: 'web' | 'app' }
  * Turnstile lo valida el middleware (siteverify) antes de llegar aquí.
@@ -34,8 +35,10 @@ export const onRequestPost: Handler = async ({ request, env, data }) => {
   const perfilCompleto = usuario?.meta_calorias != null
 
   if (cliente === 'app') {
+    await avisarAccesoNuevo(env, request, u.id, u.email)
     const { token, exp } = await crearTokenApp(env, u.id, u.email)
     return json({ ok: true, token, expira: exp, usuario, perfilCompleto })
   }
+  await avisarAccesoNuevo(env, request, u.id, u.email)
   return json({ ok: true, usuario, perfilCompleto }, { headers: { 'Set-Cookie': await crearCookieSesion(env, u.id, u.email) } })
 }

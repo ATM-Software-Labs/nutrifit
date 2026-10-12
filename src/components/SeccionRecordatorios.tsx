@@ -14,6 +14,19 @@ const COMIDAS: { k: 'desayuno' | 'comida' | 'cena' | 'snack' | 'cierre'; l: stri
   { k: 'cierre', l: 'Cierra tu día', d: '22:30' },
 ]
 
+const TIPOS: { k: string; l: string }[] = [
+  { k: 'comidas', l: 'Comidas sin registrar' },
+  { k: 'agua', l: 'Agua' },
+  { k: 'cierre', l: 'Cierra tu día' },
+  { k: 'racha', l: 'Racha en peligro' },
+  { k: 'objetivo', l: 'Objetivo del día (calorías/proteína)' },
+  { k: 'logros', l: 'Logros desbloqueados' },
+  { k: 'resumen', l: 'Resumen semanal (lunes)' },
+  { k: 'inactividad', l: 'Si llevas días sin registrar' },
+  { k: 'bienvenida', l: 'Consejos de bienvenida' },
+  { k: 'seguridad', l: 'Seguridad de la cuenta' },
+]
+
 function Interruptor({ on, onClick, label }: { on: boolean; onClick: () => void; label: string }) {
   return (
     <button type="button" role="switch" aria-checked={on} aria-label={label} onClick={onClick} className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors ${on ? 'bg-mint' : 'bg-neutral-300 dark:bg-neutral-700'}`}>
@@ -105,6 +118,32 @@ export default function SeccionRecordatorios() {
             <Interruptor on={p.email} onClick={() => void guardar({ ...p, email: !p.email })} label="Recordatorios por correo" />
           </div>
         </>
+      )}
+      {p.canales && (
+        <div className="p-4">
+          <p className="text-sm font-semibold">Qué te avisamos y por dónde</p>
+          <p className="mb-3 text-xs text-neutral-500 dark:text-neutral-400">Como mucho {p.max_dia} avisos al día y nunca en horas de silencio.</p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead><tr className="text-xs text-neutral-500"><th className="py-1 text-left font-medium">Aviso</th><th className="px-2 font-medium">Push</th><th className="px-2 font-medium">Email</th><th className="px-2 font-medium">App</th></tr></thead>
+              <tbody>
+                {TIPOS.map(({ k, l }) => {
+                  const c = p.canales![k] ?? { push: false, email: false, app: false }
+                  return (
+                    <tr key={k} className="border-t border-neutral-100 dark:border-neutral-800">
+                      <td className="py-2 pr-2">{l}</td>
+                      {(['push', 'email', 'app'] as const).map((canal) => (
+                        <td key={canal} className="px-2 text-center">
+                          <input type="checkbox" aria-label={`${l} por ${canal}`} className="h-4 w-4 accent-mint-600" checked={c[canal]} onChange={(ev) => void guardar({ ...p, canales: { ...p.canales!, [k]: { ...c, [canal]: ev.target.checked } } })} />
+                        </td>
+                      ))}
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
       )}
       <div className={fila}>
         <div>

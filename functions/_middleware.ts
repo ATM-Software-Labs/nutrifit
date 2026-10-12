@@ -264,7 +264,7 @@ export const onRequest: Handler = async (ctx) => {
       await exigirLimite(env, await claveLimite('login:ip', datos.ip), 50, 900, MENSAJE_LOGIN, OPCIONES_PICO)
     }
 
-    if (ESCRITURA.has(request.method) && (url.pathname === RUTA_BAJA || url.pathname === RUTA_INTERNA_CORREO)) {
+    if (ESCRITURA.has(request.method) && (url.pathname === RUTA_BAJA || url.pathname === RUTA_INTERNA_CORREO || url.pathname === '/api/interno/cron')) {
       // Baja en un clic (RFC 8058): la hace el cliente de correo sin Origin; el token de baja es la credencial.
     } else if (ESCRITURA.has(request.method)) {
       if (datos.sesion?.via === 'bearer') {

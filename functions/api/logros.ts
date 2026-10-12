@@ -7,14 +7,29 @@ import type { Handler } from '../utils/env.ts'
 import { json } from '../utils/response.ts'
 import { exigirSesion } from '../utils/session.ts'
 import { hoy as hoyEn, ZONA_POR_DEFECTO } from '../utils/fechas.ts'
+import { canalesDe } from '../utils/recordatorios.ts'
+import { enviarPush, vapidDeEnv } from '../utils/webpush.ts'
 import { calcularRacha, evaluarLogros, resumenSemanal, type DiaStats } from '../utils/logros.ts'
+
+/** Logro nuevo → centro de notificaciones y push (según los canales del usuario). */
+async function avisarLogros(env: Parameters<Handler>[0]['env'], id: string, nuevos: { titulo: string; detalle: string }[]) {
+  const pref = await env.DB.prepare('SELECT email, canales_json FROM recordatorios_pref WHERE usuario_id = ?1').bind(id).first<{ email: number; canales_json: string | null }>()
+  const c = canalesDe(pref, 'logros')
+  const titulo = nuevos.length === 1 ? `Logro desbloqueado: ${nuevos[0]!.titulo}` : `${nuevos.length} logros desbloqueados`
+  const cuerpo = nuevos.length === 1 ? nuevos[0]!.detalle : nuevos.map((n) => n.titulo).join(' · ')
+  if (c.app) await env.DB.prepare('INSERT INTO notificaciones_app (id, usuario_id, tipo, titulo, cuerpo, url) VALUES (?1, ?2, ?3, ?4, ?5, ?6)').bind(crypto.randomUUID(), id, 'logros', titulo.slice(0, 120), cuerpo.slice(0, 400), '/logros').run()
+  const v = vapidDeEnv(env)
+  if (!c.push || !v) return
+  const subs = (await env.DB.prepare('SELECT endpoint, p256dh, auth FROM push_suscripciones WHERE usuario_id = ?1').bind(id).all<{ endpoint: string; p256dh: string; auth: string }>()).results ?? []
+  await Promise.all(subs.map((s) => enviarPush(s, { titulo, cuerpo, url: '/logros', etiqueta: 'logro' }, v, 3600).catch(() => 0)))
+}
 
 const horaLocal = (utc: string, zona: string) => {
   const d = new Date(utc.replace(' ', 'T') + (utc.endsWith('Z') ? '' : 'Z'))
   return Number(new Intl.DateTimeFormat('en-GB', { timeZone: zona, hour: '2-digit', hourCycle: 'h23' }).format(d))
 }
 
-export const onRequestGet: Handler = async ({ env, data }) => {
+export const onRequestGet: Handler = async ({ env, data, waitUntil }) => {
   const { usuarioId: id } = exigirSesion(data.sesion)
   const zona = ZONA_POR_DEFECTO
   const hoy = hoyEn(zona)
@@ -59,6 +74,7 @@ export const onRequestGet: Handler = async ({ env, data }) => {
     ...(pendientes.size ? [env.DB.prepare('UPDATE usuario_logros SET visto = 1 WHERE usuario_id = ?1 AND visto = 0').bind(id)] : []),
   ]
   if (stmts.length) await env.DB.batch(stmts)
+  if (aInsertar.length) waitUntil(avisarLogros(env, id, aInsertar.map((l) => ({ titulo: l.titulo, detalle: l.detalle }))).catch(() => {}))
   const ahora = new Date().toISOString()
   return json({
     racha,

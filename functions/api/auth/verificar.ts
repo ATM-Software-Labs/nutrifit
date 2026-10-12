@@ -1,3 +1,4 @@
+import { avisarAccesoNuevo } from '../../utils/avisoAcceso.ts'
 /**
  * GET /api/auth/verificar?token=…
  * Firma + caducidad + un solo uso → crea el usuario si es nuevo → cookie de
@@ -30,5 +31,6 @@ export const onRequestGet: Handler = async ({ request, env, data }) => {
   if (!u) return redirigir('/?auth=error')
   await cerrarSolicitudesLogin(env, r.email) // el código del mismo email deja de valer
 
+  await avisarAccesoNuevo(env, request, u.id, u.email)
   return redirigir('/', await crearCookieSesion(env, u.id, u.email))
 }

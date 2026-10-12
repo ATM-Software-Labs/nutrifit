@@ -9,6 +9,7 @@ import { ChartColumn, Droplet, House, Plus, User } from 'lucide-react'
 import { Logo } from './Logo.tsx'
 import { DialogoSalir } from './DialogoSalir.tsx'
 import { TarjetaRacha } from './TarjetaRacha.tsx'
+import { CentroNotificaciones } from './CentroNotificaciones.tsx'
 import { CelebracionLogro } from './CelebracionLogro.tsx'
 import { refrescarLogros } from '../lib/logros.ts'
 import { FotoAvatar } from './ui/Avatar.tsx'
@@ -312,7 +313,8 @@ export default function Dashboard({
                 Nutri<span className="text-mint-700 dark:text-mint-400">Fit</span>
               </span>
             </div>
-            <div className="relative">
+            <div className="relative flex items-center gap-1">
+              <CentroNotificaciones />
               <button type="button" aria-label="Menú de cuenta" aria-haspopup="menu" aria-expanded={menuCuenta} onClick={() => setMenuCuenta((v) => !v)} className="rounded-full ring-offset-2 focus-visible:ring-2 focus-visible:ring-mint-500">
                 <FotoAvatar url={usuario.avatar_url || null} nombre={usuario.nombre || usuario.email || 'NutriFit'} />
               </button>

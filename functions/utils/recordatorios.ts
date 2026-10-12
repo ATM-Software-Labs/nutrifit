@@ -3,7 +3,7 @@
  * Un recordatorio de comida solo sale si esa comida no está registrada todavía,
  * fuera de las horas de silencio, como mucho `max_dia` al día y una vez por clave y día.
  */
-export type ClaveRecordatorio = 'desayuno' | 'comida' | 'cena' | 'snack' | 'cierre' | 'agua' | 'resumen'
+export type ClaveRecordatorio = 'desayuno' | 'comida' | 'cena' | 'snack' | 'cierre' | 'agua' | 'resumen' | 'racha' | 'objetivo' | 'inactividad' | 'bienvenida1' | 'bienvenida3'
 
 export interface PrefRecordatorios {
   activo: number
@@ -19,6 +19,7 @@ export interface PrefRecordatorios {
   silencio_desde: string
   silencio_hasta: string
   max_dia: number
+  canales_json?: string | null
 }
 
 export const PREF_POR_DEFECTO: Omit<PrefRecordatorios, 'activo'> = {
@@ -98,4 +99,83 @@ export function recordatoriosPendientes(p: PrefRecordatorios, ahora: AhoraLocal,
 /** Resumen semanal: lunes entre 9:00 y 9:45 locales. */
 export function tocaResumen(p: PrefRecordatorios, ahora: AhoraLocal, enviadosHoy: Set<string>): boolean {
   return !!p.resumen_semanal && ahora.dow === 0 && ahora.min >= 540 && ahora.min < 540 + VENTANA_MIN && !enviadosHoy.has('resumen')
+}
+
+/** Tipos de aviso que el usuario puede configurar por canal. */
+export const TIPOS_AVISO = ['comidas', 'agua', 'cierre', 'racha', 'objetivo', 'logros', 'resumen', 'inactividad', 'bienvenida', 'seguridad'] as const
+export type TipoAviso = (typeof TIPOS_AVISO)[number]
+export interface Canales { push: boolean; email: boolean; app: boolean }
+
+export const CANALES_POR_DEFECTO: Record<TipoAviso, Canales> = {
+  comidas: { push: true, email: false, app: false },
+  agua: { push: true, email: false, app: false },
+  cierre: { push: true, email: false, app: true },
+  racha: { push: true, email: false, app: true },
+  objetivo: { push: true, email: false, app: true },
+  logros: { push: true, email: false, app: true },
+  resumen: { push: true, email: true, app: true },
+  inactividad: { push: true, email: true, app: true },
+  bienvenida: { push: false, email: true, app: true },
+  seguridad: { push: false, email: true, app: true },
+}
+
+export function tipoDeClave(c: ClaveRecordatorio | 'logro'): TipoAviso {
+  if (c === 'desayuno' || c === 'comida' || c === 'cena' || c === 'snack') return 'comidas'
+  if (c === 'bienvenida1' || c === 'bienvenida3') return 'bienvenida'
+  if (c === 'logro') return 'logros'
+  return c as TipoAviso
+}
+
+export function canalesDe(p: Pick<PrefRecordatorios, 'canales_json' | 'email'> | null, tipo: TipoAviso): Canales {
+  let custom: Partial<Record<TipoAviso, Partial<Canales>>> = {}
+  try { custom = p?.canales_json ? JSON.parse(p.canales_json) : {} } catch { custom = {} }
+  const base = CANALES_POR_DEFECTO[tipo]
+  const c = { ...base, ...(custom[tipo] ?? {}) }
+  return { push: !!c.push, email: !!c.email, app: !!c.app }
+}
+
+export interface ContextoExtra {
+  racha: number
+  calorias: number
+  proteinas: number
+  metaCalorias: number | null
+  metaProteinas: number | null
+  /** Días desde el último registro (null si nunca registró). */
+  diasSinRegistro: number | null
+  /** Días desde el alta. */
+  diasDesdeAlta: number
+  /** Claves enviadas en los últimos 7 días (para inactividad). */
+  enviadosSemana: Set<string>
+}
+
+/** Avisos de la tarde/noche y de ciclo de vida, además de los de comidas. */
+export function avisosExtra(p: PrefRecordatorios, ahora: AhoraLocal, dia: EstadoDia, enviadosHoy: Set<string>, x: ContextoExtra): Pendiente[] {
+  if (enSilencio(ahora.min, p.silencio_desde, p.silencio_hasta)) return []
+  const out: Pendiente[] = []
+  const cierre = p.cierre ? aMin(p.cierre) : aMin('22:30')
+  const en = (m: number) => ahora.min >= m && ahora.min < m + VENTANA_MIN
+  // Racha en peligro: 1 h antes del cierre, si hay racha y hoy no hay nada.
+  if (p.activo && x.racha >= 2 && dia.comidas === 0 && !enviadosHoy.has('racha') && en(cierre - 60)) {
+    out.push({ clave: 'racha', titulo: `Tu racha de ${x.racha} días está en peligro`, cuerpo: 'Registra una comida antes de medianoche para no perderla.', url: '/' })
+  }
+  // Objetivo del día muy desviado (al cierre, con al menos 2 comidas).
+  if (p.activo && dia.comidas >= 2 && !enviadosHoy.has('objetivo') && en(cierre)) {
+    if (x.metaCalorias && x.calorias > x.metaCalorias * 1.15) {
+      out.push({ clave: 'objetivo', titulo: 'Te has pasado de calorías hoy', cuerpo: `Llevas ${Math.round(x.calorias)} de ${x.metaCalorias} kcal. Mañana es otro día: compénsalo con algo ligero.`, url: '/historial' })
+    } else if (x.metaProteinas && x.proteinas < x.metaProteinas * 0.6) {
+      out.push({ clave: 'objetivo', titulo: 'Te falta proteína hoy', cuerpo: `Llevas ${Math.round(x.proteinas)} de ${x.metaProteinas} g. Un yogur, huevos o atún te acercan.`, url: '/' })
+    }
+  }
+  // Reenganche: 3+ días sin registrar, como mucho una vez por semana, a las 19:00.
+  if (x.diasSinRegistro !== null && x.diasSinRegistro >= 3 && !x.enviadosSemana.has('inactividad') && en(aMin('19:00'))) {
+    out.push({ clave: 'inactividad', titulo: 'Te echamos de menos', cuerpo: `Hace ${x.diasSinRegistro} días que no registras nada. Vuelve con una foto: tardas 10 segundos.`, url: '/' })
+  }
+  // Bienvenida día 1 y día 3 (a las 10:00).
+  if (x.diasDesdeAlta === 1 && !x.enviadosSemana.has('bienvenida1') && en(aMin('10:00'))) {
+    out.push({ clave: 'bienvenida1', titulo: 'Truco del día: la foto del plato', cuerpo: 'Haz una foto a tu comida y NutriFit calcula calorías y macros. También puedes escanear el código de barras.', url: '/' })
+  }
+  if (x.diasDesdeAlta === 3 && !x.enviadosSemana.has('bienvenida3') && en(aMin('10:00'))) {
+    out.push({ clave: 'bienvenida3', titulo: 'Rachas, logros y recordatorios', cuerpo: 'Registra cada día para subir tu racha y desbloquear logros. Activa los recordatorios en Ajustes para no olvidarte.', url: '/logros' })
+  }
+  return out
 }

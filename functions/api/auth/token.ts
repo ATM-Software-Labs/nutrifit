@@ -1,3 +1,4 @@
+import { avisarAccesoNuevo } from '../../utils/avisoAcceso.ts'
 /**
  * POST /api/auth/token  { token }   (app Android)
  * Canjea el token de un magic link (firma + caducidad + un solo uso, igual que
@@ -29,6 +30,7 @@ export const onRequestPost: Handler = async ({ request, env, data }) => {
   const u = await asegurarUsuario(env, r.email)
   if (!u) throw new HttpError(500, 'No se pudo iniciar sesión.')
   await cerrarSolicitudesLogin(env, r.email)
+  await avisarAccesoNuevo(env, request, u.id, u.email)
   const { token: bearer, exp } = await crearTokenApp(env, u.id, u.email)
   const usuario = await obtenerUsuario(env, u.id)
   return json({ ok: true, token: bearer, expira: exp, usuario, perfilCompleto: usuario?.meta_calorias != null })

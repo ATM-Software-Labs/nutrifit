@@ -7,7 +7,7 @@
  *   · lunes 9:00, resumen semanal por correo.
  * Idempotente: recordatorios_envios (usuario, fecha, clave) evita duplicados.
  */
-import { ahoraEnZona, recordatoriosPendientes, tocaResumen, type PrefRecordatorios } from '../../functions/utils/recordatorios.ts'
+import { ahoraEnZona, avisosExtra, canalesDe, PREF_POR_DEFECTO, recordatoriosPendientes, tipoDeClave, tocaResumen, type Pendiente, type PrefRecordatorios } from '../../functions/utils/recordatorios.ts'
 import { enviarPush, vapidDeEnv } from '../../functions/utils/webpush.ts'
 import { enviarAviso as enviarAvisoBrevo, mensajeRecordatorio, mensajeResumenSemanal } from '../../functions/utils/email.ts'
 import { calcularRacha, evaluarLogros, resumenSemanal, sumarDiasISO, type DiaStats } from '../../functions/utils/logros.ts'
@@ -22,7 +22,7 @@ export interface Env {
   CRON_SECRET?: string
 }
 
-type Fila = PrefRecordatorios & { usuario_id: string; email_usuario: string; nombre: string | null; baja_token: string | null; meta_agua_base_ml: number | null; meta_calorias: number | null }
+type Fila = PrefRecordatorios & { usuario_id: string; email_usuario: string; nombre: string | null; baja_token: string | null; meta_agua_base_ml: number | null; meta_calorias: number | null; meta_proteinas: number | null; creado_usuario: string }
 
 const URL_APP = 'https://nutri.trujillomingorance.com'
 
@@ -36,6 +36,31 @@ async function enviarAviso(env: Env, para: string, m: { asunto: string; html: st
     body: JSON.stringify({ para, ...m, bajaUrl }),
   }).catch(() => null)
   return !!res?.ok
+}
+
+type Sub = { endpoint_hash: string; endpoint: string; p256dh: string; auth: string }
+
+/** Envía un aviso por los canales elegidos para su tipo: push → email (si no hubo push o lo pidió) → centro de la app. */
+export async function despachar(env: Env, f: Fila, r: Pendiente, subs: Sub[], v: ReturnType<typeof vapidDeEnv>, bajaUrl: string): Promise<string> {
+  const c = canalesDe(f, tipoDeClave(r.clave))
+  const usados: string[] = []
+  if (c.push && v && subs.length) {
+    for (const s of subs) {
+      const st = await enviarPush(s, { titulo: r.titulo, cuerpo: r.cuerpo, url: r.url, etiqueta: r.clave }, v, 2 * 3600).catch(() => 0)
+      if (st >= 200 && st < 300) { if (!usados.includes('push')) usados.push('push') }
+      else if (st === 404 || st === 410) await env.DB.prepare('DELETE FROM push_suscripciones WHERE endpoint_hash = ?1').bind(s.endpoint_hash).run()
+      else await env.DB.prepare('UPDATE push_suscripciones SET fallos = fallos + 1 WHERE endpoint_hash = ?1').bind(s.endpoint_hash).run()
+    }
+  }
+  const quiereEmail = c.email || (tipoDeClave(r.clave) === 'comidas' && !!f.email && !usados.includes('push'))
+  if (quiereEmail && f.baja_token && r.clave !== 'agua') {
+    if (await enviarAviso(env, f.email_usuario, mensajeRecordatorio(r.titulo, r.cuerpo, r.url, bajaUrl), bajaUrl)) usados.push('email')
+  }
+  if (c.app) {
+    await env.DB.prepare('INSERT INTO notificaciones_app (id, usuario_id, tipo, titulo, cuerpo, url) VALUES (?1, ?2, ?3, ?4, ?5, ?6)').bind(crypto.randomUUID(), f.usuario_id, tipoDeClave(r.clave), r.titulo, r.cuerpo, r.url).run()
+    usados.push('app')
+  }
+  return usados.join('+') || 'ninguno'
 }
 
 async function procesar(env: Env, f: Fila, ahoraUtc: Date): Promise<string[]> {
@@ -62,23 +87,29 @@ async function procesar(env: Env, f: Fila, ahoraUtc: Date): Promise<string[]> {
   const marcar = (clave: string, canal: string) =>
     env.DB.prepare('INSERT OR IGNORE INTO recordatorios_envios (usuario_id, fecha, clave, canal) VALUES (?1, ?2, ?3, ?4)').bind(f.usuario_id, ahora.fecha, clave, canal).run()
 
-  for (const r of recordatoriosPendientes(f, ahora, { tipos, comidas: tipos.size ? dias.find((d) => d.fecha === ahora.fecha)?.comidas ?? 0 : 0, aguaMl, metaAguaMl: metaAgua }, enviados, racha.actual)) {
-    // Reserva primero (idempotencia ante dos ejecuciones solapadas).
+  const hoyFila = dias.find((d) => d.fecha === ahora.fecha)
+  const estadoDia = { tipos, comidas: hoyFila?.comidas ?? 0, aguaMl, metaAguaMl: metaAgua }
+  const ultimo = dias.map((d) => d.fecha).sort().at(-1) ?? null
+  const diasEntre = (a: string, b: string) => Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 86_400_000)
+  const semanaRes = await env.DB.prepare('SELECT DISTINCT clave FROM recordatorios_envios WHERE usuario_id = ?1 AND fecha >= ?2').bind(f.usuario_id, sumarDiasISO(ahora.fecha, -7)).all<{ clave: string }>()
+  const extra = avisosExtra(f, ahora, estadoDia, enviados, {
+    racha: racha.actual,
+    calorias: hoyFila?.calorias ?? 0,
+    proteinas: hoyFila?.proteinas ?? 0,
+    metaCalorias: f.meta_calorias,
+    metaProteinas: f.meta_proteinas,
+    diasSinRegistro: ultimo ? diasEntre(ultimo, ahora.fecha) : null,
+    diasDesdeAlta: diasEntre(f.creado_usuario.slice(0, 10), ahora.fecha),
+    enviadosSemana: new Set((semanaRes.results ?? []).map((r) => r.clave)),
+  })
+  let cupo = Math.max(0, f.max_dia - [...enviados].filter((c) => c !== 'resumen').length)
+  for (const r of [...recordatoriosPendientes(f, ahora, estadoDia, enviados, racha.actual), ...extra]) {
+    if (cupo <= 0) break
     const res = await marcar(r.clave, 'pendiente')
     if (!res.meta?.changes) continue
-    let canal = 'ninguno'
-    if (v && subs.length) {
-      for (const s of subs) {
-        const st = await enviarPush(s, { titulo: r.titulo, cuerpo: r.cuerpo, url: r.url, etiqueta: r.clave }, v, 2 * 3600).catch(() => 0)
-        if (st >= 200 && st < 300) canal = 'push'
-        else if (st === 404 || st === 410) await env.DB.prepare('DELETE FROM push_suscripciones WHERE endpoint_hash = ?1').bind(s.endpoint_hash).run()
-        else await env.DB.prepare('UPDATE push_suscripciones SET fallos = fallos + 1 WHERE endpoint_hash = ?1').bind(s.endpoint_hash).run()
-      }
-    }
-    if (canal === 'ninguno' && f.email && f.baja_token && r.clave !== 'agua') {
-      if (await enviarAviso(env, f.email_usuario, mensajeRecordatorio(r.titulo, r.cuerpo, r.url, bajaUrl), bajaUrl)) canal = 'email'
-    }
+    const canal = await despachar(env, f, r, subs, v, bajaUrl)
     await env.DB.prepare('UPDATE recordatorios_envios SET canal = ?4 WHERE usuario_id = ?1 AND fecha = ?2 AND clave = ?3').bind(f.usuario_id, ahora.fecha, r.clave, canal).run()
+    if (canal !== 'ninguno') cupo--
     hechos.push(`${r.clave}:${canal}`)
   }
 
@@ -94,8 +125,11 @@ async function procesar(env: Env, f: Fila, ahoraUtc: Date): Promise<string[]> {
       const titulos = new Map(evaluarLogros(base, racha).map((l) => [l.id, l.titulo]))
       const logros = (logrosRes.results ?? []).map((l) => titulos.get(l.logro_id)).filter(Boolean) as string[]
       if (sem.diasRegistrados > 0 || racha.mejor > 0) {
-        await enviarAviso(env, f.email_usuario, mensajeResumenSemanal(f.nombre, { ...sem, racha: racha.actual, logros }, bajaUrl), bajaUrl)
-        hechos.push('resumen:email')
+        const cr = canalesDe(f, 'resumen')
+        if (cr.email) await enviarAviso(env, f.email_usuario, mensajeResumenSemanal(f.nombre, { ...sem, racha: racha.actual, logros }, bajaUrl), bajaUrl)
+        const aviso = { clave: 'resumen' as const, titulo: `Tu semana: ${sem.adherenciaPct} % de constancia`, cuerpo: `${sem.diasRegistrados} días registrados, ${sem.diasEnObjetivo} en objetivo y racha de ${racha.actual} días.`, url: '/logros' }
+        await despachar(env, { ...f, canales_json: JSON.stringify({ resumen: { ...cr, email: false } }) }, aviso, subs, v, bajaUrl)
+        hechos.push('resumen')
       }
     }
   }
@@ -103,11 +137,26 @@ async function procesar(env: Env, f: Fila, ahoraUtc: Date): Promise<string[]> {
 }
 
 export async function ejecutar(env: Env, ahora = new Date()): Promise<{ usuarios: number; envios: string[] }> {
+  const d = PREF_POR_DEFECTO
   const filas = ((await env.DB.prepare(
-    `SELECT r.*, u.email AS email_usuario, u.nombre, u.meta_agua_base_ml, u.meta_calorias
-     FROM recordatorios_pref r JOIN usuarios u ON u.id = r.usuario_id
-     WHERE r.activo = 1 OR r.resumen_semanal = 1`,
-  ).all<Fila>()).results ?? [])
+    `SELECT u.id AS usuario_id, u.email AS email_usuario, u.nombre, u.meta_agua_base_ml, u.meta_calorias, u.meta_proteinas, u.creado_en AS creado_usuario,
+            COALESCE(r.activo, 0) AS activo, COALESCE(r.zona, ?1) AS zona, r.desayuno, r.comida, r.cena, r.snack, COALESCE(r.cierre, ?2) AS cierre,
+            COALESCE(r.agua, 0) AS agua, COALESCE(r.email, 0) AS email, COALESCE(r.resumen_semanal, 1) AS resumen_semanal,
+            COALESCE(r.silencio_desde, ?3) AS silencio_desde, COALESCE(r.silencio_hasta, ?4) AS silencio_hasta, COALESCE(r.max_dia, ?5) AS max_dia,
+            r.baja_token, r.canales_json, (r.usuario_id IS NOT NULL) AS tiene_pref
+     FROM usuarios u LEFT JOIN recordatorios_pref r ON r.usuario_id = u.id`,
+  ).bind(d.zona, d.cierre, d.silencio_desde, d.silencio_hasta, d.max_dia).all<Fila & { tiene_pref: number }>()).results ?? [])
+  // Quien no ha tocado Ajustes recibe aun así avisos de ciclo de vida: necesita token de baja.
+  for (const f of filas) {
+    if (!f.baja_token) {
+      f.baja_token = [...crypto.getRandomValues(new Uint8Array(32))].map((b) => b.toString(16).padStart(2, '0')).join('')
+      await env.DB.prepare(
+        `INSERT INTO recordatorios_pref (usuario_id, baja_token, desayuno, comida, cena, cierre) VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+         ON CONFLICT (usuario_id) DO UPDATE SET baja_token = COALESCE(baja_token, ?2)`,
+      ).bind(f.usuario_id, f.baja_token, d.desayuno, d.comida, d.cena, d.cierre).run()
+      if (!f.tiene_pref) { f.desayuno = d.desayuno; f.comida = d.comida; f.cena = d.cena }
+    }
+  }
   const envios: string[] = []
   for (const f of filas) {
     try {

@@ -37,3 +37,24 @@ test('resumen semanal solo los lunes a las 9', () => {
   assert.ok(!tocaResumen(p, a(9, 10, 1), new Set()))
   assert.ok(!tocaResumen(p, a(9, 10, 0), new Set(['resumen'])))
 })
+
+import { avisosExtra, canalesDe, tipoDeClave } from '../functions/utils/recordatorios.ts'
+
+const x = { racha: 4, calorias: 0, proteinas: 0, metaCalorias: 2000, metaProteinas: 120, diasSinRegistro: 0, diasDesdeAlta: 30, enviadosSemana: new Set<string>() }
+
+test('racha en peligro, objetivo, reenganche y bienvenida', () => {
+  assert.deepEqual(avisosExtra(p, a(21, 30), dia(), new Set(), x).map((r) => r.clave), ['racha'])
+  assert.deepEqual(avisosExtra(p, a(21, 30), dia(['comida']), new Set(), x), [])
+  assert.equal(avisosExtra(p, a(22, 30), dia(['comida', 'cena']), new Set(), { ...x, calorias: 2600 })[0]!.titulo, 'Te has pasado de calorías hoy')
+  assert.match(avisosExtra(p, a(22, 30), dia(['comida', 'cena']), new Set(), { ...x, calorias: 1800, proteinas: 40 })[0]!.titulo, /proteína/)
+  assert.deepEqual(avisosExtra(p, a(19, 5), dia(), new Set(), { ...x, racha: 0, diasSinRegistro: 3 }).map((r) => r.clave), ['inactividad'])
+  assert.deepEqual(avisosExtra(p, a(19, 5), dia(), new Set(), { ...x, racha: 0, diasSinRegistro: 5, enviadosSemana: new Set(['inactividad']) }), [])
+  assert.deepEqual(avisosExtra(p, a(10, 0), dia(), new Set(), { ...x, diasDesdeAlta: 1 }).map((r) => r.clave), ['bienvenida1'])
+})
+
+test('canales por tipo con valores por defecto y personalizados', () => {
+  assert.deepEqual(canalesDe(null, 'comidas'), { push: true, email: false, app: false })
+  assert.deepEqual(canalesDe({ email: 1, canales_json: '{"comidas":{"email":true}}' }, 'comidas'), { push: true, email: true, app: false })
+  assert.equal(tipoDeClave('cena'), 'comidas')
+  assert.equal(tipoDeClave('bienvenida3'), 'bienvenida')
+})
