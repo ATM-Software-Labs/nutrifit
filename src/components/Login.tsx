@@ -59,9 +59,26 @@ function IconoGoogle() {
   )
 }
 
+function IconoMicrosoft() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 21 21" aria-hidden="true">
+      <rect x="1" y="1" width="9" height="9" fill="#f25022" />
+      <rect x="11" y="1" width="9" height="9" fill="#7fba00" />
+      <rect x="1" y="11" width="9" height="9" fill="#00a4ef" />
+      <rect x="11" y="11" width="9" height="9" fill="#ffb900" />
+    </svg>
+  )
+}
+
 async function iniciarSesionGoogle(e: MouseEvent<HTMLButtonElement>) {
   e.preventDefault()
   const destino = esNativa ? urlApi('/api/auth/google') : '/api/auth/google'
+  window.location.assign(destino)
+}
+
+async function iniciarSesionMicrosoft(e: MouseEvent<HTMLButtonElement>) {
+  e.preventDefault()
+  const destino = esNativa ? urlApi('/api/auth/microsoft') : '/api/auth/microsoft'
   window.location.assign(destino)
 }
 
@@ -73,6 +90,7 @@ export default function Login({ onEntrar, vinculando = false }: { onEntrar: (u: 
   const [comprobando, setComprobando] = useState(false)
   const ultimoProbado = useRef('')
   const googleEnCurso = useRef(false)
+  const msftEnCurso = useRef(false)
   const [enviado, setEnviado] = useState(false)
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -204,6 +222,21 @@ export default function Login({ onEntrar, vinculando = false }: { onEntrar: (u: 
             >
               <IconoGoogle />
               <span>{t('login.google')}</span>
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                if (msftEnCurso.current) return
+                msftEnCurso.current = true
+                void iniciarSesionMicrosoft(e).catch((err: unknown) => {
+                  msftEnCurso.current = false
+                  setError(err instanceof Error ? err.message : 'No se pudo continuar con Microsoft.')
+                })
+              }}
+              className="mt-2.5 flex h-12 w-full items-center justify-center gap-3 rounded-2xl border border-neutral-200 text-[15px] font-medium transition hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-neutral-900"
+            >
+              <IconoMicrosoft />
+              <span>{t('login.microsoft')}</span>
             </button>
             {!vinculando && !esNativa && (
               <div className="mt-6 flex items-center justify-center">

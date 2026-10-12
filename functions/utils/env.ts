@@ -44,6 +44,12 @@ export interface Env {
   GOOGLE_CLIENT_ID?: string
   /** Secreto de Google OAuth. wrangler pages secret put GOOGLE_CLIENT_SECRET. */
   GOOGLE_CLIENT_SECRET?: string
+  /** ID público de Microsoft Entra ID (ATM Unified Identity Platform). */
+  MICROSOFT_CLIENT_ID?: string
+  /** Secreto de Microsoft Entra ID. */
+  MICROSOFT_CLIENT_SECRET?: string
+  /** Tenant ID de Microsoft Entra ID (ATM Software Labs). */
+  MICROSOFT_TENANT_ID?: string
 }
 
 /** Sesión verificada: cookie __Host-nf_session (web) o token Bearer (app Android). */
