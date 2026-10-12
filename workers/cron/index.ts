@@ -9,21 +9,34 @@
  */
 import { ahoraEnZona, recordatoriosPendientes, tocaResumen, type PrefRecordatorios } from '../../functions/utils/recordatorios.ts'
 import { enviarPush, vapidDeEnv } from '../../functions/utils/webpush.ts'
-import { enviarAviso, mensajeRecordatorio, mensajeResumenSemanal } from '../../functions/utils/email.ts'
+import { enviarAviso as enviarAvisoBrevo, mensajeRecordatorio, mensajeResumenSemanal } from '../../functions/utils/email.ts'
 import { calcularRacha, evaluarLogros, resumenSemanal, sumarDiasISO, type DiaStats } from '../../functions/utils/logros.ts'
 
-interface Env {
+export interface Env {
   DB: D1Database
   BREVO_API_KEY?: string
   VAPID_PUBLIC_KEY?: string
   VAPID_PRIVATE_JWK?: string
   VAPID_SUBJECT?: string
   APP_URL?: string
+  CRON_SECRET?: string
 }
 
 type Fila = PrefRecordatorios & { usuario_id: string; email_usuario: string; nombre: string | null; baja_token: string | null; meta_agua_base_ml: number | null; meta_calorias: number | null }
 
 const URL_APP = 'https://nutri.trujillomingorance.com'
+
+/** Con BREVO_API_KEY propia envía directo; si no, delega en Pages (/api/interno/correo). */
+async function enviarAviso(env: Env, para: string, m: { asunto: string; html: string; texto: string }, bajaUrl: string): Promise<boolean> {
+  if (env.BREVO_API_KEY) return enviarAvisoBrevo(env as never, para, m, bajaUrl)
+  if (!env.CRON_SECRET) return false
+  const res = await fetch(`${env.APP_URL || URL_APP}/api/interno/correo`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-cron-secret': env.CRON_SECRET },
+    body: JSON.stringify({ para, ...m, bajaUrl }),
+  }).catch(() => null)
+  return !!res?.ok
+}
 
 async function procesar(env: Env, f: Fila, ahoraUtc: Date): Promise<string[]> {
   const ahora = ahoraEnZona(f.zona || 'Europe/Madrid', ahoraUtc)
@@ -63,7 +76,7 @@ async function procesar(env: Env, f: Fila, ahoraUtc: Date): Promise<string[]> {
       }
     }
     if (canal === 'ninguno' && f.email && f.baja_token && r.clave !== 'agua') {
-      if (await enviarAviso(env as never, f.email_usuario, mensajeRecordatorio(r.titulo, r.cuerpo, r.url, bajaUrl), bajaUrl)) canal = 'email'
+      if (await enviarAviso(env, f.email_usuario, mensajeRecordatorio(r.titulo, r.cuerpo, r.url, bajaUrl), bajaUrl)) canal = 'email'
     }
     await env.DB.prepare('UPDATE recordatorios_envios SET canal = ?4 WHERE usuario_id = ?1 AND fecha = ?2 AND clave = ?3').bind(f.usuario_id, ahora.fecha, r.clave, canal).run()
     hechos.push(`${r.clave}:${canal}`)
@@ -81,7 +94,7 @@ async function procesar(env: Env, f: Fila, ahoraUtc: Date): Promise<string[]> {
       const titulos = new Map(evaluarLogros(base, racha).map((l) => [l.id, l.titulo]))
       const logros = (logrosRes.results ?? []).map((l) => titulos.get(l.logro_id)).filter(Boolean) as string[]
       if (sem.diasRegistrados > 0 || racha.mejor > 0) {
-        await enviarAviso(env as never, f.email_usuario, mensajeResumenSemanal(f.nombre, { ...sem, racha: racha.actual, logros }, bajaUrl), bajaUrl)
+        await enviarAviso(env, f.email_usuario, mensajeResumenSemanal(f.nombre, { ...sem, racha: racha.actual, logros }, bajaUrl), bajaUrl)
         hechos.push('resumen:email')
       }
     }
