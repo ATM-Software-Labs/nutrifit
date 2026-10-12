@@ -77,7 +77,8 @@ export interface DiaStats {
 
 export interface Estadisticas {
   dias: DiaStats[]
-  fotos: number
+  /** Emojis distintos en el diario (variedad de platos). */
+  emojisDistintos: number
   comidasTotales: number
   pesajes: number
   /** kg perdidos (+) o ganados (−) desde el primer pesaje. */
@@ -121,8 +122,8 @@ export const LOGROS: DefLogro[] = [
   { id: 'comidas_50', titulo: 'Cuaderno lleno', detalle: 'Registra 50 comidas', icono: 'utensils', nivel: 'plata', meta: 50, progreso: (e) => e.comidasTotales },
   { id: 'comidas_250', titulo: 'Archivo personal', detalle: 'Registra 250 comidas', icono: 'utensils', nivel: 'oro', meta: 250, progreso: (e) => e.comidasTotales },
   { id: 'comidas_1000', titulo: 'Mil platos', detalle: 'Registra 1.000 comidas', icono: 'utensils', nivel: 'diamante', meta: 1000, progreso: (e) => e.comidasTotales },
-  { id: 'primera_foto', titulo: 'Ojo de chef', detalle: 'Analiza tu primera foto', icono: 'camera', nivel: 'bronce', meta: 1, progreso: (e) => e.fotos },
-  { id: 'fotos_25', titulo: 'Fotógrafo culinario', detalle: 'Analiza 25 fotos', icono: 'camera', nivel: 'plata', meta: 25, progreso: (e) => e.fotos },
+  { id: 'primera_foto', titulo: 'Ojo de chef', detalle: 'Registra 5 tipos de plato distintos', icono: 'camera', nivel: 'bronce', meta: 5, progreso: (e) => e.emojisDistintos },
+  { id: 'fotos_25', titulo: 'Paladar variado', detalle: 'Registra 20 tipos de plato distintos', icono: 'camera', nivel: 'plata', meta: 20, progreso: (e) => e.emojisDistintos },
   { id: 'racha_3', titulo: 'Buen comienzo', detalle: '3 días seguidos registrando', icono: 'flame', nivel: 'bronce', meta: 3, progreso: (_e, r) => r.mejor },
   { id: 'racha_7', titulo: 'Una semana', detalle: '7 días seguidos registrando', icono: 'flame', nivel: 'bronce', meta: 7, progreso: (_e, r) => r.mejor },
   { id: 'racha_14', titulo: 'Quincena', detalle: '14 días seguidos', icono: 'flame', nivel: 'plata', meta: 14, progreso: (_e, r) => r.mejor },

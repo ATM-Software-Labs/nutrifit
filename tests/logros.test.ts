@@ -38,10 +38,10 @@ test('racha a través del cambio de hora', () => {
   assert.equal(calcularRacha(fechas, '2026-10-27').actual, 5)
 })
 
-const base: Estadisticas = { dias: [], fotos: 0, comidasTotales: 0, pesajes: 0, cambioPesoKg: 0, productosCodigoBarras: 0, metaCalorias: 2000, metaProteinas: 120, metaAguaMl: 2000, hoy: '2026-10-12' }
+const base: Estadisticas = { dias: [], emojisDistintos: 0, comidasTotales: 0, pesajes: 0, cambioPesoKg: 0, productosCodigoBarras: 0, metaCalorias: 2000, metaProteinas: 120, metaAguaMl: 2000, hoy: '2026-10-12' }
 
 test('logros: primeras veces, progreso acotado y coleccionista', () => {
-  const e = { ...base, comidasTotales: 1, fotos: 1, dias: [{ fecha: '2026-10-12', comidas: 1, calorias: 1950, proteinas: 130, agua_ml: 2100, desayunoTemprano: true }] }
+  const e = { ...base, comidasTotales: 1, emojisDistintos: 5, dias: [{ fecha: '2026-10-12', comidas: 1, calorias: 1950, proteinas: 130, agua_ml: 2100, desayunoTemprano: true }] }
   const l = evaluarLogros(e, calcularRacha(['2026-10-12'], '2026-10-12'))
   const por = Object.fromEntries(l.map((x) => [x.id, x]))
   for (const id of ['primera_comida', 'primera_foto', 'proteina_1', 'agua_1', 'en_objetivo_1', 'madrugador']) assert.ok(por[id]!.desbloqueado, id)

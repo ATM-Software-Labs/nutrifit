@@ -38,7 +38,7 @@ export const onRequestGet: Handler = async ({ env, data, waitUntil }) => {
     env.DB.prepare("SELECT fecha, MIN(creado_en) AS t FROM diario_comidas WHERE usuario_id = ?1 AND tipo_comida = 'desayuno' GROUP BY fecha").bind(id),
     env.DB.prepare('SELECT fecha, ml FROM registro_agua WHERE usuario_id = ?1').bind(id),
     env.DB.prepare('SELECT peso FROM historico_peso WHERE usuario_id = ?1 ORDER BY fecha').bind(id),
-    env.DB.prepare("SELECT COUNT(*) AS n FROM diario_comidas WHERE usuario_id = ?1 AND imagen_url IS NOT NULL AND imagen_url <> ''").bind(id),
+    env.DB.prepare("SELECT COUNT(DISTINCT emoji) AS n FROM diario_comidas WHERE usuario_id = ?1 AND emoji IS NOT NULL").bind(id),
     env.DB.prepare('SELECT COUNT(*) AS n FROM productos_usuario WHERE usuario_id = ?1 AND codigo IS NOT NULL').bind(id),
     env.DB.prepare('SELECT meta_calorias, meta_proteinas, meta_agua_base_ml FROM usuarios WHERE id = ?1').bind(id),
     env.DB.prepare('SELECT logro_id, desbloqueado_en, visto FROM usuario_logros WHERE usuario_id = ?1').bind(id),
@@ -54,7 +54,7 @@ export const onRequestGet: Handler = async ({ env, data, waitUntil }) => {
   const u = filas(usuario)[0] ?? {}
   const est = {
     dias: [...mapa.values()],
-    fotos: filas(fotos)[0]?.n ?? 0,
+    emojisDistintos: filas(fotos)[0]?.n ?? 0,
     comidasTotales: filas(dias).reduce((s, r) => s + r.comidas, 0),
     pesajes: pesos.length,
     cambioPesoKg: pesos.length > 1 ? pesos[0]! - pesos[pesos.length - 1]! : 0,

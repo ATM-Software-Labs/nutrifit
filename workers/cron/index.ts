@@ -119,7 +119,7 @@ async function procesar(env: Env, f: Fila, ahoraUtc: Date): Promise<string[]> {
       // Semana anterior completa (lunes a domingo).
       const hoyResumen = sumarDiasISO(ahora.fecha, -1)
       const st: DiaStats[] = dias.map((d) => ({ fecha: d.fecha, comidas: d.comidas, calorias: d.calorias ?? 0, proteinas: d.proteinas ?? 0, agua_ml: 0, desayunoTemprano: false }))
-      const base = { dias: st, fotos: 0, comidasTotales: 0, pesajes: 0, cambioPesoKg: 0, productosCodigoBarras: 0, metaCalorias: f.meta_calorias, metaProteinas: null, metaAguaMl: metaAgua, hoy: hoyResumen }
+      const base = { dias: st, emojisDistintos: 0, comidasTotales: 0, pesajes: 0, cambioPesoKg: 0, productosCodigoBarras: 0, metaCalorias: f.meta_calorias, metaProteinas: null, metaAguaMl: metaAgua, hoy: hoyResumen }
       const sem = resumenSemanal(base)
       const logrosRes = await env.DB.prepare("SELECT logro_id FROM usuario_logros WHERE usuario_id = ?1 AND desbloqueado_en >= datetime('now', '-7 days')").bind(f.usuario_id).all<{ logro_id: string }>()
       const titulos = new Map(evaluarLogros(base, racha).map((l) => [l.id, l.titulo]))
