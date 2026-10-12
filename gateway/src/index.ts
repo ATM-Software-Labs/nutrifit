@@ -83,7 +83,7 @@ export async function atender(request: Request, env: GatewayEnv, ctx: ContextoGa
   }
 
   // Rutas de autenticación unificada para Microsoft Entra ID
-  if (request.method === 'GET' && (ruta === '/nutrifit/auth/microsoft' || ruta === '/v1/auth/microsoft')) {
+  if ((request.method === 'GET' || request.method === 'HEAD') && (ruta === '/nutrifit/auth/microsoft' || ruta === '/v1/auth/microsoft')) {
     const destino = new URL('/api/auth/microsoft', URL_PAGINA)
     destino.search = url.search
     return cerrar(request, new Response(null, {
@@ -92,7 +92,7 @@ export async function atender(request: Request, env: GatewayEnv, ctx: ContextoGa
     }))
   }
 
-  if (request.method === 'GET' && (ruta === '/v1/auth/callback/microsoft' || ruta === '/nutrifit/auth/callback/microsoft')) {
+  if ((request.method === 'GET' || request.method === 'HEAD') && (ruta === '/v1/auth/callback/microsoft' || ruta === '/nutrifit/auth/callback/microsoft')) {
     const destino = new URL('/api/auth/callback/microsoft', URL_PAGINA)
     destino.search = url.search
     return cerrar(request, new Response(null, {
