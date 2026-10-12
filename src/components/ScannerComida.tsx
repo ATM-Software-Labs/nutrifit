@@ -12,6 +12,7 @@ import { useTurnstile } from '../hooks/useTurnstile.ts'
 import { api } from '../lib/api.ts'
 import { falloDeAnalisis, type FalloAnalisisUi } from '../lib/falloAnalisis.ts'
 import { blobDesdeDataUrl, compressFoodImage } from '../lib/imagen.ts'
+import { procesarFondoBlanco } from '../lib/fondoBlanco.ts'
 import { resultadoDesdePlato } from '../lib/platoEscaneo.ts'
 import { useIdioma } from '../hooks/useIdioma.ts'
 import type { ResultadoAnalisis } from '../lib/tipos.ts'
@@ -48,7 +49,11 @@ export default function ScannerComida({
     setEstado({ fase: 'comprimiendo' })
     ;(async () => {
       try {
-        const dataUrl = await compressFoodImage(archivo)
+        // Privacidad: solo sale del móvil la imagen con fondo blanco; la original se descarta.
+        const limpia = await procesarFondoBlanco(archivo).catch(() => null)
+        if (cancelado) return
+        if (limpia) console.info(`[fondoBlanco] ${limpia.modo} · ${limpia.caras} caras · ${limpia.ms} ms`)
+        const dataUrl = await compressFoodImage(limpia?.blob ?? archivo)
         if (cancelado) return
         setMiniatura(dataUrl)
         setEstado({ fase: 'analizando' })

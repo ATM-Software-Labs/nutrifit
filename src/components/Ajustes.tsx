@@ -1,5 +1,6 @@
 /** Ajustes: perfil y objetivos (recalculados al momento), tema, cuenta y enlaces. */
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
+import { AjusteFondoBlanco } from './AjusteFondoBlanco.tsx'
 const SeccionRecordatorios = lazy(() => import('./SeccionRecordatorios.tsx'))
 import { Check, ChevronRight, Download, ExternalLink, FileText, Lock, LogOut, Mail, Monitor, Moon, Shield, Sun } from 'lucide-react'
 import { URL_REPO } from '../lib/config.ts'
@@ -540,6 +541,7 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
         {seccionActiva === 'legal' && (
           <div className="space-y-6">
             <Seccion id="legal" titulo="Centro Legal y Cumplimiento Normativo">
+              <AjusteFondoBlanco />
               <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4 dark:border-emerald-900/40 dark:bg-emerald-950/20 text-sm text-emerald-900 dark:text-emerald-200 flex items-start gap-3">
                 <Shield className="size-5 shrink-0 text-emerald-600 dark:text-emerald-400 mt-0.5" />
                 <div className="space-y-1">

@@ -1,3 +1,4 @@
+import { fondoBlancoActivo } from '../lib/fondoBlanco.ts'
 import type { ChangeEvent, ReactNode } from 'react'
 import { Barcode, Camera, ImagePlus, PenLine, Search, Sparkles } from 'lucide-react'
 import { Sheet } from './ui/Sheet.tsx'
@@ -60,7 +61,7 @@ export function HojaAnadir({
       <div className="space-y-3">
         {!escritorio && (
           <label className={CLASE}>
-            <Opcion icono={<Camera size={20} strokeWidth={1.75} />} titulo="Hacer foto" desc="Usa la cámara del móvil" />
+            <Opcion icono={<Camera size={20} strokeWidth={1.75} />} titulo="Hacer foto" desc={fondoBlancoActivo() ? "Centra el plato o el envase; el fondo se pintará de blanco" : "Usa la cámara del móvil"} />
             <input type="file" accept="image/*" capture="environment" className="sr-only" onChange={elegir} data-autofocus />
           </label>
         )}

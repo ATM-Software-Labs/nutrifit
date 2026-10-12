@@ -27,7 +27,7 @@ function nutrifitSW(): Plugin {
         .map((p) => '/' + relative(dir, p).split('\\').join('/'))
         .filter(
           (u) =>
-            (/^\/assets\/.+\.(js|css)$/.test(u) && !/^\/assets\/heic2any\./.test(u)) ||
+            (/^\/assets\/.+\.(js|css)$/.test(u) && !/^\/assets\/(heic2any|vision_bundle|fondoBlanco)/.test(u)) ||
             u === '/fonts/outfit-latin-var.woff2' ||
             u === '/boot.js' ||
             u === '/manifest.json' ||
