@@ -52,7 +52,7 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
   const [error, setError] = useState<string | null>(null)
   const { preferencia, cambiar } = useTema()
   const { idioma, t, cambiar: cambiarIdioma } = useIdioma()
-  const { contenedorRef, obtenerToken } = useTurnstile('perfil')
+  const { contenedorRef } = useTurnstile('perfil', false)
   const toast = useToast()
 
   const [unidades, setUnidades] = useState<'metrico' | 'imperial'>(() => {
@@ -173,7 +173,7 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
           return
         }
       }
-      const token = await obtenerToken()
+      const token = '' // con sesión no hace falta Turnstile
       const r = await api.guardarPerfil(datos, token)
       if (r.usuario) onUsuario(r.usuario)
       if (!r.sinCambios) toast({ tipo: 'exito', mensaje: 'Perfil y objetivos actualizados' })

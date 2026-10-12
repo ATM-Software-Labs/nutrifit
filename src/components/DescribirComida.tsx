@@ -21,7 +21,7 @@ export default function DescribirComida({ onClose, onResultado, onManual }: { on
   const [texto, setTexto] = useState('')
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState<FalloAnalisisUi | null>(null)
-  const { contenedorRef, obtenerToken } = useTurnstile('analizar-texto')
+  const { contenedorRef } = useTurnstile('analizar-texto', false)
 
   async function enviar(e?: FormEvent) {
     e?.preventDefault()
@@ -39,7 +39,7 @@ export default function DescribirComida({ onClose, onResultado, onManual }: { on
     setError(null)
     setCargando(true)
     try {
-      const token = await obtenerToken()
+      const token = '' // con sesión no hace falta Turnstile
       const r = await api.analizarTexto(limpio, token)
       if (!r.resultado.ingredientes.length && r.resultado.calorias === 0) {
         setError({ codigo: 'FOTO', mensaje: 'No hemos reconocido ninguna comida en el texto. Prueba a describirla de otra forma.', reintentar: false, auto: false, manual: false, elegirOtra: false })

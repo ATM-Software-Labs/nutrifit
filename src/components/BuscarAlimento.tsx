@@ -148,7 +148,7 @@ export default function BuscarAlimento({ onClose, onResultado }: { onClose: () =
   const filaCats = useRef<HTMLDivElement>(null)
   const esperaOff = useRef<number | null>(null)
   const esperaSug = useRef<number | null>(null)
-  const { contenedorRef, obtenerToken } = useTurnstile('analizar-texto', false)
+  const { contenedorRef } = useTurnstile('analizar-texto', false)
 
   const alias = useMemo(() => resolverAlias(consulta), [consulta])
   const textoBusqueda = alias?.display_name ?? consulta
@@ -277,7 +277,7 @@ export default function BuscarAlimento({ onClose, onResultado }: { onClose: () =
     }
     setIa({ cargando: true, error: null })
     try {
-      const token = await obtenerToken()
+      const token = '' // con sesión no hace falta Turnstile
       const r = await api.analizarTexto(limpio, token)
       if (!r.resultado.ingredientes.length && r.resultado.calorias === 0) {
         setIa({ cargando: false, error: 'No hemos reconocido ninguna comida en el texto. Prueba a describirla de otra forma.' })

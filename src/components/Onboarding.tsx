@@ -43,7 +43,7 @@ export default function Onboarding({ usuario, onCompletado }: { usuario: Usuario
   const [nombre, setNombre] = useState(usuario.nombre ?? '')
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const { contenedorRef, obtenerToken } = useTurnstile('onboarding')
+  const { contenedorRef } = useTurnstile('onboarding', false)
 
   const plan = useMemo(
     () => calcularMacros({ edad, sexo: sexo ?? 'hombre', peso, altura, actividad: actividad ?? 'ligero', objetivo: objetivo ?? 'mantenimiento' }),
@@ -62,7 +62,7 @@ export default function Onboarding({ usuario, onCompletado }: { usuario: Usuario
     setError(null)
     setGuardando(true)
     try {
-      const token = await obtenerToken()
+      const token = '' // con sesión no hace falta Turnstile
       const r = await api.guardarPerfil({ nombre: n, edad, sexo, peso, altura, actividad, objetivo }, token)
       const { default: confetti } = await import('canvas-confetti')
       if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {

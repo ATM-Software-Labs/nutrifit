@@ -38,7 +38,7 @@ export default function ScannerComida({
   const [estado, setEstado] = useState<Estado>({ fase: 'comprimiendo' })
   const [miniatura, setMiniatura] = useState<string | null>(null)
   const [intento, setIntento] = useState(0)
-  const { contenedorRef, obtenerToken } = useTurnstile('analizar')
+  const { contenedorRef } = useTurnstile('analizar', false)
   const entregado = useRef(false)
 
   useEffect(() => {
@@ -52,7 +52,7 @@ export default function ScannerComida({
         if (cancelado) return
         setMiniatura(dataUrl)
         setEstado({ fase: 'analizando' })
-        const token = await obtenerToken()
+        const token = '' // con sesión no hace falta Turnstile
         const plato = await api.escanear(blobDesdeDataUrl(dataUrl), token)
         if (cancelado) return
         entregado.current = true

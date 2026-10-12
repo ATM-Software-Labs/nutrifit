@@ -256,7 +256,7 @@ export const onRequest: Handler = async (ctx) => {
     datos.sesion = resuelta.sesion
     datos.cookiesRotacion = resuelta.cookies
 
-    if ((url.pathname.startsWith('/api/auth/') || RUTAS_ANALISIS_COMIDA.has(url.pathname) || url.pathname === RUTA_ETIQUETA) && scoreAnomalo(puntuacionBot(request))) {
+    if (!datos.sesion && (url.pathname.startsWith('/api/auth/') || RUTAS_ANALISIS_COMIDA.has(url.pathname) || url.pathname === RUTA_ETIQUETA) && scoreAnomalo(puntuacionBot(request))) {
       throw new HttpError(403, 'No se ha podido verificar esta solicitud.', { codigo: 'score_anomalo' })
     }
 
@@ -283,10 +283,12 @@ export const onRequest: Handler = async (ctx) => {
         if (!datos.sesion) throw new HttpError(401, 'Necesitas iniciar sesión.')
         await exigirLimite(env, `comida:hora:u:${datos.sesion.usuarioId}`, 20, 3600, MENSAJE_ANALISIS, OPCIONES_ANALISIS)
       }
-      if (RUTAS_TURNSTILE.has(url.pathname)) {
-        if (RUTAS_SESION_PREVIA.has(url.pathname) && !datos.sesion) {
-          throw new HttpError(401, 'Necesitas iniciar sesión.')
-        }
+      if (RUTAS_SESION_PREVIA.has(url.pathname) && !datos.sesion) {
+        throw new HttpError(401, 'Tu sesión ha caducado. Vuelve a entrar para analizar fotos o escanear productos.')
+      }
+      // Con sesión válida no hay Turnstile: basta la sesión + los límites por usuario/IP.
+      // Turnstile queda solo para lo anónimo (pedir enlace o código de acceso).
+      if (RUTAS_TURNSTILE.has(url.pathname) && !datos.sesion) {
         const token = await extraerTokenTurnstile(request, url.pathname)
         if (!token) throw new HttpError(403, 'Falta la verificación anti-bots.', { codigo: 'turnstile_requerido' })
         if (!(await verificarTurnstile(env, token, datos.ip))) {
