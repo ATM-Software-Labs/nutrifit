@@ -4,6 +4,7 @@
  */
 import { ALIMENTOS, CATEGORIAS, type FilaAlimento } from '../data/alimentos.ts'
 import type { Totales } from './tipos.ts'
+import { esLiquido } from './liquidos.ts'
 
 export interface Alimento {
   id: string
@@ -12,6 +13,12 @@ export interface Alimento {
   por100: Totales
   racion: number | null
   fuente: 'local' | 'off'
+  /** g o ml (macros por 100 de esta unidad). Por defecto g. */
+  unidad?: 'g' | 'ml'
+  /** Contenido del envase (productos envasados). */
+  envase?: number | null
+  unidades?: number | null
+  codigo?: string | null
 }
 
 export const normalizar = (s: string) =>
@@ -29,6 +36,7 @@ const aAlimento = (f: FilaAlimento): Alimento => ({
   por100: { calorias: f[2], proteinas: f[3], carbohidratos: f[4], grasas: f[5] },
   racion: f[6],
   fuente: 'local',
+  unidad: esLiquido({ nombre: f[0], categorias: CATEGORIAS[f[1]] === 'Bebidas' ? ['en:beverages'] : [] }) ? 'ml' : 'g',
 })
 
 const INDICE = ALIMENTOS.map((f) => ({ f, n: normalizar(f[0]), palabras: normalizar(f[0]).split(' ') }))

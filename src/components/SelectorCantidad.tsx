@@ -8,7 +8,7 @@ import { aMl, desdeMl, formatoCantidad, opcionesRapidas, type UnidadVolumen } fr
 import type { MedidasProducto } from '../lib/tipos.ts'
 import { cx } from './ui/cx.ts'
 
-export function SelectorCantidad({ producto, cantidad, onCambio }: { producto: MedidasProducto; cantidad: number; onCambio: (base: number, clave?: string) => void }) {
+export function SelectorCantidad({ producto, cantidad, onCambio, compacto }: { producto: MedidasProducto; cantidad: number; onCambio: (base: number, clave?: string) => void; compacto?: boolean }) {
   const liq = producto.unidad === 'ml'
   const [uv, setUv] = useState<UnidadVolumen>('ml')
   const id = useId()
@@ -16,7 +16,7 @@ export function SelectorCantidad({ producto, cantidad, onCambio }: { producto: M
   const mostrado = liq ? desdeMl(cantidad, uv) : cantidad
   return (
     <fieldset className="space-y-3">
-      <legend className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+      <legend className={compacto ? 'sr-only' : 'mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400'}>
         {liq ? '¿Cuánto has bebido?' : '¿Cuánto has comido?'}
       </legend>
       {opciones.length > 0 && (
@@ -33,7 +33,7 @@ export function SelectorCantidad({ producto, cantidad, onCambio }: { producto: M
         </div>
       )}
       <div className="flex items-center gap-2">
-        <label htmlFor={id} className="text-sm text-neutral-600 dark:text-neutral-300">Otra cantidad</label>
+        <label htmlFor={id} className={compacto ? 'sr-only' : 'text-sm text-neutral-600 dark:text-neutral-300'}>Otra cantidad</label>
         <input id={id} type="number" inputMode="decimal" min={0} step="any" value={Number.isFinite(mostrado) ? Math.round(mostrado * 1000) / 1000 : 0}
           onFocus={(e) => e.target.select()}
           onChange={(e) => { const v = Number(e.target.value.replace(',', '.')); if (Number.isFinite(v) && v >= 0) onCambio(liq ? aMl(v, uv) : v) }}
@@ -49,7 +49,7 @@ export function SelectorCantidad({ producto, cantidad, onCambio }: { producto: M
           <span className="text-sm text-neutral-500">g</span>
         )}
       </div>
-      <p className="text-xs text-neutral-500 dark:text-neutral-400">
+      <p className={compacto ? 'sr-only' : 'text-xs text-neutral-500 dark:text-neutral-400'}>
         Valores nutricionales por 100 {producto.unidad}
         {producto.envase ? ` · envase de ${formatoCantidad(producto.envase, producto.unidad)}` : ''}
         {producto.unidades && producto.unidades > 1 ? ` (pack de ${producto.unidades})` : ''}

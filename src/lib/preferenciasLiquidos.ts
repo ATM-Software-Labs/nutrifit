@@ -1,31 +1,72 @@
-/** Preferencias locales de cantidades: última elección por producto y bebidas → agua. */
-const CLAVE_TODAS = 'nf:agua_todas_bebidas'
-const CLAVE_PROD = 'nf:cantidad_producto'
+/**
+ * Preferencias de cantidades: última elección por producto y «todas las
+ * bebidas suman al agua». Se guardan en el dispositivo (respuesta inmediata)
+ * y se sincronizan con el servidor (/api/preferencias/cantidades) para que
+ * valgan en todos los dispositivos; gana lo más reciente.
+ */
+import { fusionar, MAX_PRODUCTOS, type PrefCantidades } from './preferenciasCantidades.ts'
 
-export const contarTodasBebidas = () => {
-  try { return localStorage.getItem(CLAVE_TODAS) === '1' } catch { return false }
+const CLAVE = 'nf:pref_cantidades'
+
+function leerLocal(): PrefCantidades {
+  try {
+    const v = JSON.parse(localStorage.getItem(CLAVE) || 'null') as PrefCantidades | null
+    if (v && typeof v === 'object' && v.cantidades) return v
+  } catch { /* corrupto */ }
+  // Migración de las claves antiguas (solo locales).
+  let cantidades: PrefCantidades['cantidades'] = {}
+  try { cantidades = JSON.parse(localStorage.getItem('nf:cantidad_producto') || '{}') } catch { /* nada */ }
+  const todas = (() => { try { return localStorage.getItem('nf:agua_todas_bebidas') === '1' } catch { return false } })()
+  return { aguaTodasBebidas: todas, aguaT: 0, cantidades }
 }
-export const setContarTodasBebidas = (v: boolean) => {
-  try { localStorage.setItem(CLAVE_TODAS, v ? '1' : '0') } catch { /* sin almacenamiento */ }
+function guardarLocal(p: PrefCantidades) {
+  try { localStorage.setItem(CLAVE, JSON.stringify(p)) } catch { /* lleno */ }
 }
 
-type Memoria = Record<string, { cantidad: number; clave?: string; t: number }>
-const leer = (): Memoria => {
-  try { return JSON.parse(localStorage.getItem(CLAVE_PROD) || '{}') as Memoria } catch { return {} }
+let espera: number | undefined
+function subir() {
+  if (typeof window === 'undefined') return
+  window.clearTimeout(espera)
+  espera = window.setTimeout(() => void enviar(), 1500)
+}
+async function enviar() {
+  try {
+    const { api } = await import('./api.ts')
+    const r = await api.guardarPrefCantidades(leerLocal())
+    guardarLocal(fusionar(leerLocal(), { aguaTodasBebidas: r.aguaTodasBebidas, aguaT: r.aguaT, cantidades: r.cantidades }))
+  } catch { /* sin red: se reintenta en la próxima sincronización */ }
 }
 
-/** Última cantidad elegida para este producto (código de barras o nombre). */
+/** Al abrir la app: trae lo del servidor, fusiona y sube si había cambios locales. */
+export async function sincronizarPreferenciasCantidades() {
+  try {
+    const { api } = await import('./api.ts')
+    const r = await api.prefCantidades()
+    const remoto: PrefCantidades = { aguaTodasBebidas: r.aguaTodasBebidas, aguaT: r.aguaT, cantidades: r.cantidades }
+    const local = leerLocal()
+    const fusion = fusionar(remoto, local)
+    guardarLocal(fusion)
+    if (JSON.stringify(fusion) !== JSON.stringify(fusionar(remoto, remoto))) subir()
+  } catch { /* sin red */ }
+}
+
+export const contarTodasBebidas = () => leerLocal().aguaTodasBebidas
+export function setContarTodasBebidas(v: boolean) {
+  guardarLocal({ ...leerLocal(), aguaTodasBebidas: v, aguaT: Date.now() })
+  subir()
+}
+
+/** Última cantidad elegida para este producto (código de barras o id). */
 export function ultimaCantidad(id: string | null | undefined): { cantidad: number; clave?: string } | null {
   if (!id) return null
-  return leer()[id] ?? null
+  return leerLocal().cantidades[id.slice(0, 80)] ?? null
 }
 
 export function recordarCantidad(id: string | null | undefined, cantidad: number, clave?: string) {
   if (!id || !(cantidad > 0)) return
-  const m = leer()
-  m[id] = { cantidad, clave, t: Date.now() }
-  // Como mucho 200 productos: se olvidan los más antiguos.
-  const ids = Object.keys(m).sort((a, b) => m[b]!.t - m[a]!.t).slice(200)
-  for (const i of ids) delete m[i]
-  try { localStorage.setItem(CLAVE_PROD, JSON.stringify(m)) } catch { /* lleno */ }
+  const p = leerLocal()
+  const nuevo: PrefCantidades = { ...p, cantidades: { ...p.cantidades, [id.slice(0, 80)]: { cantidad: Math.round(cantidad * 10) / 10, ...(clave ? { clave } : {}), t: Date.now() } } }
+  guardarLocal(fusionar(nuevo, { aguaTodasBebidas: false, aguaT: -1, cantidades: {} }))
+  subir()
 }
+export { MAX_PRODUCTOS }

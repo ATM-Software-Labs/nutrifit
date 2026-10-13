@@ -400,6 +400,9 @@ export const api = {
       }
     }>('/api/alimentos/etiqueta', { method: 'POST', body: fd })
   },
+  prefCantidades: () => pedir<import('./preferenciasCantidades.ts').PrefCantidades & { ok: true }>('/api/preferencias/cantidades', { silencio401: true }),
+  guardarPrefCantidades: (p: import('./preferenciasCantidades.ts').PrefCantidades) =>
+    pedir<import('./preferenciasCantidades.ts').PrefCantidades & { ok: true }>('/api/preferencias/cantidades', { method: 'PUT', body: p, silencio401: true }),
   barcodeEan: (ean: string) =>
     pedir<{ origen?: string; producto?: { id: string; nombre: string; marca: string; calorias: number; proteinas: number; carbohidratos: number; grasas: number; codigo_barras: string; unidad?: 'g' | 'ml'; envase?: number | null; racion?: number | null; unidades?: number | null } }>(
       `/api/alimentos/barcode?ean=${encodeURIComponent(ean)}`,

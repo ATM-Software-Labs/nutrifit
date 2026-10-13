@@ -31,7 +31,7 @@ import { AnadirRapido } from './AnadirRapido.tsx'
 import { Button } from './ui/Button.tsx'
 import { anotarAgua, leerAguaLocal, mlAguaAcotado } from '../lib/syncAgua.ts'
 import { cuentaComoAgua } from '../lib/liquidos.ts'
-import { contarTodasBebidas } from '../lib/preferenciasLiquidos.ts'
+import { contarTodasBebidas, sincronizarPreferenciasCantidades } from '../lib/preferenciasLiquidos.ts'
 import { useToast } from './ui/Toast.tsx'
 import { useResumen } from '../hooks/useResumen.ts'
 import { api } from '../lib/api.ts'
@@ -142,6 +142,8 @@ export default function Dashboard({
     return total - actual
   }
 
+  useEffect(() => { void sincronizarPreferenciasCantidades() }, [usuario.id])
+
   async function guardar(nueva: NuevaComida) {
     setHoja(null)
     const idTemporal = `tmp-${crypto.randomUUID()}`
@@ -174,6 +176,7 @@ export default function Dashboard({
       ingredientes: c.ingredientes,
       imagen_url: null,
       emoji: c.emoji ?? null,
+      ...(c.unidad === 'g' || c.unidad === 'ml' ? { cantidad: c.cantidad ?? null, unidad: c.unidad, envase: c.envase ?? null, porcion: c.porcion ?? null, codigo_barras: c.codigo_barras ?? null } : {}),
       fecha: hoyISO(),
     })
   }

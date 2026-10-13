@@ -30,7 +30,7 @@ export function parsearMedida(texto: string | null | undefined): { cantidad: num
 
 const RE_CATEGORIA_LIQUIDO = /(^|:)(beverages?|drinks?|waters?|mineral-waters|spring-waters|juices?|fruit-juices|nectars|sodas|soft-drinks|colas|milks?|dairy-drinks|milk-drinks|flavoured-milks|plant-based-milks|plant-milks|teas?|iced-teas|coffee-drinks|energy-drinks|sports-drinks|smoothies|kefirs|drinkable-yogurts|beers|wines|alcoholic-beverages|broths|soups)$/
 const RE_NO_LIQUIDO = /(^|:)(dried|powders?|instant|chocolate-powders|cocoa-powders|coffee-beans|ground-coffees|tea-bags|syrups-concentrate)/
-const RE_NOMBRE_LIQUIDO = /\b(agua|water|zumo|jugo|juice|refresco|soda|cola|leche|milk|batido|bebida|drink|t[eé] fr[ií]o|kombucha|kefir l[ií]quido|cerveza|beer|vino|wine|caldo|smoothie|n[eé]ctar|horchata|isot[oó]nic[oa]|energ[eé]tica)\b/i
+const RE_NOMBRE_LIQUIDO = /^(agua|water|zumo|jugo|juice|refresco|soda|cola|leche|milk|batido|bebida|drink|t[eé] fr[ií]o|kombucha|kefir l[ií]quido|cerveza|beer|vino|wine|caldo|smoothie|n[eé]ctar|horchata|isot[oó]nic[oa]|energ[eé]tica)\b/i
 
 export interface DatosLiquido {
   unidadDeclarada?: string | null

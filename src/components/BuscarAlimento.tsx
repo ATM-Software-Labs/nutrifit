@@ -22,6 +22,8 @@ import { hidratarHistorial, leerHistorial, recordarAlimento } from '../lib/histo
 import { sugerir } from '../lib/sugerenciasAlimento.ts'
 import { entero } from '../lib/formato.ts'
 import { normalizarEan } from '../lib/ean.ts'
+import { SelectorCantidad } from './SelectorCantidad.tsx'
+import { recordarCantidad, ultimaCantidad } from '../lib/preferenciasLiquidos.ts'
 import { ApiError } from '../lib/api.ts'
 import type { ResultadoAnalisis } from '../lib/tipos.ts'
 
@@ -83,56 +85,38 @@ function nombrePlato(c: EnCesta[]) {
   return t.length > 100 ? `${t.slice(0, 97)}…` : t
 }
 
-function Detalle({ a, onAnadir }: { a: Alimento; onAnadir: (gramos: number) => void }) {
-  const [gramos, setGramos] = useState(String(a.racion ?? 100))
-  const g = Math.min(5000, Math.max(0, Number(gramos.replace(',', '.')) || 0))
+function Detalle({ a, onAnadir }: { a: Alimento; onAnadir: (cantidad: number) => void }) {
+  const unidad = a.unidad ?? 'g'
+  const idMem = a.codigo || a.id
+  const [cantidad, setCantidad] = useState(() => ultimaCantidad(idMem)?.cantidad ?? a.racion ?? (unidad === 'ml' && a.envase && a.envase <= 1000 ? a.envase : 100))
+  const [clave, setClave] = useState<string | undefined>()
+  const g = Math.min(5000, Math.max(0, cantidad || 0))
   const m = escalar(a.por100, g)
+  const anadir = () => { if (g > 0) { recordarCantidad(idMem, g, clave); onAnadir(g) } }
   return (
-    <div className="mt-3 rounded-2xl bg-neutral-50 p-3 dark:bg-neutral-900">
-      <div className="flex items-center gap-2">
-        <label className="relative w-28">
-          <span className="sr-only">Gramos de {a.nombre}</span>
-          <input
-            autoFocus
-            type="number"
-            inputMode="decimal"
-            min={1}
-            max={5000}
-            value={gramos}
-            onChange={(e) => setGramos(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && g > 0) {
-                e.preventDefault()
-                onAnadir(g)
-              }
-            }}
-            className="cifra h-10 w-full rounded-xl border border-neutral-200 bg-card pl-3 pr-8 text-sm focus:border-mint focus:outline-none focus:ring-4 focus:ring-mint/15 dark:border-neutral-800 dark:bg-card-dark"
-          />
-          <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-neutral-500">g</span>
-        </label>
-        {a.racion && a.racion !== 100 && (
-          <button type="button" onClick={() => setGramos(String(a.racion))} className="h-10 rounded-xl px-2.5 text-xs font-medium text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800">
-            Ración ({a.racion} g)
-          </button>
-        )}
-        <button type="button" onClick={() => setGramos('100')} className="h-10 rounded-xl px-2.5 text-xs font-medium text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800">
-          100 g
-        </button>
-        <Button size="sm" className="ml-auto h-10" disabled={g <= 0} onClick={() => onAnadir(g)} icon={<Plus size={16} strokeWidth={2} />}>
+    <div className="mt-3 rounded-2xl bg-neutral-50 p-3 dark:bg-neutral-900" onKeyDown={(e) => { if (e.key === 'Enter' && (e.target as HTMLElement).tagName === 'INPUT') { e.preventDefault(); anadir() } }}>
+      <SelectorCantidad
+        producto={{ unidad, envase: a.envase ?? null, racion: a.racion, unidades: a.unidades ?? null }}
+        cantidad={cantidad}
+        onCambio={(base, k) => { setCantidad(base); setClave(k) }}
+        compacto
+      />
+      <div className="mt-3 flex items-center gap-2">
+        <p className="cifra flex flex-1 flex-wrap gap-x-3 text-xs text-neutral-500 dark:text-neutral-400">
+          <span className="font-medium text-graphite dark:text-neutral-100">{entero(m.calorias)} kcal</span>
+          <span><span className="text-protein">●</span> P {entero(m.proteinas)} g</span>
+          <span><span className="text-carbs">●</span> C {entero(m.carbohidratos)} g</span>
+          <span><span className="text-fats">●</span> G {entero(m.grasas)} g</span>
+        </p>
+        <Button size="sm" className="h-10 shrink-0" disabled={g <= 0} onClick={anadir} icon={<Plus size={16} strokeWidth={2} />}>
           Añadir
         </Button>
       </div>
-      <p className="cifra mt-2 flex flex-wrap gap-x-3 text-xs text-neutral-500 dark:text-neutral-400">
-        <span className="font-medium text-graphite dark:text-neutral-100">{entero(m.calorias)} kcal</span>
-        <span><span className="text-protein">●</span> P {entero(m.proteinas)} g</span>
-        <span><span className="text-carbs">●</span> C {entero(m.carbohidratos)} g</span>
-        <span><span className="text-fats">●</span> G {entero(m.grasas)} g</span>
-      </p>
     </div>
   )
 }
 
-type ProductoEan = { id: string; nombre: string; marca?: string; calorias: number; proteinas: number; carbohidratos: number; grasas: number; codigo_barras?: string }
+type ProductoEan = { id: string; nombre: string; marca?: string; calorias: number; proteinas: number; carbohidratos: number; grasas: number; codigo_barras?: string; unidad?: 'g' | 'ml'; envase?: number | null; racion?: number | null; unidades?: number | null }
 
 /** Producto del lector o de /api/alimentos/barcode → alimento del buscador. */
 function alimentoDeProducto(producto: ProductoEan): Alimento {
@@ -141,8 +125,12 @@ function alimentoDeProducto(producto: ProductoEan): Alimento {
     nombre: producto.marca && producto.marca !== 'Genérico' ? `${producto.nombre} (${producto.marca})` : producto.nombre,
     detalle: producto.marca && producto.marca !== 'Genérico' ? `Marca: ${producto.marca}` : producto.codigo_barras ? `EAN: ${producto.codigo_barras}` : 'Open Food Facts',
     por100: { calorias: producto.calorias, proteinas: producto.proteinas, carbohidratos: producto.carbohidratos, grasas: producto.grasas },
-    racion: 100,
+    racion: producto.racion ?? null,
     fuente: 'off',
+    unidad: producto.unidad ?? 'g',
+    envase: producto.envase ?? null,
+    unidades: producto.unidades ?? null,
+    codigo: producto.codigo_barras ?? null,
   }
 }
 
@@ -258,6 +246,9 @@ export default function BuscarAlimento({ onClose, onResultado }: { onClose: () =
             por100: p.por100,
             racion: p.racion,
             fuente: 'off' as const,
+            unidad: p.unidad,
+            envase: p.envase,
+            codigo: p.codigo || null,
           })),
         })
       })
@@ -396,7 +387,10 @@ export default function BuscarAlimento({ onClose, onResultado }: { onClose: () =
   function revisar() {
     const ingredientes = cesta.map((c) => ({ nombre: c.alimento.nombre.slice(0, 100), gramos: Math.round(c.gramos), ...escalar(c.alimento.por100, c.gramos) }))
     const r1 = (v: number) => Math.round(v * 10) / 10
-    onResultado({ nombre_plato: nombrePlato(cesta), ingredientes, calorias: Math.round(total.calorias), proteinas: r1(total.proteinas), carbohidratos: r1(total.carbohidratos), grasas: r1(total.grasas) })
+    // Un solo alimento: la revisión muestra sus cantidades rápidas y su unidad (ml para bebidas).
+    const solo = cesta.length === 1 ? cesta[0]!.alimento : null
+    const producto = solo ? { codigo: solo.codigo ?? solo.id, unidad: solo.unidad ?? 'g', envase: solo.envase ?? null, racion: solo.racion, unidades: solo.unidades ?? null } : undefined
+    onResultado({ nombre_plato: nombrePlato(cesta), ingredientes, calorias: Math.round(total.calorias), proteinas: r1(total.proteinas), carbohidratos: r1(total.carbohidratos), grasas: r1(total.grasas), ...(solo?.unidad === 'ml' ? { categoria: 'bebida' as const } : {}), ...(producto ? { producto } : {}) })
   }
 
   const pie = cesta.length ? (
@@ -406,7 +400,7 @@ export default function BuscarAlimento({ onClose, onResultado }: { onClose: () =
           <li key={c.clave} className="flex items-center gap-2">
             <span className="min-w-0 flex-1 truncate">{c.alimento.nombre}</span>
             <span className="cifra text-xs text-neutral-500 dark:text-neutral-400">
-              {entero(c.gramos)} g · {entero(escalar(c.alimento.por100, c.gramos).calorias)} kcal
+              {entero(c.gramos)} {c.alimento.unidad ?? 'g'} · {entero(escalar(c.alimento.por100, c.gramos).calorias)} kcal
             </span>
             <button type="button" aria-label={`Quitar ${c.alimento.nombre}`} onClick={() => setCesta((x) => x.filter((y) => y.clave !== c.clave))} className="rounded-full p-1 text-neutral-400 hover:bg-neutral-100 hover:text-graphite dark:hover:bg-neutral-800 dark:hover:text-white">
               <X size={14} />

@@ -28,6 +28,9 @@ test('esLiquido por unidad, por 100 ml, cantidad, categorías y nombre', () => {
   assert.ok(esLiquido({ nombre: 'Agua mineral natural' }))
   assert.ok(esLiquido({ unidadRacion: 'MLT' }))
   assert.ok(!esLiquido({ nombre: 'Nutella', cantidad: '400 g' }))
+  assert.ok(!esLiquido({ nombre: 'Arroz con leche' }))
+  assert.ok(!esLiquido({ nombre: 'Queso batido 0 %' }))
+  assert.ok(esLiquido({ nombre: 'Leche semidesnatada' }))
 })
 
 test('conversiones y formato', () => {
@@ -67,4 +70,18 @@ test('medidasOff: Cacaolat, Coca-Cola pack, agua y Nutella', async () => {
   assert.equal(medidasOff({ quantity: '1,5 l' }, 'Agua mineral').envase, 1500)
   assert.deepEqual(medidasOff({ quantity: '400 g', product_quantity: '400', serving_quantity: 15 }, 'Nutella'), { unidad: 'g', envase: 400, racion: 15, unidades: null })
   assert.equal(medidasOff({ product_quantity: 1.5, product_quantity_unit: 'l' }, 'x').envase, 1500)
+})
+
+test('preferencias de cantidades: gana lo más reciente y se limita a 200', async () => {
+  const { fusionar } = await import('../src/lib/preferenciasCantidades.ts')
+  const a = { aguaTodasBebidas: true, aguaT: 10, cantidades: { x: { cantidad: 275, clave: 'envase', t: 5 }, y: { cantidad: 100, t: 9 } } }
+  const b = { aguaTodasBebidas: false, aguaT: 20, cantidades: { x: { cantidad: 250, clave: 'vaso', t: 7 }, y: { cantidad: 50, t: 1 } } }
+  const r = fusionar(a, b)
+  assert.equal(r.aguaTodasBebidas, false)
+  assert.equal(r.cantidades.x!.cantidad, 250)
+  assert.equal(r.cantidades.y!.cantidad, 100)
+  const muchas = Object.fromEntries(Array.from({ length: 250 }, (_, i) => [`p${i}`, { cantidad: 1, t: i }]))
+  const m = fusionar({ aguaTodasBebidas: false, aguaT: 0, cantidades: muchas }, { aguaTodasBebidas: false, aguaT: 0, cantidades: {} })
+  assert.equal(Object.keys(m.cantidades).length, 200)
+  assert.ok(m.cantidades.p249 && !m.cantidades.p0)
 })

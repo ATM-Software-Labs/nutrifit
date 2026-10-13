@@ -210,4 +210,6 @@ export interface ProductoOFF {
   marca: string | null
   por100: Totales
   racion: number | null
+  envase?: number | null
+  unidad?: 'g' | 'ml'
 }
