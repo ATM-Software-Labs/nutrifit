@@ -390,6 +390,22 @@ export const api = {
       method: 'POST',
       body: { textoMenu },
     }),
+  /** Foto de la tabla nutricional → valores por 100 g (y ración si aparece). Sin fondo blanco: el texto debe verse. */
+  etiqueta: (imagen: Blob) => {
+    const fd = new FormData()
+    fd.append('imagen', imagen, imagen.type === 'image/webp' ? 'etiqueta.webp' : 'etiqueta.jpg')
+    return pedir<{
+      ok: true
+      etiqueta: {
+        nombre: string | null
+        marca: string | null
+        unidad: 'g' | 'ml'
+        por100: { calorias: number; proteinas: number; carbohidratos: number; grasas: number }
+        racion: number | null
+        advertencias?: string[]
+      }
+    }>('/api/alimentos/etiqueta', { method: 'POST', body: fd })
+  },
   barcodeEan: (ean: string) =>
     pedir<{ origen?: string; producto?: { id: string; nombre: string; marca: string; calorias: number; proteinas: number; carbohidratos: number; grasas: number; codigo_barras: string } }>(
       `/api/alimentos/barcode?ean=${encodeURIComponent(ean)}`,

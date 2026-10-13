@@ -435,7 +435,24 @@ export async function cadenaVision<T>(env: Env, img: Imagen, t: TareaVision<T>):
     if (esDefinitivo(e)) throw errorDefinitivo(e)
     vistos.push(e)
     const motivo = e instanceof ErrorParseo ? `parseo: ${e.message}` : e instanceof Error ? e.message : String(e)
-    console.warn(`[ia] Gemini falló (${motivo}) → Workers AI`)
+    console.warn(`[ia] Gemini falló (${motivo}) → Groq`)
+  }
+  // Misma cadena que la foto del plato: Groq y Trujillo AI antes de Workers AI.
+  try {
+    const { modelo, resultado } = await visionGroq(env, img, t)
+    return { proveedor: 'groq', modelo, resultado }
+  } catch (e) {
+    if (esDefinitivo(e)) throw errorDefinitivo(e)
+    vistos.push(e)
+    console.warn('[ia] Groq falló:', e instanceof Error ? e.message.slice(0, 200) : e)
+  }
+  try {
+    const modelo = modeloTrujillo(env)
+    return { proveedor: 'trujillo', modelo, resultado: await visionTrujillo(env, img, t, modelo) }
+  } catch (e) {
+    if (esDefinitivo(e)) throw errorDefinitivo(e)
+    vistos.push(e)
+    console.warn('[ia] Trujillo falló:', e instanceof Error ? e.message.slice(0, 200) : e)
   }
   for (const modelo of MODELOS_VISION_WORKERS_AI) {
     try {

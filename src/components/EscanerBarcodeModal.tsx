@@ -256,7 +256,7 @@ function Escaner({ abierto, alDetectar, alCerrar, alFotoEtiqueta, alManual }: Pr
             <p className="mt-0.5 text-xs text-neutral-500">Haz una foto de la tabla nutricional o añádelo a mano.</p>
             <div className="mt-3 flex flex-wrap gap-2">
               {alFotoEtiqueta && (
-                <label className="cursor-pointer rounded-xl bg-mint px-3 py-2 text-xs font-semibold text-white">
+                <label className="cursor-pointer rounded-xl bg-mint-700 px-3 py-2 text-xs font-semibold text-white focus-within:ring-4 focus-within:ring-mint/30 hover:bg-mint-800">
                   Foto de la etiqueta
                   <input type="file" accept="image/*" capture="environment" className="sr-only" onChange={(e) => { const f = e.target.files?.[0]; if (f) { alFotoEtiqueta(f, noEncontrado); alCerrar() } }} />
                 </label>

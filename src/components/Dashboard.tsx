@@ -48,6 +48,7 @@ const PaginaPerfil = lazy(async () => {
 })
 const DescribirComida = lazy(() => import('./DescribirComida.tsx'))
 const BuscarAlimento = lazy(() => import('./BuscarAlimento.tsx'))
+const LectorEtiqueta = lazy(() => import('./LectorEtiqueta.tsx'))
 const EscanerBarcodeModal = lazy(async () => {
   const m = await import('./EscanerBarcodeModal.tsx')
   return { default: m.EscanerBarcodeModal }
@@ -61,6 +62,7 @@ type Hoja =
   | { tipo: 'anadir'; comida: TipoComida }
   | { tipo: 'scanner'; comida: TipoComida; archivo: File }
   | { tipo: 'barcode'; comida: TipoComida }
+  | { tipo: 'etiqueta'; comida: TipoComida; archivo: File; codigo: string }
   | { tipo: 'texto'; comida: TipoComida }
   | { tipo: 'buscar'; comida: TipoComida }
   | { tipo: 'revision'; comida: TipoComida; resultado: ResultadoAnalisis | null; imagenUrl: string | null }
@@ -431,11 +433,20 @@ export default function Dashboard({
             />
           </BarreraEscanner>
         )}
+        {hoja?.tipo === 'etiqueta' && (
+          <LectorEtiqueta
+            archivo={hoja.archivo}
+            codigo={hoja.codigo}
+            onClose={cerrar}
+            onResultado={(resultado) => setHoja({ tipo: 'revision', comida: hoja.comida, resultado, imagenUrl: null })}
+            onManual={() => { const codigo = hoja.codigo; setHoja({ tipo: 'revision', comida: hoja.comida, imagenUrl: null, resultado: { nombre_plato: '', display_name: '', descripcion: `Código de barras: ${codigo}`, ingredientes: [], calorias: 0, proteinas: 0, carbohidratos: 0, grasas: 0 } }) }}
+          />
+        )}
         {hoja?.tipo === 'barcode' && (
           <EscanerBarcodeModal
             abierto={true}
             alCerrar={() => setHoja((h) => (h?.tipo === 'barcode' ? null : h))}
-            alFotoEtiqueta={(archivo) => setHoja({ tipo: 'scanner', comida: hoja.comida, archivo })}
+            alFotoEtiqueta={(archivo, codigo) => setHoja({ tipo: 'etiqueta', comida: hoja.comida, archivo, codigo })}
             alManual={(codigo) => setHoja({ tipo: 'revision', comida: hoja.comida, imagenUrl: null, resultado: { nombre_plato: '', display_name: '', descripcion: `Código de barras: ${codigo}`, ingredientes: [], calorias: 0, proteinas: 0, carbohidratos: 0, grasas: 0 } })}
             alDetectar={(producto) => {
               const titulo = producto.marca ? `${producto.nombre} (${producto.marca})` : producto.nombre

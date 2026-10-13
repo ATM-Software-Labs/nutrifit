@@ -21,6 +21,8 @@ import { buscarLocal, categorias, escalar, normalizar, type Alimento } from '../
 import { hidratarHistorial, leerHistorial, recordarAlimento } from '../lib/historialAlimentos.ts'
 import { sugerir } from '../lib/sugerenciasAlimento.ts'
 import { entero } from '../lib/formato.ts'
+import { normalizarEan } from '../lib/ean.ts'
+import { ApiError } from '../lib/api.ts'
 import type { ResultadoAnalisis } from '../lib/tipos.ts'
 
 type Fuente = 'local' | 'off'
@@ -130,6 +132,26 @@ function Detalle({ a, onAnadir }: { a: Alimento; onAnadir: (gramos: number) => v
   )
 }
 
+type ProductoEan = { id: string; nombre: string; marca?: string; calorias: number; proteinas: number; carbohidratos: number; grasas: number; codigo_barras?: string }
+
+/** Producto del lector o de /api/alimentos/barcode → alimento del buscador. */
+function alimentoDeProducto(producto: ProductoEan): Alimento {
+  return {
+    id: producto.id || producto.codigo_barras || String(Date.now()),
+    nombre: producto.marca && producto.marca !== 'Genérico' ? `${producto.nombre} (${producto.marca})` : producto.nombre,
+    detalle: producto.marca && producto.marca !== 'Genérico' ? `Marca: ${producto.marca}` : producto.codigo_barras ? `EAN: ${producto.codigo_barras}` : 'Open Food Facts',
+    por100: { calorias: producto.calorias, proteinas: producto.proteinas, carbohidratos: producto.carbohidratos, grasas: producto.grasas },
+    racion: 100,
+    fuente: 'off',
+  }
+}
+
+/** Texto que es un código de barras (8–14 cifras, admite espacios) con dígito de control válido. */
+function eanDeTexto(t: string): string | null {
+  const d = t.replace(/[\s-]/g, '')
+  return /^\d{8,14}$/.test(d) ? normalizarEan(d) : null
+}
+
 export default function BuscarAlimento({ onClose, onResultado }: { onClose: () => void; onResultado: (r: ResultadoAnalisis) => void }) {
   const [fuente, setFuente] = useState<Fuente>('local')
   const [consulta, setConsulta] = useState('')
@@ -143,6 +165,7 @@ export default function BuscarAlimento({ onClose, onResultado }: { onClose: () =
   const [off, setOff] = useState<{ cargando: boolean; resultados: Alimento[] | null; error: string | null }>({ cargando: false, resultados: null, error: null })
   const [ia, setIa] = useState<{ cargando: boolean; error: string | null }>({ cargando: false, error: null })
   const [mostrarBarcode, setMostrarBarcode] = useState(false)
+  const [porCodigo, setPorCodigo] = useState<{ cargando: boolean; error: string | null }>({ cargando: false, error: null })
   const ctrl = useRef<AbortController | null>(null)
   const entrada = useRef<HTMLInputElement>(null)
   const filaCats = useRef<HTMLDivElement>(null)
@@ -206,9 +229,24 @@ export default function BuscarAlimento({ onClose, onResultado }: { onClose: () =
     ctrl.current?.abort()
     ctrl.current = new AbortController()
     setOff((s) => ({ cargando: true, resultados: s.resultados, error: null }))
-    const esCodigo = /^\d{8,14}$/.test(q)
+    const ean = eanDeTexto(q)
+    if (ean) {
+      const señal = ctrl.current.signal
+      void api
+        .barcodeEan(ean)
+        .then((r) => {
+          if (señal.aborted) return
+          setOff({ cargando: false, error: null, resultados: r.producto ? [{ ...alimentoDeProducto(r.producto), id: `off-${ean}`, detalle: [r.producto.marca, ean].filter(Boolean).join(' · ') }] : [] })
+        })
+        .catch((err: unknown) => {
+          if (señal.aborted) return
+          if (err instanceof ApiError && err.status === 404) setOff({ cargando: false, error: null, resultados: [] })
+          else setOff({ cargando: false, resultados: null, error: err instanceof Error ? err.message : 'No se pudo buscar.' })
+        })
+      return
+    }
     void api
-      .off(esCodigo ? { codigo: q } : { q }, ctrl.current.signal)
+      .off({ q }, ctrl.current.signal)
       .then((r) => {
         setOff({
           cargando: false,
@@ -245,6 +283,23 @@ export default function BuscarAlimento({ onClose, onResultado }: { onClose: () =
     ctrl.current?.abort()
     if (esperaOff.current) window.clearTimeout(esperaOff.current)
   }, [fuente])
+
+  const eanConsulta = useMemo(() => eanDeTexto(consulta), [consulta])
+
+  /** Código de barras escrito en el buscador: misma búsqueda robusta que el escáner. */
+  async function buscarPorCodigo(ean: string) {
+    setPorCodigo({ cargando: true, error: null })
+    try {
+      const r = await api.barcodeEan(ean)
+      if (r.producto) {
+        setPorCodigo({ cargando: false, error: null })
+        elegir(alimentoDeProducto(r.producto))
+      } else setPorCodigo({ cargando: false, error: `No encontramos el código ${ean}. Prueba con una foto de la etiqueta o añádelo a mano.` })
+    } catch (e) {
+      const msg = e instanceof ApiError && e.status === 404 ? `No encontramos el código ${ean}. Prueba con una foto de la etiqueta o añádelo a mano.` : e instanceof Error ? e.message : 'No se pudo buscar el código.'
+      setPorCodigo({ cargando: false, error: msg })
+    }
+  }
 
   function buscarOff(e?: FormEvent) {
     e?.preventDefault()
@@ -295,6 +350,10 @@ export default function BuscarAlimento({ onClose, onResultado }: { onClose: () =
     e.preventDefault()
     if (fuente === 'off') {
       buscarOff()
+      return
+    }
+    if (eanConsulta) {
+      void buscarPorCodigo(eanConsulta)
       return
     }
     const ahora = sugerir(consulta, historial, categoria, 5)
@@ -396,6 +455,7 @@ export default function BuscarAlimento({ onClose, onResultado }: { onClose: () =
               setAbierto(null)
               setOcultas(false)
               setIa((s) => ({ ...s, error: null }))
+              setPorCodigo((s) => (s.error ? { ...s, error: null } : s))
             }}
             onKeyDown={teclado}
             placeholder={fuente === 'local' ? 'Pollo, arroz, yogur…' : 'Nombre o código de barras'}
@@ -434,7 +494,15 @@ export default function BuscarAlimento({ onClose, onResultado }: { onClose: () =
                 </button>
               </li>
             ))}
-            {!sugerencias.length && (
+            {!sugerencias.length && eanConsulta && (
+              <li role="presentation">
+                <button type="button" onClick={() => void buscarPorCodigo(eanConsulta)} disabled={porCodigo.cargando} className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-medium text-mint-800 hover:bg-mint-50 disabled:opacity-60 dark:text-mint-200 dark:hover:bg-mint-950">
+                  <Barcode size={16} strokeWidth={1.75} aria-hidden="true" />
+                  {porCodigo.cargando ? 'Buscando el producto…' : `Buscar el código ${eanConsulta}`}
+                </button>
+              </li>
+            )}
+            {!sugerencias.length && !eanConsulta && (
               <li role="presentation">
                 <button type="button" onClick={() => void estimar()} disabled={ia.cargando} className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-medium text-mint-800 hover:bg-mint-50 disabled:opacity-60 dark:text-mint-200 dark:hover:bg-mint-950">
                   <Sparkles size={16} strokeWidth={1.75} aria-hidden="true" />
@@ -445,6 +513,11 @@ export default function BuscarAlimento({ onClose, onResultado }: { onClose: () =
           </ul>
         )}
       </form>
+      {porCodigo.error && (
+        <p role="alert" className="mt-2 text-xs text-red-600 dark:text-red-400">
+          {porCodigo.error}
+        </p>
+      )}
       {alias && (
         <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
           Nombre oficial: <span className="font-medium text-graphite dark:text-neutral-100">{alias.display_name}</span>
@@ -501,6 +574,12 @@ export default function BuscarAlimento({ onClose, onResultado }: { onClose: () =
         </p>
       )}
       <div ref={contenedorRef} className="empty:hidden" />
+      {fuente === 'local' && escribiendo && abierto && (
+        <p className="mt-3 truncate text-[15px] font-medium" title={abierto.nombre}>
+          {abierto.nombre}
+          {abierto.detalle && <span className="ml-2 text-xs font-normal text-neutral-500 dark:text-neutral-400">{abierto.detalle}</span>}
+        </p>
+      )}
       {fuente === 'local' && escribiendo && abierto && (
         <Detalle
           a={abierto}
@@ -565,22 +644,7 @@ export default function BuscarAlimento({ onClose, onResultado }: { onClose: () =
         <EscanerBarcodeModal
           abierto={mostrarBarcode}
           alCerrar={() => setMostrarBarcode(false)}
-          alDetectar={(producto) => {
-            const alim: Alimento = {
-              id: producto.id || producto.codigo_barras || String(Date.now()),
-              nombre: producto.marca ? `${producto.nombre} (${producto.marca})` : producto.nombre,
-              detalle: producto.marca ? `Marca: ${producto.marca}` : (producto.codigo_barras ? `EAN: ${producto.codigo_barras}` : 'Open Food Facts'),
-              por100: {
-                calorias: producto.calorias,
-                proteinas: producto.proteinas,
-                carbohidratos: producto.carbohidratos,
-                grasas: producto.grasas,
-              },
-              racion: 100,
-              fuente: 'off',
-            }
-            elegir(alim)
-          }}
+          alDetectar={(producto) => elegir(alimentoDeProducto(producto))}
         />
       )}
     </Sheet>
