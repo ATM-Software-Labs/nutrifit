@@ -449,7 +449,7 @@ export default function Dashboard({
             alFotoEtiqueta={(archivo, codigo) => setHoja({ tipo: 'etiqueta', comida: hoja.comida, archivo, codigo })}
             alManual={(codigo) => setHoja({ tipo: 'revision', comida: hoja.comida, imagenUrl: null, resultado: { nombre_plato: '', display_name: '', descripcion: `Código de barras: ${codigo}`, ingredientes: [], calorias: 0, proteinas: 0, carbohidratos: 0, grasas: 0 } })}
             alDetectar={(producto) => {
-              const titulo = producto.marca ? `${producto.nombre} (${producto.marca})` : producto.nombre
+              const titulo = producto.marca && producto.marca !== 'Genérico' ? `${producto.nombre} (${producto.marca})` : producto.nombre
               const res: ResultadoAnalisis = {
                 nombre_plato: titulo,
                 display_name: titulo,

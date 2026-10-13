@@ -11,7 +11,7 @@ test('mapeo en español e inglés con respaldo 🍽️', () => {
   assert.equal(emojiPorTexto('Scrambled eggs'), '🍳')
   assert.equal(emojiPorTexto('Banana'), '🍌')
   assert.equal(emojiPorTexto('Chocolate con leche'), '🍫')
-  assert.equal(emojiPorTexto('Nutella'), '🍽️')
+  assert.equal(emojiPorTexto('Producto Xyz'), '🍽️')
   assert.equal(emojiComida({ descripcion: 'Steak', proteinas: 30, carbohidratos: 0, grasas: 10 }), '🥩')
 })
 test('emoji guardado válido gana; texto no es emoji', () => {
@@ -62,4 +62,12 @@ test('recortar no parte palabras', async () => {
   const { recortar } = await import('../functions/utils/nombresPlato.ts')
   const r = recortar('Tostadas con tomate y aceite a la plancha casera')
   assert.ok(r.length <= 40 && !r.endsWith('planch'), r)
+})
+
+test('emoji de productos escaneados por nombre', () => {
+  assert.equal(emojiPorTexto('Pro High Protein Sin Azucares Añadidos'), '🥛')
+  assert.equal(emojiPorTexto('Nutella'), '🍫')
+  assert.equal(emojiPorTexto('Tomate triturado'), '🍅')
+  assert.equal(emojiPorTexto('Tostadas con tomate y aceite'), '🍞')
+  assert.equal(emojiPorTexto('Barrita high protein'), '🍪')
 })

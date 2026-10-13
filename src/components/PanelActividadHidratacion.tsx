@@ -226,7 +226,7 @@ export function PanelActividadHidratacion({
               type="button"
               onClick={() => setTipo(t)}
               aria-pressed={tipo === t}
-              className={`h-9 rounded-xl text-sm font-medium transition ${tipo === t ? 'bg-mint text-white' : 'border border-neutral-200 text-neutral-600 dark:border-neutral-800 dark:text-neutral-300'}`}
+              className={`h-9 rounded-xl text-sm font-medium transition ${tipo === t ? 'bg-mint-700 text-white' : 'border border-neutral-200 text-neutral-600 dark:border-neutral-800 dark:text-neutral-300'}`}
             >
               {t === 'fuerza' ? 'Fuerza' : 'Cardio'}
             </button>
@@ -266,7 +266,7 @@ export function PanelActividadHidratacion({
               type="button"
               onClick={() => setIntensidad(nivel)}
               aria-pressed={intensidad === nivel}
-              className={`h-9 rounded-xl text-xs font-medium transition ${intensidad === nivel ? 'bg-mint text-white' : 'border border-neutral-200 text-neutral-600 dark:border-neutral-800 dark:text-neutral-300'}`}
+              className={`h-9 rounded-xl text-xs font-medium transition ${intensidad === nivel ? 'bg-mint-700 text-white' : 'border border-neutral-200 text-neutral-600 dark:border-neutral-800 dark:text-neutral-300'}`}
             >
               {nivel === 'baja' ? 'Baja' : nivel === 'media' ? 'Media' : 'Alta'}
             </button>

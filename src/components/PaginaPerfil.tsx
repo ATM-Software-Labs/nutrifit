@@ -63,7 +63,7 @@ function BotonAmistad({
   if (relacion?.estado === 'pendiente' && relacion.direccion === 'enviada') return <span className="shrink-0 text-xs text-neutral-500">Solicitud enviada</span>
   if (relacion?.estado === 'pendiente' && relacion.direccion === 'recibida') {
     return (
-      <button type="button" onClick={() => onAceptar(relacion.id)} className="h-9 shrink-0 rounded-xl bg-mint px-3 text-sm font-medium text-white">
+      <button type="button" onClick={() => onAceptar(relacion.id)} className="h-9 shrink-0 rounded-xl bg-mint-700 px-3 text-sm font-medium text-white">
         Aceptar
       </button>
     )
@@ -531,7 +531,7 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
               <textarea value={bio} onChange={(e) => setBio(e.target.value)} maxLength={160} rows={2} className="mt-1 w-full rounded-xl border border-neutral-200 bg-transparent px-3 py-1.5 dark:border-neutral-800" />
             </label>
             <div className="flex gap-2">
-              <button type="submit" className="h-8 rounded-xl bg-mint px-3 text-xs font-medium text-white">Guardar</button>
+              <button type="submit" className="h-8 rounded-xl bg-mint-700 px-3 text-xs font-medium text-white">Guardar</button>
               <button type="button" onClick={() => setEditando(false)} className="h-8 rounded-xl px-3 text-xs text-neutral-500">Cancelar</button>
             </div>
           </form>
@@ -546,7 +546,7 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
               role="tab"
               aria-selected={pestana === id}
               onClick={() => setPestana(id)}
-              className={`h-9 rounded-xl text-xs font-semibold ${pestana === id ? 'bg-mint text-white' : 'border border-neutral-200 dark:border-neutral-800'}`}
+              className={`h-9 rounded-xl text-xs font-semibold ${pestana === id ? 'bg-mint-700 text-white' : 'border border-neutral-200 dark:border-neutral-800'}`}
             >
               {id === 'feed' ? 'Feed' : t('perfil.amigos')}
             </button>
@@ -660,7 +660,7 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
                 placeholder="@usuario"
                 className="h-10 min-w-0 flex-1 bg-transparent text-sm outline-none"
               />
-              <button type="submit" className="h-10 rounded-xl bg-mint px-3 text-sm font-medium text-white">Buscar</button>
+              <button type="submit" className="h-10 rounded-xl bg-mint-700 px-3 text-sm font-medium text-white">Buscar</button>
             </form>
             {hallado && (
               <div className="tarjeta flex items-center justify-between gap-3 p-4">
@@ -699,7 +699,7 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
                       ) : enviada ? (
                         <span className="shrink-0 text-xs text-neutral-500">Solicitud enviada</span>
                       ) : recibida ? (
-                        <button type="button" onClick={() => void responder(vinculo.id, 'aceptada')} className="h-9 shrink-0 rounded-xl bg-mint px-3 text-sm font-medium text-white">Aceptar</button>
+                        <button type="button" onClick={() => void responder(vinculo.id, 'aceptada')} className="h-9 shrink-0 rounded-xl bg-mint-700 px-3 text-sm font-medium text-white">Aceptar</button>
                       ) : (
                         <button type="button" className="btn-add-friend h-9 shrink-0 rounded-full bg-emerald-500 px-3.5 text-sm font-semibold text-black transition hover:-translate-y-0.5 hover:bg-emerald-400" data-user-id={s.id}>
                           {t('perfil.seguir')}
@@ -801,7 +801,7 @@ export function PaginaPerfil({ usuario, onUsuario }: { usuario: Usuario; onUsuar
                       navigator.clipboard.writeText(`¡He conseguido el logro ${logroSeleccionado.titulo} (${logroSeleccionado.nivel.toUpperCase()}) en NutriFit! Mira mi perfil: ${enlaceCompartir}`)
                     }
                   }}
-                  className="flex-1 rounded-xl bg-mint py-3 text-sm font-semibold text-white transition hover:bg-mint-600"
+                  className="flex-1 rounded-xl bg-mint-700 py-3 text-sm font-semibold text-white transition hover:bg-mint-800"
                 >
                   Compartir
                 </button>

@@ -117,12 +117,13 @@ const REGLAS: readonly { re: RegExp; emoji: string; plato?: boolean }[] = [
   { re: /\b(mantequilla|margarina)\b/, emoji: '🧈' },
   { re: /\b(miel|mermelada|confitura)\b/, emoji: '🍯' },
   { re: /\b(quesos?)\b/, emoji: '🧀' },
-  { re: /\b(yogur(?:es)?|yogurt|kefir|leche|batidos?|cacaolat|protein shake|bebidas? proteicas?|bebidas? de (?:cacao|avena|soja|almendras?))\b/, emoji: '🥛' },
+  { re: /\b(yogur(?:es)?|yogurt|kefir|leche|batidos?|cacaolat|protein shake|high protein|proteinas? liquidas?|bebidas? proteicas?|bebidas? de (?:cacao|avena|soja|almendras?))\b/, emoji: '🥛' },
   { re: /\b(panes|pan|tostadas?|bagel|hogaza)\b/, emoji: '🍞' },
   { re: /\b(huevos?)\b/, emoji: '🍳' },
   { re: /\b(brocoli|verduras?|lechuga|espinacas?)\b/, emoji: '🥦' },
   { re: /\b(lentejas?|garbanzos?|alubias?|judias?|legumbres?)\b/, emoji: '🫘' },
-  { re: /\b(chocolate)\b/, emoji: '🍫' },
+  { re: /\b(tomates?|tomate triturado)\b/, emoji: '🍅' },
+  { re: /\b(chocolate|nutella|nocilla|crema de cacao)\b/, emoji: '🍫' },
   { re: /\b(galletas?|snacks?|barritas?)\b/, emoji: '🍪' },
 ]
 

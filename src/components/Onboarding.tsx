@@ -130,7 +130,7 @@ export default function Onboarding({ usuario, onCompletado }: { usuario: Usuario
                       <span
                         className={cx(
                           'flex h-14 w-14 items-center justify-center rounded-full transition-colors',
-                          sel ? 'bg-mint text-white' : 'bg-neutral-100 text-neutral-500 dark:bg-neutral-900 dark:text-neutral-400',
+                          sel ? 'bg-mint-700 text-white' : 'bg-neutral-100 text-neutral-500 dark:bg-neutral-900 dark:text-neutral-400',
                         )}
                       >
                         <I size={26} strokeWidth={1.75} />
