@@ -4,6 +4,7 @@
  * Móvil: una columna + botón flotante. Escritorio (≥ lg): barra lateral y
  * panel en 2–3 columnas con «Añadir comida» siempre visible.
  */
+import { HojaEditarComida } from './HojaEditarComida.tsx'
 import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import { ChartColumn, Droplet, House, Plus, Scale, User } from 'lucide-react'
 import { Logo } from './Logo.tsx'
@@ -64,6 +65,7 @@ type Hoja =
   | { tipo: 'buscar'; comida: TipoComida }
   | { tipo: 'revision'; comida: TipoComida; resultado: ResultadoAnalisis | null; imagenUrl: string | null }
   | { tipo: 'ajustes' }
+  | { tipo: 'editar'; c: Comida }
 
 function saludo() {
   const h = new Date().getHours()
@@ -259,7 +261,7 @@ export default function Dashboard({
             {resumen === null && !error
               ? TIPOS_COMIDA.map((t) => <Esqueleto key={t} alto="h-[68px]" />)
               : TIPOS_COMIDA.map((t) => (
-                  <SeccionComida key={t} tipo={t} comidas={resumen?.comidas[t] ?? []} onAnadir={(comida) => setHoja({ tipo: 'anadir', comida })} onBorrar={(c) => void borrar(c)} onRepetir={repetir} onFrecuente={(c) => void frecuente(c)} />
+                  <SeccionComida key={t} tipo={t} comidas={resumen?.comidas[t] ?? []} onAnadir={(comida) => setHoja({ tipo: 'anadir', comida })} onBorrar={(c) => void borrar(c)} onRepetir={repetir} onFrecuente={(c) => void frecuente(c)} onEditar={(c) => setHoja({ tipo: 'editar', c })} />
                 ))}
           </div>
 
@@ -459,6 +461,19 @@ export default function Dashboard({
               }
               setHoja({ tipo: 'revision', comida: hoja.comida, resultado: res, imagenUrl: null })
             }}
+          />
+        )}
+        {hoja?.tipo === 'editar' && (
+          <HojaEditarComida
+            comida={hoja.c}
+            onClose={cerrar}
+            onGuardada={(nueva, antes) => {
+              actualizar((r) => (nueva.fecha !== fecha ? sinComida(r, antes.id) : nueva.tipo_comida !== antes.tipo_comida ? conComida(sinComida(r, antes.id), nueva) : reemplazarComida(r, antes.id, nueva)))
+              toast({ tipo: 'exito', mensaje: 'Cambios guardados' })
+            }}
+            onDuplicar={repetir}
+            onFavorito={(c) => void frecuente(c)}
+            onBorrar={(c) => void borrar(c)}
           />
         )}
         {hoja?.tipo === 'texto' && (

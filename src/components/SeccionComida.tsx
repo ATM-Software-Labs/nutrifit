@@ -28,8 +28,10 @@ function FilaComida({
   onBorrar,
   onRepetir,
   onFrecuente,
+  onEditar,
 }: {
   c: Comida
+  onEditar?: (c: Comida) => void
   onBorrar: (c: Comida) => void
   onRepetir: (c: Comida) => void
   onFrecuente: (c: Comida) => void
@@ -39,14 +41,14 @@ function FilaComida({
   return (
     <li className={cx('flex items-center gap-3 py-3', c.pendiente && 'opacity-60')}>
       <Miniatura c={c} />
-      <div className="min-w-0 flex-1">
+      <button type="button" disabled={c.pendiente || !onEditar} onClick={() => onEditar?.(c)} aria-label={`Editar ${c.descripcion}`} className="min-w-0 flex-1 rounded-lg text-left focus-visible:outline-2 focus-visible:outline-mint">
         <p className="truncate text-[15px] font-medium">{c.descripcion}</p>
         <p className="cifra mt-0.5 flex gap-2.5 text-xs text-neutral-500 dark:text-neutral-400">
           <span><span className="text-protein">●</span> P {entero(c.proteinas)}</span>
           <span><span className="text-carbs">●</span> C {entero(c.carbohidratos)}</span>
           <span><span className="text-fats">●</span> G {entero(c.grasas)}</span>
         </p>
-      </div>
+      </button>
       {confirmar ? (
         <div className="flex animate-fade-in items-center gap-1">
           <button type="button" onClick={() => setConfirmar(false)} className="rounded-lg px-2.5 py-1.5 text-sm text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800">
@@ -123,7 +125,9 @@ export function SeccionComida({
   onBorrar,
   onRepetir,
   onFrecuente,
+  onEditar,
 }: {
+  onEditar?: (c: Comida) => void
   tipo: TipoComida
   comidas: Comida[]
   onAnadir: (t: TipoComida) => void
@@ -162,7 +166,7 @@ export function SeccionComida({
           {comidas.length ? (
             <ul className="divide-y divide-neutral-100 border-t border-neutral-100 dark:divide-neutral-800 dark:border-neutral-800">
               {comidas.map((c) => (
-                <FilaComida key={c.id} c={c} onBorrar={onBorrar} onRepetir={onRepetir} onFrecuente={onFrecuente} />
+                <FilaComida key={c.id} c={c} onBorrar={onBorrar} onRepetir={onRepetir} onFrecuente={onFrecuente} onEditar={onEditar} />
               ))}
             </ul>
           ) : (

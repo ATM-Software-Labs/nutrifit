@@ -181,6 +181,32 @@ export const comidaGuardarSchema = z
     path: ['calorias'],
   })
 
+/** PATCH /api/comidas/:id — todos los campos opcionales; al menos uno. */
+export const comidaEditarSchema = z
+  .strictObject({
+    descripcion: texto(200).optional(),
+    emoji: z.string().trim().min(1).max(16).optional(),
+    tipo_comida: z.enum(TIPOS_COMIDA, { error: 'Tipo de comida inválido.' }).optional(),
+    fecha: fecha.optional(),
+    hora: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, { error: 'La hora debe ser HH:MM.' }).nullable().optional(),
+    cantidad: numero(0, 10000, 'La cantidad').nullable().optional(),
+    unidad: z.enum(['g', 'ml', 'unidad', 'racion'], { error: 'Unidad inválida.' }).nullable().optional(),
+    calorias: numero(0, MAX.calorias, 'Las calorías').optional(),
+    proteinas: numero(0, MAX.proteinas, 'Las proteínas').optional(),
+    carbohidratos: numero(0, MAX.carbohidratos, 'Los carbohidratos').optional(),
+    grasas: numero(0, MAX.grasas, 'Las grasas').optional(),
+    fibra: numero(0, 500, 'La fibra').nullable().optional(),
+    azucares: numero(0, 2000, 'Los azúcares').nullable().optional(),
+    sal: numero(0, 100, 'La sal').nullable().optional(),
+    notas: z.string().trim().max(500, { error: 'Las notas admiten 500 caracteres.' }).nullable().optional(),
+  })
+  .refine((c) => Object.keys(c).length > 0, { error: 'No hay cambios que guardar.' })
+
+export const sugerirNombresSchema = z.strictObject({
+  descripcion: texto(200),
+  ingredientes: z.array(z.string().trim().max(80)).max(30).optional(),
+})
+
 export const resumenQuery = z.object({ fecha })
 
 // ------------------------------------------------------------- peso y agua

@@ -61,6 +61,13 @@ export interface Comida {
   grasas: number
   imagen_url: string | null
   emoji?: string | null
+  fibra?: number | null
+  azucares?: number | null
+  sal?: number | null
+  cantidad?: number | null
+  unidad?: 'g' | 'ml' | 'unidad' | 'racion' | null
+  hora?: string | null
+  notas?: string | null
   fecha: string
   creado_en: string
   ingredientes: Ingrediente[]

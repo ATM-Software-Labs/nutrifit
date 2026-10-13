@@ -11,6 +11,13 @@ export interface FilaComida {
   ingredientes_json: string | null
   imagen_url: string | null
   emoji: string | null
+  fibra?: number | null
+  azucares?: number | null
+  sal?: number | null
+  cantidad?: number | null
+  unidad?: string | null
+  hora?: string | null
+  notas?: string | null
   fecha: string
   creado_en: string
 }

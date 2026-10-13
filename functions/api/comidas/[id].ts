@@ -5,7 +5,9 @@
 import type { Handler } from '../../utils/env.ts'
 import { error, json } from '../../utils/response.ts'
 import { validar } from '../../utils/http.ts'
-import { uuid } from '../../utils/schemas.ts'
+import { comidaEditarSchema, uuid } from '../../utils/schemas.ts'
+import { leerBody } from '../../utils/http.ts'
+import { aComidaApi, type FilaComida } from '../../utils/comidas.ts'
 import { exigirSesion } from '../../utils/session.ts'
 import { esEmojiValido } from '../../../src/lib/miniaturaComida.ts'
 
@@ -17,13 +19,23 @@ export const onRequestDelete: Handler<'id'> = async ({ env, data, params }) => {
   return json({ ok: true, id })
 }
 
-/** PATCH /api/comidas/:id — cambia el emoji de la comida. */
+const CAMPOS = ['descripcion', 'emoji', 'tipo_comida', 'fecha', 'hora', 'cantidad', 'unidad', 'calorias', 'proteinas', 'carbohidratos', 'grasas', 'fibra', 'azucares', 'sal', 'notas'] as const
+
+/** PATCH /api/comidas/:id — edita cualquier propiedad de la comida (validado con Zod). */
 export const onRequestPatch: Handler<'id'> = async ({ request, env, data, params }) => {
   const sesion = exigirSesion(data.sesion)
   const id = validar(uuid, Array.isArray(params.id) ? params.id[0] : params.id)
-  const body = (await request.json().catch(() => null)) as { emoji?: unknown } | null
-  if (!esEmojiValido(body?.emoji)) return error(400, 'Elige un emoji válido.')
-  const r = await env.DB.prepare('UPDATE diario_comidas SET emoji = ?3 WHERE id = ?1 AND usuario_id = ?2').bind(id, sesion.usuarioId, body.emoji).run()
-  if (!r.meta.changes) return error(404, 'Comida no encontrada.')
-  return json({ ok: true, id, emoji: body.emoji })
+  const c = await leerBody(request, comidaEditarSchema, 16 * 1024)
+  if (c.emoji !== undefined && !esEmojiValido(c.emoji)) return error(400, 'Elige un emoji válido.')
+  const sets: string[] = []
+  const vals: unknown[] = [id, sesion.usuarioId]
+  for (const k of CAMPOS) {
+    const v = (c as Record<string, unknown>)[k]
+    if (v === undefined) continue
+    vals.push(v)
+    sets.push(`${k} = ?${vals.length}`)
+  }
+  const fila = await env.DB.prepare(`UPDATE diario_comidas SET ${sets.join(', ')} WHERE id = ?1 AND usuario_id = ?2 RETURNING *`).bind(...vals).first<FilaComida>()
+  if (!fila) return error(404, 'Comida no encontrada.')
+  return json({ ok: true, comida: aComidaApi(fila) })
 }

@@ -33,3 +33,33 @@ test('EAN: control, ceros iniciales y lecturas inválidas', () => {
   assert.deepEqual(variantesEan('0036000291452'), ['0036000291452', '036000291452'])
   assert.equal(normalizarEan('96385074'), '96385074')
 })
+
+import { cantidadInicial, diferencias, escalarNutrientes } from '../src/lib/editarComida.ts'
+import { limpiarNombres, nombresLocales } from '../functions/utils/nombresPlato.ts'
+import { comidaEditarSchema } from '../functions/utils/schemas.ts'
+test('edición: escala proporcional, cantidad inicial y diferencias', () => {
+  const n = { calorias: 200, proteinas: 10, carbohidratos: 20, grasas: 8, fibra: 2, azucares: null, sal: 0.5 }
+  assert.deepEqual(escalarNutrientes(n, 100, 150), { calorias: 300, proteinas: 15, carbohidratos: 30, grasas: 12, fibra: 3, azucares: null, sal: 0.8 })
+  assert.deepEqual(escalarNutrientes(n, 0, 150), n)
+  assert.deepEqual(cantidadInicial({ ingredientes: [{ gramos: 120 }, { gramos: 30 }] }), { cantidad: 150, unidad: 'g' })
+  assert.deepEqual(cantidadInicial({}), { cantidad: 1, unidad: 'racion' })
+  assert.deepEqual(diferencias({ a: 1, b: 'x' }, { a: 2, b: 'x' }), { a: 2 })
+})
+test('PATCH valida con Zod', () => {
+  assert.ok(comidaEditarSchema.safeParse({ descripcion: 'Tortilla', hora: '08:30', unidad: 'g', fibra: 3 }).success)
+  assert.ok(!comidaEditarSchema.safeParse({}).success)
+  assert.ok(!comidaEditarSchema.safeParse({ hora: '25:00' }).success)
+  assert.ok(!comidaEditarSchema.safeParse({ calorias: -5 }).success)
+  assert.ok(!comidaEditarSchema.safeParse({ usuario_id: 'x' }).success)
+})
+test('sugerencias de nombre: saneado y respaldo local', () => {
+  assert.deepEqual(limpiarNombres('{"nombres":["Tostada con tomate","tostada con tomate","Pan tumaca", "x"]}', 'Pan'), ['Tostada con tomate', 'Pan tumaca'])
+  assert.deepEqual(limpiarNombres('1. Ensalada César\n2. Ensalada de pollo', ''), ['Ensalada César', 'Ensalada de pollo'])
+  assert.ok(nombresLocales('Pollo con arroz', ['Pollo', 'Arroz']).length >= 3)
+})
+
+test('recortar no parte palabras', async () => {
+  const { recortar } = await import('../functions/utils/nombresPlato.ts')
+  const r = recortar('Tostadas con tomate y aceite a la plancha casera')
+  assert.ok(r.length <= 40 && !r.endsWith('planch'), r)
+})
