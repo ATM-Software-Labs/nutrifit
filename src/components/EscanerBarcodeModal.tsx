@@ -1,6 +1,6 @@
 import { Component, useEffect, useRef, useState, type ReactNode } from 'react'
 import { normalizarEan } from '../lib/ean.ts'
-import { Barcode, Camera, Search, X } from 'lucide-react'
+import { Barcode, Camera, Flashlight, ImageUp, RotateCcw, Search, X } from 'lucide-react'
 import { ApiError, api } from '../lib/api.ts'
 import { Button } from './ui/Button.tsx'
 
@@ -25,7 +25,9 @@ interface Props {
   alManual?: (codigo: string) => void
 }
 
-type Detector = (v: HTMLVideoElement, lienzo: HTMLCanvasElement) => Promise<string | null>
+type Fuente = HTMLVideoElement | HTMLCanvasElement
+type Detector = (v: Fuente, lienzo: HTMLCanvasElement) => Promise<string | null>
+const dims = (v: Fuente) => (v instanceof HTMLVideoElement ? [v.videoWidth, v.videoHeight] : [v.width, v.height])
 type BarcodeDetectorCtor = { new (o?: { formats: string[] }): { detect: (v: CanvasImageSource) => Promise<{ rawValue: string }[]> }; getSupportedFormats?: () => Promise<string[]> }
 const FORMATOS = ['ean_13', 'ean_8', 'upc_a', 'upc_e']
 const INTERVALO_MS = 140
@@ -50,10 +52,12 @@ async function crearDetector(): Promise<Detector> {
   lector.setHints(pistas)
   return async (v, lienzo) => {
     // Franja central (donde está la guía), reducida: rápido en móviles medios.
-    const w = v.videoWidth, h = v.videoHeight
+    const [w, h] = dims(v)
     if (!w || !h) return null
-    const fw = Math.round(w * 0.8), fh = Math.round(h * 0.45)
-    const escala = Math.min(1, 960 / fw)
+    // En vídeo, franja central; en una foto, la imagen entera.
+    const foto = v instanceof HTMLCanvasElement
+    const fw = foto ? w : Math.round(w * 0.8), fh = foto ? h : Math.round(h * 0.45)
+    const escala = Math.min(1, (foto ? 1600 : 960) / fw)
     lienzo.width = Math.round(fw * escala); lienzo.height = Math.round(fh * escala)
     lienzo.getContext('2d', { willReadFrequently: true })!.drawImage(v, (w - fw) / 2, (h - fh) / 2, fw, fh, 0, 0, lienzo.width, lienzo.height)
     try {
@@ -61,6 +65,33 @@ async function crearDetector(): Promise<Detector> {
     } catch {
       return null
     }
+  }
+}
+
+/** Mensaje claro según el fallo de getUserMedia (permiso, sin cámara, ocupada, contexto inseguro). */
+export function mensajeCamara(e: unknown): string {
+  const n = e instanceof Error ? e.name : ''
+  const ios = /iP(hone|ad|od)/.test(navigator.userAgent)
+  if (n === 'NotAllowedError' || n === 'SecurityError')
+    return ios
+      ? 'No hay permiso para la cámara. En Ajustes › Safari › Cámara elige «Preguntar» o «Permitir» y vuelve a abrir el escáner. También puedes hacer una foto del código.'
+      : 'No hay permiso para la cámara. Toca el candado o «ⓘ» junto a la dirección (o en la app: mantén pulsado el icono › Información › Permisos) y permite la cámara. También puedes hacer una foto del código.'
+  if (n === 'NotFoundError' || n === 'OverconstrainedError') return 'No encontramos una cámara disponible. Haz una foto del código o escríbelo debajo.'
+  if (n === 'NotReadableError' || n === 'AbortError') return 'Otra app está usando la cámara. Ciérrala y pulsa «Reintentar».'
+  if (e instanceof Error && e.message === 'camara') return 'La cámara tarda demasiado en abrirse. Pulsa «Reintentar» o haz una foto del código.'
+  if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) return 'Este navegador no permite usar la cámara aquí. Haz una foto del código o escríbelo debajo.'
+  return 'No se pudo usar la cámara. Pulsa «Reintentar», haz una foto del código o escríbelo debajo.'
+}
+
+/** Abre la trasera; si las restricciones fallan, cualquier cámara. */
+async function abrirCamara(): Promise<MediaStream> {
+  if (!navigator.mediaDevices?.getUserMedia) throw new DOMException('sin getUserMedia', 'NotFoundError')
+  try {
+    return await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } } })
+  } catch (e) {
+    const n = e instanceof Error ? e.name : ''
+    if (n === 'NotAllowedError' || n === 'SecurityError') throw e
+    return navigator.mediaDevices.getUserMedia({ audio: false, video: true })
   }
 }
 
@@ -101,6 +132,11 @@ function Escaner({ abierto, alDetectar, alCerrar, alFotoEtiqueta, alManual }: Pr
   const [codigoManual, setCodigoManual] = useState('')
   const [camaraActiva, setCamaraActiva] = useState(false)
   const [ronda, setRonda] = useState(0)
+  const [fallaCamara, setFallaCamara] = useState(false)
+  const [linterna, setLinterna] = useState<null | boolean>(null)
+  const pistaRef = useRef<MediaStreamTrack | null>(null)
+  const detectorRef = useRef<Promise<Detector> | null>(null)
+  const obtenerDetector = () => (detectorRef.current ??= crearDetector().catch((e) => { detectorRef.current = null; throw e }))
   const vivo = useRef(true)
   useEffect(() => () => { vivo.current = false }, [])
 
@@ -116,22 +152,36 @@ function Escaner({ abierto, alDetectar, alCerrar, alFotoEtiqueta, alManual }: Pr
       activo = false
       window.clearTimeout(timer)
       stream?.getTracks().forEach((t) => t.stop())
+      pistaRef.current = null
       stream = null
       if (videoRef.current) videoRef.current.srcObject = null
     }
 
     ;(async () => {
       try {
-        stream = await conTiempo(navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } }), 10000, 'camara')
+        setFallaCamara(false)
+        void obtenerDetector().catch(() => {}) // precarga en paralelo (ZXing es un chunk aparte)
+        stream = await conTiempo(abrirCamara(), 12000, 'camara')
         if (!activo) return parar()
         const pista = stream.getVideoTracks()[0]
+        pistaRef.current = pista ?? null
+        const caps = (pista?.getCapabilities?.() ?? {}) as { torch?: boolean }
+        if (caps.torch) setLinterna(false)
         void pista?.applyConstraints({ advanced: [{ focusMode: 'continuous' } as MediaTrackConstraintSet] }).catch(() => {})
         const v = videoRef.current
         if (!v) return parar()
         v.srcObject = stream
         await v.play().catch(() => {})
         setCamaraActiva(true)
-        const detectar = await crearDetector()
+        let detectar: Detector
+        try {
+          detectar = await obtenerDetector()
+        } catch {
+          // Chunk del lector no disponible (sin conexión o versión vieja tras actualizar).
+          parar()
+          if (vivo.current) { setFallaCamara(true); setError('No se pudo cargar el lector de códigos. Comprueba la conexión y pulsa «Reintentar», o escribe el código debajo.') }
+          return
+        }
         const vuelta = async () => {
           if (!activo) return
           if (v.readyState >= v.HAVE_ENOUGH_DATA) {
@@ -148,15 +198,44 @@ function Escaner({ abierto, alDetectar, alCerrar, alFotoEtiqueta, alManual }: Pr
           if (activo) timer = window.setTimeout(vuelta, INTERVALO_MS)
         }
         void vuelta()
-      } catch {
+      } catch (e) {
         parar()
-        if (vivo.current) setError('No se pudo usar la cámara. Escribe el código de barras debajo.')
+        if (vivo.current) { setFallaCamara(true); setError(mensajeCamara(e)) }
       }
     })()
 
     return parar
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [abierto, ronda])
+
+  const reintentar = () => { setError(null); setNoEncontrado(null); setCamaraActiva(false); setLinterna(null); setRonda((r) => r + 1) }
+
+  const alternarLinterna = async () => {
+    const p = pistaRef.current
+    if (!p || linterna === null) return
+    try { await p.applyConstraints({ advanced: [{ torch: !linterna } as MediaTrackConstraintSet] }); setLinterna(!linterna) } catch { setLinterna(null) }
+  }
+
+  /** Foto del código (sin vídeo en directo): útil en iOS o si se deniega la cámara. */
+  const leerFoto = async (archivo: File) => {
+    setError(null)
+    setCargando(true)
+    try {
+      const bmp = await createImageBitmap(archivo)
+      const c = document.createElement('canvas')
+      c.width = bmp.width; c.height = bmp.height
+      c.getContext('2d')!.drawImage(bmp, 0, 0)
+      bmp.close?.()
+      const detectar = await obtenerDetector()
+      const crudo = await detectar(c, document.createElement('canvas'))
+      setCargando(false)
+      if (!crudo) { setError('No vemos un código de barras en la foto. Acércate, que salga recto y nítido, o escríbelo debajo.'); return }
+      void buscarCodigo(crudo)
+    } catch {
+      setCargando(false)
+      setError('No se pudo leer la foto. Escribe el código debajo.')
+    }
+  }
 
   const buscarCodigo = async (entrada: string) => {
     const limpio = entrada.replace(/\D/g, '')
@@ -208,6 +287,7 @@ function Escaner({ abierto, alDetectar, alCerrar, alFotoEtiqueta, alManual }: Pr
           <button
             type="button"
             onClick={alCerrar}
+            aria-label="Cerrar escáner"
             className="flex h-8 w-8 items-center justify-center rounded-full text-neutral-400 transition hover:bg-neutral-100 hover:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
           >
             <X size={18} />
@@ -216,7 +296,7 @@ function Escaner({ abierto, alDetectar, alCerrar, alFotoEtiqueta, alManual }: Pr
 
         {/* Visor de cámara con visor de enfoque */}
         <div className="relative aspect-4/3 w-full overflow-hidden rounded-2xl bg-neutral-900 border border-neutral-800">
-          <video ref={videoRef} className="h-full w-full object-cover" playsInline muted />
+          <video ref={videoRef} className="h-full w-full object-cover" playsInline muted autoPlay aria-label="Vista de la cámara" />
           
           {camaraActiva ? (
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-6">
@@ -229,11 +309,27 @@ function Escaner({ abierto, alDetectar, alCerrar, alFotoEtiqueta, alManual }: Pr
                 <div className="absolute left-2 right-2 top-1/2 h-0.5 bg-mint/90 shadow-[0_0_8px_#10b981] animate-pulse" />
               </div>
             </div>
-          ) : (
-            <div className="flex h-full flex-col items-center justify-center gap-2 text-neutral-500">
-              <Camera size={28} strokeWidth={1.5} />
-              <span className="text-xs">Iniciando cámara...</span>
+          ) : fallaCamara ? (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-4 text-center text-neutral-300">
+              <Camera size={28} strokeWidth={1.5} aria-hidden="true" />
+              <div className="flex flex-wrap justify-center gap-2">
+                <button type="button" onClick={reintentar} className="inline-flex items-center gap-1.5 rounded-xl bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/20"><RotateCcw size={14} aria-hidden="true" />Reintentar</button>
+                <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl bg-mint-700 px-3 py-2 text-xs font-semibold text-white focus-within:ring-4 focus-within:ring-mint/30">
+                  <ImageUp size={14} aria-hidden="true" />Foto del código
+                  <input type="file" accept="image/*" capture="environment" className="sr-only" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void leerFoto(f) }} />
+                </label>
+              </div>
             </div>
+          ) : (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-neutral-500" role="status">
+              <Camera size={28} strokeWidth={1.5} aria-hidden="true" />
+              <span className="text-xs">Iniciando cámara…</span>
+            </div>
+          )}
+          {camaraActiva && linterna !== null && (
+            <button type="button" onClick={() => void alternarLinterna()} aria-pressed={linterna} aria-label={linterna ? 'Apagar linterna' : 'Encender linterna'} className={`absolute bottom-3 right-3 flex h-10 w-10 items-center justify-center rounded-full ${linterna ? 'bg-amber-300 text-black' : 'bg-black/50 text-white'}`}>
+              <Flashlight size={18} aria-hidden="true" />
+            </button>
           )}
 
           {cargando && (
@@ -262,7 +358,7 @@ function Escaner({ abierto, alDetectar, alCerrar, alFotoEtiqueta, alManual }: Pr
                 </label>
               )}
               {alManual && <button type="button" onClick={() => { alManual(noEncontrado); alCerrar() }} className="rounded-xl border border-neutral-200 px-3 py-2 text-xs font-semibold dark:border-neutral-700">Añadir a mano</button>}
-              <button type="button" onClick={() => { setNoEncontrado(null); setError(null); setCamaraActiva(false); setRonda((r) => r + 1) }} className="rounded-xl px-3 py-2 text-xs font-semibold text-mint-700 dark:text-mint-400">Volver a escanear</button>
+              <button type="button" onClick={reintentar} className="rounded-xl px-3 py-2 text-xs font-semibold text-mint-700 dark:text-mint-400">Volver a escanear</button>
             </div>
           </div>
         )}
@@ -278,14 +374,15 @@ function Escaner({ abierto, alDetectar, alCerrar, alFotoEtiqueta, alManual }: Pr
           <input
             type="text"
             inputMode="numeric"
-            placeholder="O escribe el código (ej. 8412700012955)"
+            placeholder="O escribe el código"
+            aria-label="Código de barras (8 o 13 cifras)"
             autoComplete="off"
             maxLength={14}
             value={codigoManual}
             onChange={(e) => setCodigoManual(e.target.value)}
-            className="flex-1 rounded-xl border border-neutral-200 bg-neutral-50 px-3.5 py-2.5 text-sm text-graphite focus:border-mint focus:outline-none dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-100"
+            className="min-w-0 flex-1 rounded-xl border border-neutral-200 bg-neutral-50 px-3.5 py-2.5 text-sm text-graphite focus:border-mint focus:outline-none dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-100"
           />
-          <Button type="submit" loading={cargando} disabled={!codigoManual.trim()} icon={<Search size={16} />}>
+          <Button type="submit" className="shrink-0" loading={cargando} disabled={!codigoManual.trim()} icon={<Search size={16} />}>
             Buscar
           </Button>
         </form>

@@ -34,6 +34,11 @@ export function registrarServiceWorker() {
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (!habiaControlador || avisado) return
     avisado = true
+    // PWA instalada que estaba en segundo plano: al volver, recarga sola con la versión nueva.
+    if (document.visibilityState === 'hidden') {
+      document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && window.location.reload(), { once: true })
+      return
+    }
     window.dispatchEvent(new CustomEvent('nf:actualizacion'))
   })
 }
