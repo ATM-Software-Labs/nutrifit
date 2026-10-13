@@ -1,7 +1,6 @@
 /** POST /api/comidas/guardar — inserta una comida del usuario de la sesión. */
 import type { Handler } from '../../utils/env.ts'
-import { error, json } from '../../utils/response.ts'
-import { idDeArchivoUrl } from '../../utils/archivos.ts'
+import { json } from '../../utils/response.ts'
 import { leerBody } from '../../utils/http.ts'
 import { comidaGuardarSchema } from '../../utils/schemas.ts'
 import { exigirSesion } from '../../utils/session.ts'
@@ -13,15 +12,8 @@ export const onRequestPost: Handler = async ({ request, env, data }) => {
   const sesion = exigirSesion(data.sesion)
   const c = await leerBody(request, comidaGuardarSchema, 64 * 1024)
   await exigirLimite(env, `guardar:u:${sesion.usuarioId}`, 300, 86400)
-  if (typeof c.imagen_url === 'string' && c.imagen_url.startsWith('/api/archivos/')) {
-    const archivoId = idDeArchivoUrl(c.imagen_url)
-    const propio = archivoId
-      ? await env.DB.prepare(`SELECT 1 AS ok FROM archivos_usuario WHERE id = ?1 AND usuario_id = ?2 AND clase = 'plato'`)
-          .bind(archivoId, sesion.usuarioId)
-          .first<{ ok: number }>()
-      : null
-    if (!propio) return error(400, 'La foto del plato no es válida.')
-  }
+  // Privacidad: nunca se guarda una foto ni un enlace a ella, aunque el cliente lo envíe.
+  c.imagen_url = null
 
   const fila = await env.DB.prepare(
     `INSERT INTO diario_comidas

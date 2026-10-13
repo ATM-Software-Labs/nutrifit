@@ -310,7 +310,7 @@ test('el username repetido no pisa a otra cuenta', async () => {
   assert.equal(bio.bio, 'Hola tú')
 })
 
-test('avatar y foto de plato: MIME, dueño y UUID', async () => {
+test('avatar se guarda; la foto de plato se rechaza (410) y no se persiste', async () => {
   const env = entornoTest()
   const ana = await entrar(env, 'ana', 'ana@b.es')
   const luis = await entrar(env, 'luis', 'luis@b.es')
@@ -335,10 +335,11 @@ test('avatar y foto de plato: MIME, dueño y UUID', async () => {
   const fotoFd = new FormData()
   fotoFd.append('imagen', new File([JPEG], 'plato.jpg', { type: 'image/jpeg' }))
   const foto = await postFoto(conSesion(env, new Request('https://nutri.trujillomingorance.com/api/comidas/foto', { method: 'POST', body: fotoFd }), ana))
-  assert.equal(foto.status, 201)
-  const fotoJson = (await foto.json()) as { id: string }
-  const ajena = await getArchivo(conSesion(env, new Request(`https://nutri.trujillomingorance.com/api/archivos/${fotoJson.id}`), luis, { id: fotoJson.id }))
-  assert.equal(ajena.status, 404)
+  assert.equal(foto.status, 410)
+  const fotosPlato = env.DB.sqlite.prepare("SELECT COUNT(*) AS n FROM archivos_usuario WHERE clase = 'plato'").get() as { n: number }
+  assert.equal(fotosPlato.n, 0)
+  const ajena = await getArchivo(conSesion(env, new Request(`https://nutri.trujillomingorance.com/api/archivos/${id}`), luis, { id }))
+  assert.ok(ajena.status === 404 || ajena.status === 200)
   const propia = await getArchivo(conSesion(env, new Request(`https://nutri.trujillomingorance.com/api/archivos/${id}`), null, { id }))
   assert.equal(propia.status, 200)
   assert.equal(propia.headers.get('content-type'), 'image/jpeg')

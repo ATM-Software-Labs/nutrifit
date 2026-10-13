@@ -1,15 +1,9 @@
-/** POST /api/comidas/foto — guarda la foto del plato y devuelve su ruta. No inserta el diario. */
+/**
+ * POST /api/comidas/foto — RETIRADO. Las fotos de comida no se guardan nunca:
+ * se analizan en memoria y solo queda el emoji y los macros. Las versiones
+ * antiguas de la app que aún llaman aquí reciben 410 y siguen sin foto.
+ */
 import type { Handler } from '../../utils/env.ts'
-import { json } from '../../utils/response.ts'
-import { exigirIdentidad } from '../../utils/identidad.ts'
-import { exigirLimite } from '../../utils/rateLimit.ts'
-import { leerImagenSubida } from '../../utils/imagenSubida.ts'
-import { guardarArchivo } from '../../utils/archivos.ts'
+import { error } from '../../utils/response.ts'
 
-export const onRequestPost: Handler = async ({ request, env, data }) => {
-  const sesion = await exigirIdentidad(env, data.sesion)
-  await exigirLimite(env, `foto:u:${sesion.usuarioId}`, 40, 3600, 'Demasiadas fotos. Espera un rato.')
-  const imagen = await leerImagenSubida(request)
-  const { id, url } = await guardarArchivo(env, sesion.usuarioId, 'plato', imagen)
-  return json({ ok: true, id, imagen_url: url }, { status: 201 })
-}
+export const onRequestPost: Handler = async () => error(410, 'Las fotos de comida ya no se guardan.', { codigo: 'fotos_retiradas' })

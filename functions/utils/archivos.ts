@@ -49,6 +49,8 @@ export function idDeArchivoUrl(url: string | null | undefined): string | null {
 }
 
 export async function guardarArchivo(env: Env, usuarioId: string, clase: ClaseArchivo, imagen: Imagen): Promise<{ id: string; url: string }> {
+  // Las fotos de comida, etiquetas o tickets jamás se persisten (solo avatar y portada).
+  if (clase !== 'avatar' && clase !== 'banner') throw new Error(`clase de archivo no persistible: ${clase}`)
   const id = crypto.randomUUID()
   await env.DB.prepare(
     `INSERT INTO archivos_usuario (id, usuario_id, clase, mime, bytes, contenido) VALUES (?1, ?2, ?3, ?4, ?5, ?6)`,

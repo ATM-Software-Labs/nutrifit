@@ -367,12 +367,6 @@ export const api = {
   },
   borrarAvatar: () => pedir<{ ok: true }>('/api/usuarios/avatar', { method: 'DELETE' }),
   borrarBanner: () => pedir<{ ok: true }>('/api/usuarios/banner', { method: 'DELETE' }),
-  subirFotoPlato: (imagen: Blob) => {
-    const fd = new FormData()
-    const ext = imagen.type === 'image/png' ? 'png' : imagen.type === 'image/webp' ? 'webp' : 'jpg'
-    fd.append('imagen', imagen, `plato.${ext}`)
-    return pedir<{ ok: true; id: string; imagen_url: string }>('/api/comidas/foto', { method: 'POST', body: fd })
-  },
   estimarGrasa: async (_foto: Blob) => {
     // Si no existe el endpoint en el backend, simulamos un tiempo de espera
     // y devolvemos nulo para que el componente UI haga el cálculo local fallback.

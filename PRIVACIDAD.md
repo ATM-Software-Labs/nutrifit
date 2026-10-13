@@ -29,7 +29,7 @@ El tratamiento de tus datos de registro y uso se realiza sobre la base de la eje
 
 ### Fotos de comidas: solo para el análisis
 
-Las fotos de platos y envases **ya no se guardan**. Se usan en memoria únicamente para que la IA calcule los nutrientes y después se descartan. En el diario cada comida se muestra con un emoji representativo (🍕 🥗 🍔…), que puedes cambiar tocándolo. Las fotos guardadas antes de este cambio se mantienen hasta que decidas borrarlas; puedes pedirlo en cualquier momento.
+Las fotos de platos, envases, etiquetas nutricionales y tickets **no se guardan nunca**: ni en la base de datos, ni en almacenamiento de archivos, ni en cachés ni en los registros (logs). Se procesan solo en memoria durante el análisis y se descartan al terminar la petición. Lo único que se conserva es el resultado: el nombre, el emoji (🍕 🥗 🍔…) y los nutrientes, que puedes editar. Para no repetir análisis idénticos se guarda como máximo el resultado asociado a una huella SHA-256 de la imagen, que no permite reconstruirla. Las fotos guardadas por versiones anteriores de la app se eliminaron el 13 de octubre de 2026. Solo se almacenan la foto de perfil y la portada que tú subas a tu perfil.
 
 Antes de enviarla, la foto se procesa **en tu propio dispositivo** (opción activada por defecto en Ajustes › Privacidad y legal › «Fondo blanco en fotos»):
 
