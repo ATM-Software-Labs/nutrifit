@@ -6,6 +6,8 @@
  * Sin ingredientes → los totales se editan directamente.
  */
 import { emojiPorTexto, esEmojiValido } from '../lib/miniaturaComida.ts'
+import { SelectorCantidad } from './SelectorCantidad.tsx'
+import { recordarCantidad, ultimaCantidad } from '../lib/preferenciasLiquidos.ts'
 import { SelectorEmoji } from './TileEmoji.tsx'
 import { useMemo, useState, type FormEvent } from 'react'
 import { Plus, X } from 'lucide-react'
@@ -100,7 +102,18 @@ export default function ModalRevisionPlato({
   const [nombre, setNombre] = useState(resultado?.display_name || resultado?.nombre_plato || '')
   const [tipo, setTipo] = useState<TipoComida>(tipoInicial)
   const [emoji, setEmoji] = useState<string | null>(esEmojiValido(resultado?.emoji) ? resultado.emoji : null)
-  const [filas, setFilas] = useState<Fila[]>(() => filasIniciales(resultado))
+  const producto = resultado?.producto ?? null
+  const idProducto = producto ? producto.codigo || `n:${(resultado?.nombre_plato || '').toLowerCase().slice(0, 60)}` : null
+  const [claveCantidad, setClaveCantidad] = useState<string | undefined>(() => ultimaCantidad(idProducto)?.clave)
+  const [filas, setFilas] = useState<Fila[]>(() => {
+    const fs = filasIniciales(resultado)
+    if (!producto || fs.length !== 1) return fs
+    // Envasado: última cantidad elegida → porción → envase (bebidas de hasta 1 l) → 100.
+    const previa = ultimaCantidad(idProducto)?.cantidad
+    const inicial = previa ?? producto.racion ?? (producto.unidad === 'ml' && producto.envase && producto.envase <= 1000 ? producto.envase : 100)
+    return [{ ...fs[0]!, gramos: inicial }]
+  })
+  const unidadBase = producto && filas.length === 1 ? producto.unidad : 'g'
   const [manuales, setManuales] = useState<Totales>(() =>
     resultado && !resultado.ingredientes.length
       ? { calorias: resultado.calorias, proteinas: resultado.proteinas, carbohidratos: resultado.carbohidratos, grasas: resultado.grasas }
@@ -131,7 +144,7 @@ export default function ModalRevisionPlato({
     if (!desc) return setError('Ponle un nombre al plato.')
     if (/[<>]/.test(desc)) return setError('El nombre no puede contener < ni >.')
     if (filas.some((f) => !f.nombre.trim() || /[<>]/.test(f.nombre))) return setError('Revisa los nombres de los ingredientes.')
-    if (totales.calorias <= 0 && totales.proteinas + totales.carbohidratos + totales.grasas <= 0) return setError('Indica al menos las calorías.')
+    if (totales.calorias <= 0 && totales.proteinas + totales.carbohidratos + totales.grasas <= 0 && !(producto && filas.length === 1)) return setError('Indica al menos las calorías.')
     const P = r1(totales.proteinas)
     const C = r1(totales.carbohidratos)
     const G = r1(totales.grasas)
@@ -154,7 +167,9 @@ export default function ModalRevisionPlato({
         grasas: r1(m.grasas),
       }
     })
-    onConfirmar({ tipo_comida: tipo, descripcion: desc.slice(0, 200), calorias: kcal, proteinas: P, carbohidratos: C, grasas: G, ingredientes, imagen_url: null, emoji: emoji ?? emojiPorTexto(desc, resultado?.categoria), fecha })
+    const envasado = producto && filas.length === 1 ? { cantidad: r1(filas[0]!.gramos), unidad: producto.unidad, envase: producto.envase, porcion: producto.racion, codigo_barras: producto.codigo && /^\d{8,14}$/.test(producto.codigo) ? producto.codigo : null } : {}
+    if (producto && filas.length === 1) recordarCantidad(idProducto, filas[0]!.gramos, claveCantidad)
+    onConfirmar({ tipo_comida: tipo, descripcion: desc.slice(0, 200), calorias: kcal, proteinas: P, carbohidratos: C, grasas: G, ingredientes, imagen_url: null, emoji: emoji ?? emojiPorTexto(desc, resultado?.categoria), fecha, ...envasado })
   }
 
   function aplicarAlternativa(a: AlternativaPlato) {
@@ -174,8 +189,8 @@ export default function ModalRevisionPlato({
     <Sheet
       abierto
       onClose={onClose}
-      titulo={resultado ? 'Revisa tu plato' : 'Añadir comida'}
-      descripcion={resultado ? 'Ajusta los gramos: los macros se recalculan al momento.' : 'Escribe el plato y sus valores aproximados.'}
+      titulo={resultado ? (unidadBase === 'ml' ? 'Revisa tu bebida' : 'Revisa tu plato') : 'Añadir comida'}
+      descripcion={resultado ? (unidadBase === 'ml' ? 'Ajusta la cantidad: los macros se recalculan al momento.' : 'Ajusta los gramos: los macros se recalculan al momento.') : 'Escribe el plato y sus valores aproximados.'}
       ancho="lg"
       pie={
         <Button type="submit" form="form-revision" size="lg" block>
@@ -243,6 +258,14 @@ export default function ModalRevisionPlato({
           ))}
         </div>
 
+        {producto && filas.length === 1 && (
+          <SelectorCantidad
+            producto={producto}
+            cantidad={filas[0]!.gramos}
+            onCambio={(base, clave) => { setClaveCantidad(clave); cambiarFila(filas[0]!.id, { gramos: base }) }}
+          />
+        )}
+
         {/* Ingredientes */}
         <div>
           <div className="mb-2 flex items-center justify-between">
@@ -264,7 +287,7 @@ export default function ModalRevisionPlato({
                         onChange={(e) => cambiarFila(f.id, { nombre: e.target.value })}
                         className="h-10 min-w-0 flex-1 rounded-xl border border-transparent bg-transparent px-2 text-[15px] font-medium hover:border-neutral-200 focus:border-mint focus:outline-none focus:ring-4 focus:ring-mint/15 dark:hover:border-neutral-800"
                       />
-                      <CampoNumero label={`Gramos de ${f.nombre || 'ingrediente'}`} valor={f.gramos} onChange={(g) => cambiarFila(f.id, { gramos: g })} sufijo="g" />
+                      <CampoNumero label={`${unidadBase === 'ml' ? 'Mililitros' : 'Gramos'} de ${f.nombre || 'ingrediente'}`} valor={f.gramos} onChange={(g) => cambiarFila(f.id, { gramos: g })} sufijo={unidadBase} />
                       <button
                         type="button"
                         onClick={() => setFilas((fs) => fs.filter((x) => x.id !== f.id))}

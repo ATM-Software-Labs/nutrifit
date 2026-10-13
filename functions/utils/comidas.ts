@@ -16,6 +16,9 @@ export interface FilaComida {
   sal?: number | null
   cantidad?: number | null
   unidad?: string | null
+  envase?: number | null
+  porcion?: number | null
+  codigo_barras?: string | null
   hora?: string | null
   notas?: string | null
   fecha: string

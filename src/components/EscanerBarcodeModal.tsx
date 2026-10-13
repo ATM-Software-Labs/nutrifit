@@ -13,6 +13,10 @@ interface ProductoDetectado {
   carbohidratos: number
   grasas: number
   codigo_barras?: string
+  unidad?: 'g' | 'ml'
+  envase?: number | null
+  racion?: number | null
+  unidades?: number | null
 }
 
 interface Props {

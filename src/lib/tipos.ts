@@ -66,6 +66,9 @@ export interface Comida {
   sal?: number | null
   cantidad?: number | null
   unidad?: 'g' | 'ml' | 'unidad' | 'racion' | null
+  envase?: number | null
+  porcion?: number | null
+  codigo_barras?: string | null
   hora?: string | null
   notas?: string | null
   fecha: string
@@ -131,6 +134,8 @@ export interface ResultadoAnalisis {
   grasas: number
   /** Lecturas alternativas de la foto, como máximo dos. */
   alternativas?: AlternativaPlato[]
+  /** Si viene de un producto envasado: unidad (g/ml), envase y porción. */
+  producto?: MedidasProducto
 }
 
 export interface NuevaComida {
@@ -143,7 +148,22 @@ export interface NuevaComida {
   ingredientes?: Ingrediente[]
   imagen_url?: string | null
   emoji?: string | null
+  /** Cantidad tomada en la unidad base (g o ml) y medidas del envase. */
+  cantidad?: number | null
+  unidad?: 'g' | 'ml' | 'unidad' | 'racion' | null
+  envase?: number | null
+  porcion?: number | null
+  codigo_barras?: string | null
   fecha: string
+}
+
+/** Producto envasado detrás de un análisis (código de barras o etiqueta). */
+export interface MedidasProducto {
+  codigo?: string | null
+  unidad: 'g' | 'ml'
+  envase: number | null
+  racion: number | null
+  unidades?: number | null
 }
 
 export interface DatosPerfil {

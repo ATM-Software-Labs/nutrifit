@@ -17,8 +17,8 @@ export const onRequestPost: Handler = async ({ request, env, data }) => {
 
   const fila = await env.DB.prepare(
     `INSERT INTO diario_comidas
-       (id, usuario_id, tipo_comida, descripcion, calorias, proteinas, carbohidratos, grasas, ingredientes_json, imagen_url, fecha, emoji)
-     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)
+       (id, usuario_id, tipo_comida, descripcion, calorias, proteinas, carbohidratos, grasas, ingredientes_json, imagen_url, fecha, emoji, cantidad, unidad, envase, porcion, codigo_barras)
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17)
      RETURNING *`,
   )
     .bind(
@@ -34,6 +34,11 @@ export const onRequestPost: Handler = async ({ request, env, data }) => {
       c.imagen_url ?? null,
       c.fecha,
       esEmojiValido(c.emoji) ? c.emoji : emojiComida(c),
+      c.cantidad ?? null,
+      c.unidad ?? null,
+      c.envase ?? null,
+      c.porcion ?? null,
+      c.codigo_barras ?? null,
     )
     .first<FilaComida>()
 

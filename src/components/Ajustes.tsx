@@ -1,6 +1,7 @@
 /** Ajustes: perfil y objetivos (recalculados al momento), tema, cuenta y enlaces. */
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { AjusteFondoBlanco } from './AjusteFondoBlanco.tsx'
+import { AjusteBebidasAgua } from './AjusteBebidasAgua.tsx'
 const SeccionRecordatorios = lazy(() => import('./SeccionRecordatorios.tsx'))
 import { Check, ChevronRight, Download, ExternalLink, FileText, Lock, LogOut, Mail, Monitor, Moon, Shield, Sun } from 'lucide-react'
 import { URL_REPO } from '../lib/config.ts'
@@ -364,6 +365,7 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
               <p className="text-xs text-neutral-500 dark:text-neutral-400">
                 Afecta a medidas corporales, registro de hidratación y cálculos nutricionales.
               </p>
+              <AjusteBebidasAgua />
             </Seccion>
             <Seccion titulo={t('ajustes.apariencia')}>
               <Segmented

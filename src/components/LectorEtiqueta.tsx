@@ -26,7 +26,8 @@ export function resultadoDeEtiqueta(e: Etiqueta, codigo?: string): ResultadoAnal
     nombre_plato: nombre,
     display_name: nombre,
     descripcion: codigo ? `Código de barras: ${codigo}` : 'Leído de la etiqueta',
-    categoria: 'snack',
+    categoria: e.unidad === 'ml' ? 'bebida' : 'snack',
+    producto: { codigo: codigo ?? null, unidad: e.unidad, envase: null, racion: e.racion && e.racion > 0 ? Math.round(e.racion) : null },
     ingredientes: [{ nombre, gramos, serving_description: gramos === 100 ? `100 ${e.unidad}` : `1 ración (${gramos} ${e.unidad})`, ...m }],
     ...m,
   }

@@ -401,7 +401,7 @@ export const api = {
     }>('/api/alimentos/etiqueta', { method: 'POST', body: fd })
   },
   barcodeEan: (ean: string) =>
-    pedir<{ origen?: string; producto?: { id: string; nombre: string; marca: string; calorias: number; proteinas: number; carbohidratos: number; grasas: number; codigo_barras: string } }>(
+    pedir<{ origen?: string; producto?: { id: string; nombre: string; marca: string; calorias: number; proteinas: number; carbohidratos: number; grasas: number; codigo_barras: string; unidad?: 'g' | 'ml'; envase?: number | null; racion?: number | null; unidades?: number | null } }>(
       `/api/alimentos/barcode?ean=${encodeURIComponent(ean)}`,
     ),
 }

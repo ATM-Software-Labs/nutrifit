@@ -14,13 +14,42 @@ import { error, HttpError } from '../../utils/response.ts'
 import { sanitizarTextoLibre } from '../../utils/sanitizar.ts'
 import { pedirJson } from '../../utils/off.ts'
 import { normalizarEan, variantesEan } from '../../../src/lib/ean.ts'
+import { esLiquido, parsearMedida } from '../../../src/lib/liquidos.ts'
 
 interface Env {
   DB?: D1Database
   DB_ALIMENTOS?: D1Database
   USDA_API_KEY?: string
 }
-interface Producto { id: string; nombre: string; marca: string; calorias: number; proteinas: number; carbohidratos: number; grasas: number; codigo_barras: string }
+interface Producto {
+  id: string; nombre: string; marca: string; calorias: number; proteinas: number; carbohidratos: number; grasas: number; codigo_barras: string
+  /** g o ml: los macros son por 100 de esta unidad. */
+  unidad?: 'g' | 'ml'
+  /** Contenido del envase y tamaño de una porción, en la misma unidad. */
+  envase?: number | null
+  racion?: number | null
+  /** Unidades en un pack (6 × 33 cl). */
+  unidades?: number | null
+}
+
+const enRango = (v: number | null | undefined, max: number) => (v && v >= 1 && v <= max ? Math.round(v * 10) / 10 : null)
+
+/** Unidad, envase y porción a partir de los campos de OFF (exportado para tests). */
+export function medidasOff(p: Record<string, unknown>, nombre: string): Pick<Producto, 'unidad' | 'envase' | 'racion' | 'unidades'> {
+  const cats = Array.isArray(p.categories_tags) ? (p.categories_tags as string[]) : []
+  const qty = typeof p.quantity === 'string' ? p.quantity : null
+  const uDecl = typeof p.product_quantity_unit === 'string' ? p.product_quantity_unit : null
+  const liquido = esLiquido({ unidadDeclarada: uDecl, cantidad: qty, porNutricion: typeof p.nutrition_data_per === 'string' ? p.nutrition_data_per : null, categorias: cats, nombre, unidadRacion: typeof p.serving_quantity_unit === 'string' ? p.serving_quantity_unit : null })
+  const med = parsearMedida(qty)
+  let envase: number | null = null
+  const pq = Number(p.product_quantity)
+  if (Number.isFinite(pq) && pq > 0) envase = pq * (uDecl === 'cl' ? 10 : uDecl === 'l' || uDecl === 'kg' ? 1000 : 1)
+  if (med?.unidades && med.unidades > 1) envase = med.cantidad // pack: el envase es cada unidad
+  else if (!envase && med) envase = med.cantidad
+  let racion: number | null = Number(p.serving_quantity) || null
+  if (!racion && typeof p.serving_size === 'string') racion = parsearMedida(p.serving_size)?.cantidad ?? null
+  return { unidad: liquido ? 'ml' : 'g', envase: enRango(envase, 10_000), racion: enRango(racion, 2000), unidades: med?.unidades ?? null }
+}
 
 const n = (v: unknown) => (Number.isFinite(Number(v)) ? Math.max(0, Number(v)) : 0)
 const r1 = (v: number) => Math.round(v * 10) / 10
@@ -29,15 +58,17 @@ export const ESPEJOS_OFF = ['https://es.openfoodfacts.org', 'https://world.openf
 const TTL_BC = 30 * 86_400
 
 async function deOff(codigo: string, base: string, timeoutMs = 2500): Promise<Producto | null> {
-  const data = (await pedirJson(`${base}/api/v2/product/${codigo}.json?fields=product_name_es,product_name,brands,nutriments`, 1, timeoutMs)) as
-    | { status?: number; product?: { product_name_es?: string; product_name?: string; brands?: string; nutriments?: Record<string, number | undefined> } }
+  const data = (await pedirJson(`${base}/api/v2/product/${codigo}.json?fields=product_name_es,product_name,brands,nutriments,quantity,product_quantity,product_quantity_unit,serving_size,serving_quantity,serving_quantity_unit,nutrition_data_per,categories_tags`, 1, timeoutMs)) as
+    | { status?: number; product?: { product_name_es?: string; product_name?: string; brands?: string; nutriments?: Record<string, number | undefined> } & Record<string, unknown> }
     | null
   if (!data || data.status !== 1 || !data.product) return null
   const p = data.product, nu = p.nutriments || {}
   const kcal = nu['energy-kcal_100g'] ?? (nu['energy_100g'] ? nu['energy_100g'] / 4.184 : 0)
+  const nombre = sanitizarTextoLibre(String(p.product_name_es || p.product_name || '')).slice(0, 120) || 'Producto sin nombre'
   return {
+    ...medidasOff(p, nombre),
     id: crypto.randomUUID(),
-    nombre: sanitizarTextoLibre(String(p.product_name_es || p.product_name || '')).slice(0, 120) || 'Producto sin nombre',
+    nombre,
     marca: sanitizarTextoLibre(String(p.brands || '')).slice(0, 80) || 'Genérico',
     calorias: Math.round(n(kcal)),
     proteinas: r1(n(nu['proteins_100g'])),
@@ -50,14 +81,22 @@ async function deOff(codigo: string, base: string, timeoutMs = 2500): Promise<Pr
 async function deUsda(codigo: string, clave: string): Promise<Producto | null> {
   const res = await fetch(`https://api.nal.usda.gov/fdc/v1/foods/search?query=${codigo}&dataType=Branded&pageSize=5&api_key=${encodeURIComponent(clave)}`, { signal: AbortSignal.timeout(3000) })
   if (!res.ok) return null
-  const d = (await res.json()) as { foods?: { description?: string; brandOwner?: string; brandName?: string; gtinUpc?: string; foodNutrients?: { nutrientNumber?: string; value?: number }[] }[] }
+  const d = (await res.json()) as { foods?: { description?: string; brandOwner?: string; brandName?: string; gtinUpc?: string; foodNutrients?: { nutrientNumber?: string; value?: number }[]; servingSize?: number; servingSizeUnit?: string; packageWeight?: string; brandedFoodCategory?: string }[] }
   const sinCeros = (s: string) => s.replace(/^0+/, '')
   const f = d.foods?.find((x) => x.gtinUpc && sinCeros(x.gtinUpc) === sinCeros(codigo))
   if (!f) return null
   const v = (num: string) => n(f.foodNutrients?.find((x) => x.nutrientNumber === num)?.value)
+  const nombre = sanitizarTextoLibre(String(f.description || '')).slice(0, 120) || 'Producto sin nombre'
+  const uR = (f.servingSizeUnit || '').toLowerCase()
+  const liquido = esLiquido({ unidadRacion: uR === 'mlt' ? 'ml' : uR, cantidad: f.packageWeight, categorias: f.brandedFoodCategory ? [`en:${f.brandedFoodCategory.toLowerCase().replace(/\W+/g, '-')}`] : [], nombre })
+  const pk = parsearMedida(f.packageWeight?.split('/').find((x) => (liquido ? /ml|l\b/i : /g\b/i).test(x)) ?? f.packageWeight)
   return {
+    unidad: liquido ? 'ml' : 'g',
+    envase: enRango(pk?.cantidad, 10_000),
+    racion: enRango(f.servingSize, 2000),
+    unidades: null,
     id: crypto.randomUUID(),
-    nombre: sanitizarTextoLibre(String(f.description || '')).slice(0, 120) || 'Producto sin nombre',
+    nombre,
     marca: sanitizarTextoLibre(String(f.brandName || f.brandOwner || '')).slice(0, 80) || 'Genérico',
     calorias: Math.round(v('208')),
     proteinas: r1(v('203')),
@@ -94,7 +133,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       if (p) return Response.json({ origen: 'propio', producto: p })
     } catch (e) { console.warn('[barcode] productos propios', e) }
   }
-  const clave = `bc:${ean}`
+  const clave = `bc2:${ean}`
   let copia: { producto: Producto; origen: string; expira_en: number } | null = null
   if (env.DB) {
     try {

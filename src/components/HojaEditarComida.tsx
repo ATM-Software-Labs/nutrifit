@@ -7,6 +7,7 @@ import { cx } from './ui/cx.ts'
 import { pedirApi, ApiError } from '../lib/api.ts'
 import { emojiDe } from '../lib/miniaturaComida.ts'
 import { cantidadInicial, diferencias, escalarNutrientes } from '../lib/editarComida.ts'
+import { opcionesRapidas } from '../lib/liquidos.ts'
 import { NOMBRE_TIPO, type Comida, type TipoComida } from '../lib/tipos.ts'
 
 const TIPOS: TipoComida[] = ['desayuno', 'comida', 'cena', 'snack']
@@ -122,6 +123,16 @@ export function HojaEditarComida({ comida, onClose, onGuardada, onDuplicar, onFa
             <select className={CAMPO} value={e.unidad ?? 'g'} onChange={(ev) => set('unidad', ev.target.value as Estado['unidad'])}>{UNIDADES.map(([v, t]) => <option key={v} value={v}>{t}</option>)}</select>
           </label>
         </div>
+        {(comida.envase || comida.porcion) && (e.unidad === 'g' || e.unidad === 'ml') && (
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Cantidades rápidas">
+            {opcionesRapidas({ unidad: e.unidad, envase: comida.envase ?? null, racion: comida.porcion ?? null }).map((o) => (
+              <button key={o.clave} type="button" aria-pressed={e.cantidad === o.cantidad} onClick={() => cambiarCantidad(o.cantidad)}
+                className={`rounded-full border px-3 py-1.5 text-sm transition ${e.cantidad === o.cantidad ? 'border-mint-700 bg-mint-700 text-white' : 'border-neutral-200 hover:border-mint dark:border-neutral-700'}`}>
+                {o.etiqueta}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {n('calorias', 'Calorías', 'kcal')}{n('proteinas', 'Proteína', 'g')}{n('carbohidratos', 'Carbohidratos', 'g')}{n('grasas', 'Grasas', 'g')}
         </div>

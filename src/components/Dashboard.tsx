@@ -29,6 +29,9 @@ import { BannerInstalarPWA } from './BannerInstalarPWA.tsx'
 import { BarraLateral } from './BarraLateral.tsx'
 import { AnadirRapido } from './AnadirRapido.tsx'
 import { Button } from './ui/Button.tsx'
+import { anotarAgua, leerAguaLocal, mlAguaAcotado } from '../lib/syncAgua.ts'
+import { cuentaComoAgua } from '../lib/liquidos.ts'
+import { contarTodasBebidas } from '../lib/preferenciasLiquidos.ts'
 import { useToast } from './ui/Toast.tsx'
 import { useResumen } from '../hooks/useResumen.ts'
 import { api } from '../lib/api.ts'
@@ -127,6 +130,18 @@ export default function Dashboard({
   }
   const totales = resumen?.totales ?? { calorias: 0, proteinas: 0, carbohidratos: 0, grasas: 0 }
 
+  /** Bebidas: el agua, las infusiones y lo que no tiene calorías suman al objetivo de agua (o todas, si está activado). */
+  function sumarBebidaAlAgua(c: NuevaComida): number {
+    if (c.unidad !== 'ml' || !c.cantidad || c.cantidad <= 0) return 0
+    const kcal100 = (c.calorias / c.cantidad) * 100
+    if (!contarTodasBebidas() && !cuentaComoAgua(c.descripcion, kcal100)) return 0
+    const actual = leerAguaLocal(c.fecha) ?? (c.fecha === fecha ? resumen?.agua_ml ?? 0 : 0)
+    const total = mlAguaAcotado(actual + c.cantidad)
+    anotarAgua(c.fecha, total)
+    if (c.fecha === fecha) actualizar((r) => ({ ...r, agua_ml: total }))
+    return total - actual
+  }
+
   async function guardar(nueva: NuevaComida) {
     setHoja(null)
     const idTemporal = `tmp-${crypto.randomUUID()}`
@@ -138,7 +153,8 @@ export default function Dashboard({
       const imagen = null
       const { comida } = await api.guardarComida({ ...nueva, imagen_url: imagen })
       actualizar((r) => reemplazarComida(r, idTemporal, comida))
-      toast({ tipo: 'exito', mensaje: `${comida.descripcion} añadido` })
+      const ml = sumarBebidaAlAgua(nueva)
+      toast({ tipo: 'exito', mensaje: ml ? `${comida.descripcion} añadido · +${Math.round(ml)} ml de agua` : `${comida.descripcion} añadido` })
       void refrescarLogros()
       if (comida.fecha === hoyISO()) void import('../lib/notificaciones.ts').then((m) => m.cancelarRecordatorioDeHoy(comida.tipo_comida))
     } catch (e) {
@@ -454,7 +470,8 @@ export default function Dashboard({
                 nombre_plato: titulo,
                 display_name: titulo,
                 descripcion: `Código de barras: ${producto.codigo_barras || ''}`,
-                categoria: 'plato_elaborado',
+                categoria: producto.unidad === 'ml' ? 'bebida' : 'plato_elaborado',
+                producto: { codigo: producto.codigo_barras ?? null, unidad: producto.unidad ?? 'g', envase: producto.envase ?? null, racion: producto.racion ?? null, unidades: producto.unidades ?? null },
                 ingredientes: [
                   {
                     nombre: producto.nombre,

@@ -19,7 +19,7 @@ export const onRequestDelete: Handler<'id'> = async ({ env, data, params }) => {
   return json({ ok: true, id })
 }
 
-const CAMPOS = ['descripcion', 'emoji', 'tipo_comida', 'fecha', 'hora', 'cantidad', 'unidad', 'calorias', 'proteinas', 'carbohidratos', 'grasas', 'fibra', 'azucares', 'sal', 'notas'] as const
+const CAMPOS = ['descripcion', 'emoji', 'tipo_comida', 'fecha', 'hora', 'cantidad', 'unidad', 'envase', 'porcion', 'calorias', 'proteinas', 'carbohidratos', 'grasas', 'fibra', 'azucares', 'sal', 'notas'] as const
 
 /** PATCH /api/comidas/:id — edita cualquier propiedad de la comida (validado con Zod). */
 export const onRequestPatch: Handler<'id'> = async ({ request, env, data, params }) => {

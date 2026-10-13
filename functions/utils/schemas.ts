@@ -172,6 +172,11 @@ export const comidaGuardarSchema = z
       ])
       .nullish(),
     emoji: z.string().trim().min(1).max(16).nullish(),
+    cantidad: numero(0, 10000, 'La cantidad').nullish(),
+    unidad: z.enum(['g', 'ml', 'unidad', 'racion'], { error: 'Unidad inválida.' }).nullish(),
+    envase: z.union([z.null(), numero(1, 10000, 'El envase')]).optional(),
+    porcion: z.union([z.null(), numero(1, 2000, 'La porción')]).optional(),
+    codigo_barras: z.string().regex(/^\d{8,14}$/, { error: 'Código de barras inválido.' }).nullish(),
     fecha,
   })
   // Coherencia: los macros no pueden aportar MUCHAS más kcal que las declaradas
@@ -191,6 +196,8 @@ export const comidaEditarSchema = z
     hora: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, { error: 'La hora debe ser HH:MM.' }).nullable().optional(),
     cantidad: numero(0, 10000, 'La cantidad').nullable().optional(),
     unidad: z.enum(['g', 'ml', 'unidad', 'racion'], { error: 'Unidad inválida.' }).nullable().optional(),
+    envase: z.union([z.null(), numero(1, 10000, 'El envase')]).optional(),
+    porcion: z.union([z.null(), numero(1, 2000, 'La porción')]).optional(),
     calorias: numero(0, MAX.calorias, 'Las calorías').optional(),
     proteinas: numero(0, MAX.proteinas, 'Las proteínas').optional(),
     carbohidratos: numero(0, MAX.carbohidratos, 'Los carbohidratos').optional(),
