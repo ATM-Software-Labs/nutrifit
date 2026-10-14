@@ -42,6 +42,39 @@ export async function activarPush(vapidPublica: string): Promise<'ok' | 'denegad
   return 'ok'
 }
 
+function mismaClave(a: ArrayBuffer | null | undefined, b: Uint8Array): boolean {
+  if (!a) return false
+  const x = new Uint8Array(a)
+  return x.length === b.length && x.every((v, i) => v === b[i])
+}
+
+/**
+ * Si la clave VAPID del servidor cambió (rotación), la suscripción del navegador ya no sirve:
+ * se da de baja y se vuelve a suscribir sin preguntar (el permiso ya está concedido) y se avisa al servidor.
+ * Con la misma clave, refresca la suscripción en el servidor una vez al día.
+ */
+export async function resincronizarPush(): Promise<'renovada' | 'refrescada' | 'nada'> {
+  if (!pushSoportado() || Notification.permission !== 'granted') return 'nada'
+  const reg = await navigator.serviceWorker.ready
+  const sub = await reg.pushManager.getSubscription()
+  if (!sub) return 'nada'
+  const { vapidPublica } = await leerRecordatorios()
+  if (!vapidPublica) return 'nada'
+  const clave = claveBytes(vapidPublica)
+  if (mismaClave(sub.options.applicationServerKey, clave)) {
+    const hoy = new Date().toISOString().slice(0, 10)
+    if (localStorage.getItem('nf:push_refrescado') === hoy) return 'nada'
+    await pedirApi('/api/push/suscripcion', { method: 'PATCH', body: sub.toJSON() })
+    localStorage.setItem('nf:push_refrescado', hoy)
+    return 'refrescada'
+  }
+  const anterior = sub.endpoint
+  await sub.unsubscribe().catch(() => {})
+  const nueva = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: clave as BufferSource })
+  await pedirApi('/api/push/suscripcion', { method: 'PATCH', body: { ...nueva.toJSON(), anterior } })
+  return 'renovada'
+}
+
 export async function desactivarPush(): Promise<void> {
   if (!pushSoportado()) return
   const reg = await navigator.serviceWorker.ready

@@ -143,6 +143,8 @@ export default function Dashboard({
   }
 
   useEffect(() => { void sincronizarPreferenciasCantidades() }, [usuario.id])
+  // Tras rotar la clave VAPID, renueva la suscripción push en silencio (sin volver a pedir permiso).
+  useEffect(() => { void import('../lib/push.ts').then((m) => m.resincronizarPush()).catch(() => undefined) }, [usuario.id])
 
   async function guardar(nueva: NuevaComida) {
     setHoja(null)
