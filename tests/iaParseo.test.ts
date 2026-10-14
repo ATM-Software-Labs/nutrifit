@@ -142,7 +142,7 @@ test('el prompt obliga al nombre oficial y el esquema pide input_query y display
   assert.equal(ESQUEMA_FOTO.properties.categoria.enum?.includes('lacteo'), true)
   assert.deepEqual(RESPONSE_SCHEMA.properties.ingredientes.items.required, ['input_query', 'display_name', 'gramos', 'calorias', 'proteinas', 'carbohidratos', 'grasas'])
   assert.equal(ESQUEMA_FOTO.required.includes('is_food'), true)
-  assert.deepEqual(ESQUEMA_FOTO.properties.items.items.required, ['input_query', 'display_name', 'grams', 'min_grams', 'max_grams', 'calories', 'protein', 'carbs', 'fat'])
+  assert.deepEqual(ESQUEMA_FOTO.properties.items.items.required, ['input_query', 'display_name', 'grams', 'min_grams', 'max_grams', 'units', 'calories', 'protein', 'carbs', 'fat'])
   assert.equal(TIMEOUT_GATEWAY_FOTO_MS, 15_000)
   assert.equal(CARRERA_VISION_MS, 2_000)
   assert.equal(ESQUEMA_FOTO.required.includes('alternatives'), false)

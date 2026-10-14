@@ -86,7 +86,7 @@ function CampoNumero({ label, valor, onChange, sufijo, ancho = 'w-20', etiquetaV
 
 export default function ModalRevisionPlato({
   resultado,
-  imagenUrl: _imagenUrl,
+  imagenUrl,
   tipoInicial,
   fecha,
   onClose,
@@ -199,6 +199,13 @@ export default function ModalRevisionPlato({
       }
     >
       <form id="form-revision" onSubmit={confirmar} noValidate className="space-y-6">
+        {imagenUrl && (
+          // Foto completa solo en este dispositivo y solo para revisar: nunca se sube ni se guarda.
+          <figure className="overflow-hidden rounded-2xl bg-neutral-100 dark:bg-neutral-900">
+            <img src={imagenUrl} alt="Tu foto (solo en este móvil)" className="max-h-64 w-full object-contain" />
+            <figcaption className="px-3 py-1.5 text-xs text-neutral-500 dark:text-neutral-400">Solo se ve aquí; no se guarda. Al confirmar, la comida se anota con su emoji.</figcaption>
+          </figure>
+        )}
         {!!resultado?.alternativas?.length && (
           <div className="flex flex-wrap gap-2" role="group" aria-label="Alternativas probables">
             {resultado.alternativas.map((a) => (

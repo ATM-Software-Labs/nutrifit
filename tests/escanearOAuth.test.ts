@@ -28,13 +28,14 @@ const plato = (): ResultadoAnalisis => ({
 
 test('el plato unificado no arrastra el proveedor y deja como máximo dos alternativas', () => {
   const u = aPlato(plato())
-  assert.deepEqual(Object.keys(u).sort(), ['alimento', 'alternativas', 'calorias', 'categoria', 'descripcion', 'emoji', 'macros', 'peso_aprox_g'])
+  assert.deepEqual(Object.keys(u).sort(), ['alimento', 'alternativas', 'calorias', 'categoria', 'descripcion', 'emoji', 'items', 'macros', 'peso_aprox_g'])
   assert.equal(u.alimento, 'Cruasán de mantequilla')
   assert.equal(u.descripcion, '')
   assert.equal(u.categoria, 'panaderia')
   assert.equal(u.peso_aprox_g, 70)
   assert.deepEqual(u.macros, { proteinas: 5, carbohidratos: 32, grasas: 15 })
   assert.deepEqual(u.alternativas, ['Brioche', 'Napolitana'])
+  assert.ok(u.items!.every((i) => !('proveedor' in i)))
 })
 
 test('la cascada sigue ante 429 o timeout y se detiene si la foto no es comida', async () => {
@@ -218,4 +219,26 @@ test('el idioma sale de nutrifit_lang y, si no hay, de navigator.language', () =
   assert.equal(traducir('nav.hoy', 'en'), 'Today')
   assert.equal(traducir('nav.hoy', 'ca'), 'Avui')
   assert.equal(traducir('clave.inexistente', 'en'), 'clave.inexistente')
+})
+
+test('varias unidades: el desglose conserva la cantidad y los totales suman todas', () => {
+  const u = aPlato({ nombre_plato: '2 tostadas con tortilla', display_name: '2 tostadas con tortilla', ingredientes: [
+    { nombre: 'pan', display_name: '2 rebanadas de pan tostado', gramos: 80, calorias: 210, proteinas: 7, carbohidratos: 40, grasas: 2 },
+    { nombre: 'tortilla', display_name: '2 porciones de tortilla de patatas', gramos: 160, calorias: 300, proteinas: 11, carbohidratos: 20, grasas: 19 },
+  ], calorias: 510, proteinas: 18, carbohidratos: 60, grasas: 21 } as never)
+  assert.equal(u.alimento, '2 tostadas con tortilla')
+  assert.deepEqual(u.items!.map((i) => i.nombre), ['2 rebanadas de pan tostado', '2 porciones de tortilla de patatas'])
+  assert.equal(u.peso_aprox_g, 240)
+  assert.equal(u.items!.reduce((a, i) => a + i.calorias, 0), u.calorias)
+})
+
+test('units del modelo se convierte en cantidad visible en el título y en cada pieza', async () => {
+  const { normalizarAnalisis } = await import('../functions/utils/iaParseo.ts')
+  const r = normalizarAnalisis({ is_food: true, alimento: 'Tostada con tortilla', categoria: 'plato_elaborado', items: [
+    { input_query: 'pan', display_name: 'Rebanada de pan tostado', grams: 80, min_grams: 60, max_grams: 100, units: 2, calories: 210, protein: 7, carbs: 40, fat: 2 },
+    { input_query: 'tortilla', display_name: '2 porciones de tortilla de patatas', grams: 160, min_grams: 120, max_grams: 200, units: 2, calories: 300, protein: 11, carbs: 20, fat: 19 },
+  ], total: { calories: 510, protein: 18, carbs: 60, fat: 21 } })
+  assert.match(r.nombre_plato, /^2 /)
+  assert.deepEqual(r.ingredientes.map((i) => i.display_name), ['2 × Rebanada de pan tostado', '2 porciones de tortilla de patatas'])
+  assert.equal(r.calorias, 510)
 })

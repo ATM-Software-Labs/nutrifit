@@ -13,10 +13,9 @@ export const BLANCO = '#FFFFFF'
 const LADO_MAX = 1024
 const TIEMPO_MAX_MS = 9000
 const LADO_SEG = 384
-const NOTA_BUENA = 0.25
-const PRESUPUESTO_SEG_MS = 2000
+const PRESUPUESTO_SEG_MS = 3000
 /** Centro primero y luego rejilla dentro de la guía de encuadre (80 % central). */
-const PUNTOS: [number, number][] = [[0.5, 0.5], [0.5, 0.7], [0.3, 0.5], [0.7, 0.5], [0.5, 0.3], [0.3, 0.7], [0.7, 0.7], [0.3, 0.3], [0.7, 0.3]]
+const PUNTOS: [number, number][] = [[0.5, 0.5], [0.5, 0.7], [0.3, 0.5], [0.7, 0.5], [0.5, 0.3], [0.3, 0.7], [0.7, 0.7], [0.3, 0.3], [0.7, 0.3], [0.2, 0.5], [0.8, 0.5], [0.5, 0.15], [0.5, 0.85]]
 
 export function fondoBlancoActivo(): boolean {
   try { return localStorage.getItem(CLAVE) !== '0' } catch { return true }
@@ -25,7 +24,7 @@ export function setFondoBlanco(v: boolean) {
   try { localStorage.setItem(CLAVE, v ? '1' : '0') } catch { /* sin almacenamiento */ }
 }
 
-import { cajaDeMascara, componenteEn, conMargen, contiene, puntuarCandidato, recorteCentral, type Caja } from './fondoBlancoGeom.ts'
+import { unirRegiones, componenteEn, conMargen, recorteCentral, type Caja } from './fondoBlancoGeom.ts'
 export interface ResultadoFondo { blob: Blob; modo: 'segmentado' | 'recorte' | 'desactivado'; caras: number; ms: number }
 
 type Vision = typeof import('@mediapipe/tasks-vision')
@@ -73,29 +72,25 @@ export async function procesarFondoBlanco(archivo: Blob, opciones: { forzar?: bo
     const peq = lienzo(sw, sh)
     peq.getContext('2d')!.drawImage(base, 0, 0, sw, sh)
     const carasPeq = caras.map((c) => ({ x: c.x * ks, y: c.y * ks, w: c.w * ks, h: c.h * ks }))
-    // Varios puntos dentro de la guía de encuadre; gana el candidato que parece un plato o envase.
-    let mejor: { m: Float32Array; caja: Caja; nota: number } | null = null
+    // Rejilla de puntos: se unen TODAS las regiones de comida (dos tostadas, plato + vaso), no solo una.
+    const cands: { conf: Float32Array; comp: Uint8Array }[] = []
+    const cubierto = new Uint8Array(sw * sh)
     for (const [kx, ky] of PUNTOS) {
+      const px = Math.round(kx * (sw - 1)), py = Math.round(ky * (sh - 1))
+      if (cubierto[py * sw + px]) continue // ese punto ya cae en una región encontrada
       let conf: Float32Array | null = null
       seg.segment(peq, { keypoint: { x: kx, y: ky } }, (r) => {
         const mk = r.confidenceMasks?.[0]
         if (mk && mk.width === sw && mk.height === sh) conf = mk.getAsFloat32Array().slice()
       })
       const c0 = conf as Float32Array | null
-      if (!c0) continue
-      const comp = componenteEn(c0, sw, sh, Math.round(kx * (sw - 1)), Math.round(ky * (sh - 1)))
-      if (!comp) continue
-      const { caja, fraccion } = cajaDeMascara(comp, sw, sh)
-      // Una máscara que contiene una cara es una persona, no comida.
-      if (caja && carasPeq.some((f) => contiene(caja, f.x + f.w / 2, f.y + f.h / 2))) continue
-      const nota = puntuarCandidato(caja, fraccion, sw, sh)
-      if (caja && nota !== null && (!mejor || nota > mejor.nota)) {
-        for (let i = 0; i < c0.length; i++) if (!comp[i]) c0[i] = 0
-        mejor = { m: c0, caja, nota }
+      if (c0) {
+        const comp = componenteEn(c0, sw, sh, px, py)
+        if (comp) { cands.push({ conf: c0, comp }); for (let i = 0; i < comp.length; i++) if (comp[i]) cubierto[i] = 1 }
       }
-      // Basta con un buen candidato, o con agotar el presupuesto de tiempo.
-      if ((mejor && mejor.nota >= NOTA_BUENA) || performance.now() - t0 > PRESUPUESTO_SEG_MS) break
+      if (performance.now() - t0 > PRESUPUESTO_SEG_MS) break
     }
+    const mejor = unirRegiones(cands, sw, sh, carasPeq)
     if (mejor) {
       const m = mejor.m
       const r = conMargen({ x: mejor.caja.x / ks, y: mejor.caja.y / ks, w: mejor.caja.w / ks, h: mejor.caja.h / ks }, w, h)

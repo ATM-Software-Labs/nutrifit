@@ -55,15 +55,19 @@ export default function ScannerComida({
         // Si el fondo no se pudo limpiar, nunca subimos la foto original: se pide repetirla.
         if (!limpia && fondoBlancoActivo()) throw new ErrorImagen('No hemos podido preparar la foto en tu móvil. Repite la foto, con el plato o el envase centrado.')
         if (limpia) console.info(`[fondoBlanco] ${limpia.modo} · ${limpia.caras} caras · ${limpia.ms} ms`)
+        // Vista previa: la foto COMPLETA, solo en memoria del dispositivo (nunca se sube ni se guarda).
+        const vista = await compressFoodImage(archivo).catch(() => null)
+        if (cancelado) return
+        if (vista) setMiniatura(vista)
+        // A la IA va solo la versión limpia (todas las regiones de comida, caras en blanco).
         const dataUrl = await compressFoodImage(limpia?.blob ?? archivo)
         if (cancelado) return
-        setMiniatura(dataUrl)
         setEstado({ fase: 'analizando' })
         const token = '' // con sesión no hace falta Turnstile
         const plato = await api.escanear(blobDesdeDataUrl(dataUrl), token)
         if (cancelado) return
         entregado.current = true
-        onResultado(resultadoDesdePlato(plato), dataUrl)
+        onResultado(resultadoDesdePlato(plato), vista ?? dataUrl)
       } catch (e) {
         if (cancelado) return
         const fallo = falloDeAnalisis(e)
@@ -102,7 +106,7 @@ export default function ScannerComida({
     <Sheet abierto onClose={onClose} titulo={procesando ? t('scan.analizando') : 'No hemos podido analizarlo'} ancho="sm">
       <div className="relative mx-auto aspect-square w-full max-w-[280px] overflow-hidden rounded-3xl bg-neutral-100 dark:bg-neutral-900">
         {miniatura ? (
-          <img src={miniatura} alt="Foto del plato" className="h-full w-full object-cover" />
+          <img src={miniatura} alt="Foto del plato" className="h-full w-full object-contain" />
         ) : (
           <div className="h-full w-full animate-pulse bg-neutral-200 dark:bg-neutral-800" role="status" aria-label={t('scan.comprimiendo')} />
         )}

@@ -232,13 +232,29 @@ function adaptarContratoClinico(obj: unknown): unknown {
 }
 
 /** El esquema corto de la foto (`items`/`total`) pasa al ResultadoAnalisis de la app. */
+/** Unidades contadas por el modelo (campo units); 1 si no viene o no es un entero razonable. */
+export function unidadesDe(it: Record<string, unknown>): number {
+  const v = it.units ?? it.unidades
+  const n = typeof v === 'string' ? Number(v) : v
+  return typeof n === 'number' && Number.isInteger(n) && n > 1 && n <= 50 ? n : 1
+}
+
+/** "Tostada con tortilla" + 2 → "2 × Tostada con tortilla". Si el nombre ya empieza por una cifra, se respeta. */
+export function conUnidades(nombre: string, n: number): string {
+  if (n <= 1 || !nombre || /^\d/.test(nombre)) return nombre
+  return `${n} × ${nombre}`
+}
+
 function adaptarEsquemaFoto(obj: unknown): unknown {
   if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return obj
   const o = obj as Record<string, unknown>
   if (!Array.isArray(o.items)) return obj
   const total = o.total && typeof o.total === 'object' ? (o.total as Record<string, unknown>) : {}
+  let maxUnidades = 1
   const ingredientes = (o.items as Record<string, unknown>[]).map((it) => {
-    const oficial = comoTexto(it.display_name) || comoTexto(it.name) || comoTexto(it.nombre)
+    const n = unidadesDe(it)
+    if (n > maxUnidades) maxUnidades = n
+    const oficial = conUnidades(comoTexto(it.display_name) || comoTexto(it.name) || comoTexto(it.nombre), n)
     const consulta = comoTexto(it.input_query)
     return {
       nombre: oficial,
@@ -252,7 +268,7 @@ function adaptarEsquemaFoto(obj: unknown): unknown {
     }
   })
   const nombres = ingredientes.map((i) => i.display_name).filter((n): n is string => !!n)
-  const crudo = comoTexto(o.alimento) || comoTexto(o.display_name) || comoTexto(o.nombre_plato)
+  const crudo = conUnidades(comoTexto(o.alimento) || comoTexto(o.display_name) || comoTexto(o.nombre_plato), maxUnidades)
   const titulo = tituloGastronomico(crudo, nombres)
   const alternativas = leerAlternativas(o)
   return {

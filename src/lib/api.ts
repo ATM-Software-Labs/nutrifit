@@ -224,7 +224,8 @@ export const api = {
         body: { sha256: await sha256Imagen(imagen) },
         turnstile,
       })
-      if (prep.modo === 'cache') return prep.plato
+      if (prep.modo === 'cache' && prep.plato?.items?.length) return prep.plato
+      if (prep.modo === 'cache') return subirFicha()
       if (prep.modo === 'local') return subirFicha()
       if (prep.modo !== 'gateway' || !prep.ticket || !urlVisionPermitida(prep.url)) {
         return subirFicha()
@@ -240,6 +241,8 @@ export const api = {
       if (!res.ok) {
         return subirFicha()
       }
+      // Una pasarela sin desglose por piezas (versión antigua) no cuenta unidades: se analiza aquí.
+      if (!Array.isArray((data as { items?: unknown }).items) || !(data as { items: unknown[] }).items.length) return subirFicha()
       return data as unknown as PlatoEscaneo
     } catch (e) {
       if ((e as Error).name === 'AbortError') throw e

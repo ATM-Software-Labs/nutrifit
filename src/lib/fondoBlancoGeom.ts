@@ -58,3 +58,31 @@ export function puntuarCandidato(c: Caja | null, fraccion: number, w: number, h:
 }
 
 export const contiene = (c: Caja, x: number, y: number) => x >= c.x && x <= c.x + c.w && y >= c.y && y <= c.y + c.h
+
+/** ¿Un trozo de comida aceptable para sumarlo a la unión? Más permisivo que un plato: una tostada suelta puede ocupar el 1 %. */
+export function componenteAceptable(c: Caja | null, fraccion: number, w: number, h: number): boolean {
+  if (!c || fraccion < 0.01 || fraccion > 0.6) return false
+  if (bordesTocados(c, w, h) > 1) return false
+  return (fraccion * w * h) / (c.w * c.h) >= 0.35
+}
+
+/**
+ * Une todas las regiones de comida: cada candidato es la máscara de confianza y su componente.
+ * Descarta los que no pasan el filtro o contienen una cara. Devuelve la máscara de confianza
+ * unida (0 fuera de la unión) y su caja, o null si nada vale o la unión es casi toda la foto.
+ */
+export function unirRegiones(cands: { conf: ArrayLike<number>; comp: Uint8Array }[], w: number, h: number, caras: Caja[] = []): { m: Float32Array; caja: Caja; partes: number } | null {
+  const m = new Float32Array(w * h)
+  let partes = 0
+  for (const { conf, comp } of cands) {
+    const { caja, fraccion } = cajaDeMascara(comp, w, h)
+    if (!componenteAceptable(caja, fraccion, w, h)) continue
+    if (caras.some((f) => contiene(caja!, f.x + f.w / 2, f.y + f.h / 2))) continue
+    partes++
+    for (let i = 0; i < m.length; i++) if (comp[i] && conf[i] > m[i]) m[i] = conf[i]
+  }
+  if (!partes) return null
+  const { caja, fraccion } = cajaDeMascara(m, w, h)
+  if (!caja || fraccion > 0.85) return null
+  return { m, caja, partes }
+}

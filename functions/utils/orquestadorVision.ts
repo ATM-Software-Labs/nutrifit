@@ -25,7 +25,19 @@ export interface PlatoEscaneo {
   calorias: number
   macros: { proteinas: number; carbohidratos: number; grasas: number }
   alternativas: string[]
+  /** Desglose con cantidades ("2 rebanadas de pan tostado"); gramos y macros ya suman todas las unidades. */
+  items?: ItemPlato[]
 }
+export interface ItemPlato { nombre: string; gramos: number; calorias: number; proteinas: number; carbohidratos: number; grasas: number }
+
+const itemSchema = z.strictObject({
+  nombre: z.string().trim().min(1).max(80),
+  gramos: z.number().finite().min(0).max(5000),
+  calorias: z.number().finite().min(0).max(5000),
+  proteinas: z.number().finite().min(0).max(500),
+  carbohidratos: z.number().finite().min(0).max(1000),
+  grasas: z.number().finite().min(0).max(500),
+})
 
 const platoSchema = z.strictObject({
   alimento: z.string().trim().min(1).max(40),
@@ -40,10 +52,11 @@ const platoSchema = z.strictObject({
     grasas: z.number().finite().min(0).max(500),
   }),
   alternativas: z.array(z.string().trim().min(1).max(80)).max(2),
+  items: z.array(itemSchema).max(12).optional(),
 })
 
-const redondear = (n: number, max: number) => {
-  if (!Number.isFinite(n) || n < 0) return 0
+const redondear = (n: number | undefined, max: number) => {
+  if (n === undefined || !Number.isFinite(n) || n < 0) return 0
   return Math.min(max, Math.round(n * 10) / 10)
 }
 
@@ -71,6 +84,17 @@ export function aPlato(r: ResultadoAnalisis): PlatoEscaneo {
       grasas: redondear(r.grasas, 500),
     },
     alternativas,
+    items: r.ingredientes
+      .filter((i) => (i.display_name || i.nombre || '').trim())
+      .slice(0, 12)
+      .map((i) => ({
+        nombre: (i.display_name || i.nombre).trim().slice(0, 80),
+        gramos: redondear(i.gramos, 5000),
+        calorias: redondear(i.calorias, 5000),
+        proteinas: redondear(i.proteinas, 500),
+        carbohidratos: redondear(i.carbohidratos, 1000),
+        grasas: redondear(i.grasas, 500),
+      })),
   })
 }
 
@@ -125,7 +149,8 @@ export async function leerPlatoCache(env: Env, clave: string): Promise<PlatoEsca
     const fila = await env.DB.prepare('SELECT datos, expira_en FROM catalogo_alimentos_cache WHERE clave = ?1').bind(clave).first<{ datos: string; expira_en: number }>()
     if (!fila || fila.expira_en <= Math.floor(Date.now() / 1000)) return null
     const parsed = platoSchema.safeParse(JSON.parse(fila.datos))
-    return parsed.success ? parsed.data : null
+    // Entradas anteriores al desglose por unidades no sirven: se vuelve a analizar.
+    return parsed.success && parsed.data.items?.length ? parsed.data : null
   } catch {
     return null
   }
