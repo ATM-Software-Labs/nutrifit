@@ -12,6 +12,8 @@ GEMINI_MODEL = "gemini-2.0-flash"
 # El escáner de producción pide el ticket y sube la foto a este host.
 # En localhost el handler no usa la pasarela.
 VISION_GATEWAY_URL = "https://api.trujillomingorance.com"
+# Base secundaria (copia diaria y catálogo). La clave service_role va como secreto de Pages.
+SUPABASE_URL = "https://pjyseojkjfcpyjrrrlzm.supabase.co"
 
 [[d1_databases]]
 binding = "DB"
