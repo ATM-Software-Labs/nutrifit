@@ -142,7 +142,7 @@ const q = (o: Record<string, string>) => new URLSearchParams(o).toString()
 export const api = {
   config: () => pedir<{ turnstileSiteKey: string | null }>('/api/config'),
   salud: () =>
-    pedir<{ ok: boolean; db: boolean; precision_reducida: boolean; servicios: { d1: 'ok' | 'caido'; supabase: { estado: 'ok' | 'caido' | 'pausado' | 'sin_config' | 'desconocido'; comprobado_en?: string; caido_desde?: string | null } } }>('/api/salud', { silencio401: true }),
+    pedir<{ ok: boolean; db: boolean; precision_reducida: boolean; servicios: { d1: 'ok' | 'caido'; supabase: { estado: 'ok' | 'caido' | 'pausado' | 'sin_config' | 'sin_esquema' | 'desconocido'; comprobado_en?: string; caido_desde?: string | null } } }>('/api/salud', { silencio401: true }),
 
   yo: async (): Promise<{ ok: true; usuario: Usuario | null; perfilCompleto: boolean }> => {
     // En la app, sin token no hay sesión posible: ni siquiera preguntamos.

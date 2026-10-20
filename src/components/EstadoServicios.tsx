@@ -9,6 +9,7 @@ const TEXTO: Record<string, { punto: string; texto: string }> = {
   ok: { punto: 'bg-mint-500', texto: 'Todo funciona' },
   caido: { punto: 'bg-amber-500', texto: 'Catálogo ampliado no disponible: precisión reducida en el análisis' },
   pausado: { punto: 'bg-amber-500', texto: 'Catálogo ampliado en pausa: precisión reducida en el análisis' },
+  sin_esquema: { punto: 'bg-neutral-400', texto: 'Catálogo ampliado pendiente de configurar' },
   desconocido: { punto: 'bg-neutral-400', texto: 'Estado del catálogo ampliado sin comprobar' },
   sin_config: { punto: 'bg-mint-500', texto: 'Todo funciona' },
 }

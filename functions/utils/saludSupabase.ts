@@ -10,7 +10,8 @@
 import type { MensajeCorreo } from './email.ts'
 import { supaFetch, supabaseConfigurado, type SupaEnv } from './supabase.ts'
 
-export type EstadoSupabase = 'ok' | 'caido' | 'pausado' | 'sin_config'
+/** sin_esquema: responde pero falta ejecutar el SQL de supabase/migrations (no es una caída: no alerta). */
+export type EstadoSupabase = 'ok' | 'caido' | 'pausado' | 'sin_config' | 'sin_esquema'
 
 export interface Comprobacion {
   estado: EstadoSupabase
@@ -34,6 +35,11 @@ export function pareceEnPausa(mensaje: string): boolean {
   return /Supabase 540\b|paused|pausad|project is (inactive|not active)|restoring/i.test(mensaje)
 }
 
+/** PostgREST responde pero no encuentra la función o la tabla: el SQL inicial no se ha ejecutado. */
+export function faltaEsquema(mensaje: string): boolean {
+  return /Supabase 404\b.*(PGRST202|PGRST205|42P01|42883|Could not find)/.test(mensaje)
+}
+
 export async function comprobarSupabase(env: SupaEnv, timeoutMs = 4000): Promise<Comprobacion> {
   if (!supabaseConfigurado(env)) return { estado: 'sin_config' }
   try {
@@ -42,7 +48,7 @@ export async function comprobarSupabase(env: SupaEnv, timeoutMs = 4000): Promise
     return { estado: 'ok', latido: Array.isArray(filas) ? filas[0] : undefined }
   } catch (e) {
     const error = (e instanceof Error ? e.message : String(e)).slice(0, 300)
-    return { estado: pareceEnPausa(error) ? 'pausado' : 'caido', error }
+    return { estado: pareceEnPausa(error) ? 'pausado' : faltaEsquema(error) ? 'sin_esquema' : 'caido', error }
   }
 }
 
@@ -68,12 +74,12 @@ export type Alerta = { tipo: 'caida' | 'recuperado'; mensaje: MensajeCorreo } | 
 /** Decide el nuevo estado y si toca avisar (función pura, testeable). */
 export function transicion(previo: FilaEstado | null, c: Comprobacion, ahora: number, url?: string): { fila: FilaEstado; alerta: { tipo: 'caida' | 'recuperado'; titulo: string; cuerpo: string; boton: string; url: string } | null } {
   const panel = urlPanel(url)
-  if (c.estado === 'ok' || c.estado === 'sin_config') {
+  if (c.estado === 'ok' || c.estado === 'sin_config' || c.estado === 'sin_esquema') {
     const alerta =
       c.estado === 'ok' && previo?.alertado_en
         ? { tipo: 'recuperado' as const, titulo: 'Supabase vuelve a funcionar', cuerpo: `La base secundaria de NutriFit responde de nuevo. Estuvo sin servicio desde ${new Date((previo.caido_desde ?? ahora) * 1000).toISOString()}.\nEl catálogo y la copia diaria vuelven a estar activos.`, boton: 'Abrir el panel de Supabase', url: panel }
         : null
-    return { fila: { estado: c.estado, caido_desde: null, ultimo_ok: c.estado === 'ok' ? ahora : (previo?.ultimo_ok ?? null), alertado_en: null, ultimo_error: null, comprobado_en: ahora }, alerta }
+    return { fila: { estado: c.estado, caido_desde: null, ultimo_ok: c.estado === 'ok' ? ahora : (previo?.ultimo_ok ?? null), alertado_en: null, ultimo_error: c.error ?? null, comprobado_en: ahora }, alerta }
   }
   const caidoDesde = previo && previo.estado !== 'ok' && previo.estado !== 'sin_config' && previo.caido_desde ? previo.caido_desde : ahora
   const minutos = Math.floor((ahora - caidoDesde) / 60)
@@ -123,6 +129,7 @@ export async function vigilarSupabase(env: EnvVigilancia, enviar: (para: string,
     if (!avisado && alerta.tipo === 'caida') fila.alertado_en = null
     if (!avisado && alerta.tipo === 'recuperado') fila.alertado_en = previo?.alertado_en ?? null
   } else if (c.estado !== 'ok' && c.estado !== 'sin_config') {
+    // sin_esquema también se registra en el log para que se vea en Cloudflare.
     console.warn(`[supabase] ${c.estado}: ${c.error}`)
   }
   await guardarEstadoSupabase(env.DB, fila).catch((e: unknown) => console.warn('[supabase] estado no guardado:', e instanceof Error ? e.message : e))

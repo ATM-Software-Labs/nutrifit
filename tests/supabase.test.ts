@@ -185,6 +185,13 @@ test('vigilancia: pausado avisa al momento con el enlace para restaurarlo', () =
   assert.equal(urlPanel(ENV.SUPABASE_URL), 'https://supabase.com/dashboard/project/pjyseojkjfcpyjrrrlzm')
 })
 
+test('vigilancia: sin esquema (falta el SQL) no es una caída ni alerta', () => {
+  const msg = 'Supabase 404: {"code":"PGRST202","message":"Could not find the function public.nf_latido"}'
+  const e = transicion(null, { estado: 'sin_esquema', error: msg }, 1_800_000_000, ENV.SUPABASE_URL)
+  assert.equal(e.alerta, null)
+  assert.equal(e.fila.estado, 'sin_esquema')
+})
+
 test('vigilancia: latido real (lectura + escritura) y estado guardado en D1', async () => {
   const db = d1Sqlite()
   simular((l) => {

@@ -34,7 +34,7 @@ export const onRequestGet: Handler = async ({ env }) => {
     db,
     servicios: { d1: db ? 'ok' : 'caido', supabase },
     // Si Supabase falla, la app sigue con D1, Open Food Facts, USDA y la IA.
-    precision_reducida: supabase.estado !== 'ok' && supabase.estado !== 'sin_config',
+    precision_reducida: supabase.estado === 'caido' || supabase.estado === 'pausado',
     time: new Date().toISOString(),
   })
 }
