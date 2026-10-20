@@ -12,14 +12,15 @@
  *   · font-src y object-src → fuente autoalojada y plugins
  * style-src lleva 'unsafe-inline' porque la UI usa estilos en el elemento
  * (barras, gráficas). No hay script inline: boot.js y el bundle son 'self'.
+ * static.cloudflareinsights.com / cloudflareinsights.com: beacon de Cloudflare Web Analytics (sin cookies) que inyecta la zona.
  */
 export const CSP_DOCUMENTO = [
   "default-src 'self'",
-  "script-src 'self' https://challenges.cloudflare.com",
+  "script-src 'self' https://challenges.cloudflare.com https://static.cloudflareinsights.com",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self'",
-  "connect-src 'self' data: blob: https://generativelanguage.googleapis.com https://api.groq.com https://challenges.cloudflare.com https://ai.trujillomingorance.com https://api.trujillomingorance.com",
+  "connect-src 'self' data: blob: https://cloudflareinsights.com https://generativelanguage.googleapis.com https://api.groq.com https://challenges.cloudflare.com https://ai.trujillomingorance.com https://api.trujillomingorance.com",
   "frame-src https://challenges.cloudflare.com",
   "worker-src 'self' blob:",
   "object-src 'none'",

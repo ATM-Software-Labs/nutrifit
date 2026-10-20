@@ -211,7 +211,7 @@ export default function Login({ onEntrar, vinculando = false }: { onEntrar: (u: 
             </form>
             <div className="relative my-5 flex items-center justify-center">
               <div className="w-full border-t border-neutral-200 dark:border-neutral-800" />
-              <span className="absolute bg-white px-3 text-xs font-medium text-neutral-400 dark:bg-neutral-950 dark:text-neutral-500">
+              <span className="absolute bg-white px-3 text-xs font-medium text-neutral-600 dark:bg-neutral-950 dark:text-neutral-400">
                 {t('login.o_bien')}
               </span>
             </div>

@@ -28,7 +28,7 @@ export function CookieBanner() {
     <div className="fixed bottom-0 inset-x-0 z-[100] pb-2 sm:pb-5 px-2 sm:px-5 pointer-events-none">
       <div className="pointer-events-auto w-full max-w-md mx-auto bg-bg dark:bg-bg-dark border border-neutral-200 dark:border-neutral-800 shadow-2xl rounded-2xl p-4 sm:p-5 flex flex-col gap-3">
         <div>
-          <h3 className="font-semibold text-graphite dark:text-neutral-100 mb-1">Privacidad y Cookies</h3>
+          <h2 className="text-base font-semibold text-graphite dark:text-neutral-100 mb-1">Privacidad y Cookies</h2>
           <p className="text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed">
             Utilizamos cookies esenciales para que la aplicación funcione y opciones analíticas para mejorar tu experiencia. Cumpliendo con la normativa GDPR, tú decides.
           </p>
