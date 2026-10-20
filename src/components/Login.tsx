@@ -6,6 +6,7 @@ import { Input } from './ui/Input.tsx'
 import { useTurnstile } from '../hooks/useTurnstile.ts'
 import { api, ApiError } from '../lib/api.ts'
 import { esNativa } from '../lib/plataforma.ts'
+import { AtmNet } from './AtmNet.tsx'
 import { urlApi, URL_REPO } from '../lib/config.ts'
 import { clicPrivacidad, clicRecursos } from '../lib/rutas.ts'
 import { guardarTokenApp } from '../lib/tokenApp.ts'
@@ -358,6 +359,7 @@ export default function Login({ onEntrar, vinculando = false }: { onEntrar: (u: 
           </a>
         </nav>
         <p>Protegido con Cloudflare Turnstile · Proyecto open source (MIT)</p>
+        {!esNativa && <AtmNet current="nutri" legal={false} />}
       </footer>
     </main>
   )
