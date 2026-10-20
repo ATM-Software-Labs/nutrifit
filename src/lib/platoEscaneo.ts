@@ -10,6 +10,8 @@ export interface PlatoEscaneo {
   macros: { proteinas: number; carbohidratos: number; grasas: number }
   alternativas: string[]
   items?: { nombre: string; gramos: number; calorias: number; proteinas: number; carbohidratos: number; grasas: number }[]
+  catalogo?: 'ok' | 'no_disponible' | 'sin_config'
+  afinados?: number
 }
 
 /** El escáner devuelve el plato unificado. La revisión lo trata como un ingrediente. */
@@ -36,5 +38,7 @@ export function resultadoDesdePlato(p: PlatoEscaneo): ResultadoAnalisis {
     carbohidratos: p.macros.carbohidratos,
     grasas: p.macros.grasas,
     alternativas: p.alternativas.map((nombre) => ({ ...fila, nombre, display_name: nombre })),
+    ...(p.catalogo === 'no_disponible' ? { precision_reducida: true } : {}),
+    ...(p.afinados ? { afinados: p.afinados } : {}),
   }
 }

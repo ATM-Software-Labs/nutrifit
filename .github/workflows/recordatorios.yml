@@ -1,5 +1,6 @@
 name: Recordatorios (cron)
 # Sustituto del Cron Trigger de nutrifit-cron mientras la cuenta de Cloudflare
+# (además hace el latido de Supabase para que no se pause y avisa si lleva > 30 min caído)
 # tenga ocupados sus 5 crons gratuitos. Llama a /api/interno/cron cada 15 min.
 on:
   schedule:

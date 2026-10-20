@@ -44,6 +44,14 @@ export interface Env {
   TURSO_DATABASE_URL?: string
   /** Token de Turso. Secreto: wrangler pages secret put TURSO_AUTH_TOKEN. */
   TURSO_AUTH_TOKEN?: string
+  /** Supabase (copia diaria y catálogo compartido). URL pública del proyecto. */
+  SUPABASE_URL?: string
+  /** Clave service_role de Supabase. Secreto de Pages; nunca llega al cliente. */
+  SUPABASE_SERVICE_ROLE_KEY?: string
+  /** Secreto compartido con GitHub Actions para /api/interno/*. */
+  CRON_SECRET?: string
+  /** Destinatario de las alertas técnicas (Supabase caído/pausado). Secreto: no se versiona. */
+  ALERTAS_EMAIL?: string
   /** ID público de Google OAuth. Vacío = el inicio con Google no arranca. */
   GOOGLE_CLIENT_ID?: string
   /** Secreto de Google OAuth. wrangler pages secret put GOOGLE_CLIENT_SECRET. */

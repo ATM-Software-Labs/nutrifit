@@ -22,6 +22,7 @@ import { calcularMacros, type NivelActividad, type Objetivo, type Sexo } from '.
 import { entero } from '../lib/formato.ts'
 import type { Usuario } from '../lib/tipos.ts'
 import { SeccionDispositivos } from './SeccionDispositivos.tsx'
+import { EstadoServicios } from './EstadoServicios.tsx'
 import { SeccionIntegraciones } from './SeccionIntegraciones.tsx'
 import { SeccionPreferenciasAvanzadas } from './SeccionPreferenciasAvanzadas.tsx'
 import { useIdioma } from '../hooks/useIdioma.ts'
@@ -486,6 +487,7 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
         {seccionActiva === 'mas' && (
         <Seccion titulo={t('ajustes.mas')} noCard>
           <div className="divide-y divide-neutral-100 bg-card rounded-2xl border border-neutral-200 dark:divide-neutral-800 dark:border-neutral-800 dark:bg-card-dark overflow-hidden mt-6">
+            <EstadoServicios />
             {!esNativa && (
               <a
                 href="/descargar"

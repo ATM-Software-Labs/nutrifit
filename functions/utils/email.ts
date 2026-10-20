@@ -382,3 +382,20 @@ ${pieHtml(PIE_AVISOS, bajaUrl)}`,
 export async function enviarAviso(env: Env, para: string, m: MensajeCorreo, bajaUrl: string): Promise<boolean> {
   return enviar(env, { para, ...m, bajaUrl })
 }
+
+/** Aviso técnico para la administración (Supabase caído o pausado). Sin baja: no es un envío a usuarios. */
+export function mensajeAlertaServicio(titulo: string, cuerpo: string, url: string, textoBoton: string): MensajeCorreo {
+  const html = envolver(
+    `<tr><td class="nf-texto" style="padding:16px 32px 8px;font-family:${FUENTE};font-size:22px;line-height:1.3;font-weight:600;color:#111827;">${escaparHtml(titulo)}</td></tr>
+<tr><td class="nf-suave" style="padding:0 32px 24px;font-family:${FUENTE};font-size:16px;line-height:1.5;color:#4b5563;white-space:pre-line;">${escaparHtml(cuerpo)}</td></tr>
+${botonHtml(url, textoBoton)}
+<tr><td style="padding:0 0 28px;"></td></tr>`,
+    `${titulo}: ${cuerpo.split('\n')[0]}`,
+  )
+  return { asunto: `${titulo} · NutriFit`, html, texto: `${titulo}\n\n${cuerpo}\n\n${textoBoton}: ${url}` }
+}
+
+export async function enviarAlerta(env: Env, para: string, m: MensajeCorreo): Promise<boolean> {
+  return enviar(env, { para, ...m })
+}
+

@@ -7,8 +7,9 @@ import { exigirSesion } from '../../utils/session.ts'
 import { exigirLimite } from '../../utils/rateLimit.ts'
 import { emojiComida, esEmojiValido } from '../../../src/lib/miniaturaComida.ts'
 import { aComidaApi, type FilaComida } from '../../utils/comidas.ts'
+import { registrarPlatoEnSegundoPlano } from '../../utils/supabase.ts'
 
-export const onRequestPost: Handler = async ({ request, env, data }) => {
+export const onRequestPost: Handler = async ({ request, env, data, waitUntil }) => {
   const sesion = exigirSesion(data.sesion)
   const c = await leerBody(request, comidaGuardarSchema, 64 * 1024)
   await exigirLimite(env, `guardar:u:${sesion.usuarioId}`, 300, 86400)
@@ -42,5 +43,13 @@ export const onRequestPost: Handler = async ({ request, env, data }) => {
     )
     .first<FilaComida>()
 
+  // Catálogo de platos (Supabase): solo los reconocidos por IA o escaneados, con el nombre
+  // normalizado y sin usuario, fecha ni notas. Nunca bloquea la respuesta.
+  if (fila && (c.ingredientes?.length || c.codigo_barras)) {
+    registrarPlatoEnSegundoPlano({ env, waitUntil }, {
+      descripcion: fila.descripcion, emoji: fila.emoji, calorias: fila.calorias, proteinas: fila.proteinas,
+      carbohidratos: fila.carbohidratos, grasas: fila.grasas, cantidad: fila.cantidad, unidad: fila.unidad,
+    })
+  }
   return json({ ok: true, comida: fila ? aComidaApi(fila) : null }, { status: 201 })
 }

@@ -232,6 +232,12 @@ export default function ModalRevisionPlato({
             data-autofocus={!resultado || undefined}
           />
         </div>
+        {resultado?.precision_reducida && (
+          <p className="-mt-4 text-xs text-amber-700 dark:text-amber-400" data-testid="precision-reducida">Precisión reducida: el catálogo ampliado no responde ahora, los valores son una estimación de la IA. Revísalos.</p>
+        )}
+        {!resultado?.precision_reducida && !!resultado?.afinados && (
+          <p className="-mt-4 text-xs text-mint-700 dark:text-mint-400">Valores ajustados con el catálogo nutricional ({resultado.afinados} {resultado.afinados === 1 ? 'ingrediente' : 'ingredientes'}).</p>
+        )}
         {resultado?.input_query && resultado.input_query !== nombre && (
           <p className="-mt-4 text-xs text-neutral-500 dark:text-neutral-400">Texto original: {resultado.input_query}</p>
         )}

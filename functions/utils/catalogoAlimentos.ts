@@ -14,6 +14,7 @@ import { hayCupoOff, parsearCantidad, pedirJson, puntosMarca, terminoOFF, urlOff
 import { foodQuery, guardarKv, leerKv } from './cacheBusquedaKv.ts'
 import { aplazarEnTurso, guardarCheckpoint, leerCheckpoint } from './turso.ts'
 import { buscarFrescoBedca, esConsultaFresco, type Nutrientes } from './bedca.ts'
+import { catalogarEnSegundoPlano, type ProductoCatalogoEntrada } from './supabase.ts'
 
 export type { Nutrientes }
 
@@ -223,6 +224,16 @@ export function alimentoDesdeBedca(ficha: { id: string; nombre: string; nutrient
   }
 }
 
+/** AlimentoCatalogo (OFF/BEDCA) → fila del catálogo compartido de Supabase. */
+export function aEntradaCatalogo(a: AlimentoCatalogo): ProductoCatalogoEntrada {
+  return {
+    codigo: a.codigo, nombre: a.nombre, marca: a.marca, unidad: a.unidad,
+    calorias: a.por_100g.energia_kcal ?? -1, proteinas: a.por_100g.proteinas, carbohidratos: a.por_100g.carbohidratos, grasas: a.por_100g.grasas,
+    azucares: a.por_100g.azucares, saturadas: a.por_100g.grasas_saturadas, fibra: a.por_100g.fibra, sal: a.por_100g.sal,
+    porcion: a.gramos_porcion, fuente: a.fuente === 'bedca' ? 'bedca' : 'openfoodfacts',
+  }
+}
+
 function tokens(q: string): string[] {
   return sinAcentos(q)
     .split(' ')
@@ -342,7 +353,10 @@ export async function productoCatalogoPorCodigo(codigo: string, ctx: Ctx): Promi
   try {
     const datos = (await pedirJson(`${BASE}/api/v2/product/${codigo}.json?fields=${CAMPOS}&lc=es`, 2, 6000)) as { product?: unknown; status?: number } | null
     const producto = datos?.product ? normalizarProductoOff({ code: codigo, ...(datos.product as object) }, codigo) : null
-    if (producto) guardarCache(ctx, clave, 'barcode', producto)
+    if (producto) {
+      guardarCache(ctx, clave, 'barcode', producto)
+      catalogarEnSegundoPlano(ctx, [aEntradaCatalogo(producto)])
+    }
     else if (cache?.datos && 'por_100g' in cache.datos) return { producto: cache.datos, cache: true }
     return { producto, cache: false }
   } catch (e) {
@@ -404,5 +418,6 @@ export async function buscarCatalogo(consulta: string, ctx: Ctx): Promise<{ alim
   const alimentos = deduplicar([...bedca, ...off], 12)
   if (food_query) guardarKv(ctx, food_query, alimentos)
   guardarCache(ctx, clave, 'buscar', alimentos)
+  catalogarEnSegundoPlano(ctx, alimentos.filter((a) => a.fuente !== 'propio').map(aEntradaCatalogo))
   return { alimentos, cache: false }
 }

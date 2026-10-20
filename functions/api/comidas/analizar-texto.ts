@@ -13,6 +13,7 @@ import { exigirSesion } from '../../utils/session.ts'
 import { exigirLimite } from '../../utils/rateLimit.ts'
 import { camposLimite, conContextoVision, MENSAJE_LIMITE, respuestaFalloVision } from '../../utils/errorVision.ts'
 import { analizarTexto } from '../../utils/ia.ts'
+import { afinarConCatalogo } from '../../utils/afinarCatalogo.ts'
 
 export const onRequestPost: Handler = async ({ request, env, data }) => {
   const sesion = exigirSesion(data.sesion)
@@ -21,7 +22,8 @@ export const onRequestPost: Handler = async ({ request, env, data }) => {
     await exigirLimite(env, `analizar-texto:u:${sesion.usuarioId}`, 30, 86400, MENSAJE_LIMITE, { extra: camposLimite(MENSAJE_LIMITE) })
     try {
       const { proveedor, resultado } = await analizarTexto(env, descripcion)
-      return json({ ok: true, proveedor, resultado })
+      const a = await afinarConCatalogo(env, resultado)
+      return json({ ok: true, proveedor, resultado: a.resultado, catalogo: a.catalogo, afinados: a.afinados })
     } catch (e) {
       const res = respuestaFalloVision(e)
       if (res) return res

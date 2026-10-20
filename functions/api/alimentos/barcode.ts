@@ -15,11 +15,14 @@ import { sanitizarTextoLibre } from '../../utils/sanitizar.ts'
 import { pedirJson } from '../../utils/off.ts'
 import { normalizarEan, variantesEan } from '../../../src/lib/ean.ts'
 import { esLiquido, parsearMedida } from '../../../src/lib/liquidos.ts'
+import { catalogarEnSegundoPlano, catalogoPorCodigo, type FilaCatalogoAlimento } from '../../utils/supabase.ts'
 
 interface Env {
   DB?: D1Database
   DB_ALIMENTOS?: D1Database
   USDA_API_KEY?: string
+  SUPABASE_URL?: string
+  SUPABASE_SERVICE_ROLE_KEY?: string
 }
 interface Producto {
   id: string; nombre: string; marca: string; calorias: number; proteinas: number; carbohidratos: number; grasas: number; codigo_barras: string
@@ -53,6 +56,24 @@ export function medidasOff(p: Record<string, unknown>, nombre: string): Pick<Pro
 
 const n = (v: unknown) => (Number.isFinite(Number(v)) ? Math.max(0, Number(v)) : 0)
 const r1 = (v: number) => Math.round(v * 10) / 10
+
+/** Fila del catálogo compartido (Supabase) → producto del escáner. */
+export function productoDesdeCatalogo(f: FilaCatalogoAlimento, ean: string): Producto {
+  return {
+    id: `cat:${f.codigo_barras ?? ean}`,
+    nombre: f.nombre,
+    marca: f.marca || 'Genérico',
+    calorias: Math.round(f.kcal_100),
+    proteinas: r1(f.proteinas_100),
+    carbohidratos: r1(f.carbohidratos_100),
+    grasas: r1(f.grasas_100),
+    codigo_barras: ean,
+    unidad: f.unidad,
+    envase: f.envase,
+    racion: f.porcion,
+    unidades: null,
+  }
+}
 
 export const ESPEJOS_OFF = ['https://es.openfoodfacts.org', 'https://world.openfoodfacts.org']
 const TTL_BC = 30 * 86_400
@@ -145,6 +166,12 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   if (copia?.producto && copia.expira_en > ahora) return Response.json({ origen: copia.origen, cache: true, producto: { ...copia.producto, codigo_barras: ean } })
 
   const guardar = (producto: Producto, origen: string) => {
+    // Catálogo compartido (Supabase): solo composición pública, sin datos del usuario.
+    catalogarEnSegundoPlano(context, [{
+      codigo: ean, nombre: producto.nombre, marca: producto.marca, unidad: producto.unidad ?? 'g',
+      calorias: producto.calorias, proteinas: producto.proteinas, carbohidratos: producto.carbohidratos, grasas: producto.grasas,
+      envase: producto.envase, porcion: producto.racion, fuente: origen === 'usda' ? 'usda' : 'openfoodfacts',
+    }])
     if (!env.DB) return
     const t = Math.floor(Date.now() / 1000)
     context.waitUntil(
@@ -152,6 +179,10 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
         .bind(clave, JSON.stringify({ producto: { ...producto, codigo_barras: ean }, origen }), t + TTL_BC, t).run().catch((e: unknown) => console.warn('[barcode] guardar caché', e)),
     )
   }
+  // Catálogo compartido antes de OFF: responde aunque Open Food Facts esté caído.
+  const enCatalogo = await catalogoPorCodigo(env, variantes)
+  if (enCatalogo) return Response.json({ origen: 'catalogo', producto: productoDesdeCatalogo(enCatalogo, ean) })
+
   const buscar = async (timeoutMs: number) => {
     let fallos = 0
     for (const base of ESPEJOS_OFF) {

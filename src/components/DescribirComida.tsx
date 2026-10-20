@@ -46,7 +46,7 @@ export default function DescribirComida({ onClose, onResultado, onManual }: { on
         return
       }
       recordarAliasDelAnalisis(limpio, r.resultado)
-      onResultado(r.resultado)
+      onResultado({ ...r.resultado, ...(r.catalogo === 'no_disponible' ? { precision_reducida: true } : {}), ...(r.afinados ? { afinados: r.afinados } : {}) })
     } catch (err) {
       setError(falloDeAnalisis(err))
     } finally {

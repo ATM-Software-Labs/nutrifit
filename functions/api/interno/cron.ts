@@ -6,6 +6,8 @@
 import type { Handler } from '../../utils/env.ts'
 import { json } from '../../utils/response.ts'
 import { ejecutar } from '../../../workers/cron/index.ts'
+import { vigilarSupabase } from '../../utils/saludSupabase.ts'
+import { enviarAlerta, mensajeAlertaServicio } from '../../utils/email.ts'
 
 function iguales(a: string, b: string): boolean {
   if (a.length !== b.length) return false
@@ -17,6 +19,10 @@ function iguales(a: string, b: string): boolean {
 export const onRequestPost: Handler = async ({ request, env }) => {
   const secreto = (env as { CRON_SECRET?: string }).CRON_SECRET
   if (!secreto || !iguales(request.headers.get('x-cron-secret') ?? '', secreto)) return json({ error: 'No autorizado' }, { status: 401 })
-  const r = await ejecutar(env as never)
-  return json({ usuarios: r.usuarios, envios: r.envios.length })
+  // Latido de Supabase primero e independiente: un fallo de la base secundaria no frena los recordatorios.
+  const [r, supabase] = await Promise.all([
+    ejecutar(env as never),
+    vigilarSupabase(env, (para, m) => enviarAlerta(env, para, m), mensajeAlertaServicio).catch((e: unknown) => ({ estado: 'caido', error: e instanceof Error ? e.message : String(e) })),
+  ])
+  return json({ usuarios: r.usuarios, envios: r.envios.length, supabase })
 }

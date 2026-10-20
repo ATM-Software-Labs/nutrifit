@@ -118,6 +118,10 @@ export interface AlternativaPlato {
 }
 
 export interface ResultadoAnalisis {
+  /** El catálogo ampliado no respondió: macros solo estimados por la IA. */
+  precision_reducida?: boolean
+  /** Ingredientes cuyos macros salen del catálogo verificado. */
+  afinados?: number
   /** Texto original del usuario. Vacío en un análisis por foto. */
   input_query?: string
   /** Título gastronómico del plato. Coincide con nombre_plato. */

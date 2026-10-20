@@ -9,6 +9,9 @@ export interface GatewayEnv {
   /** Origen Pages al que se reenvía /v1. Solo hosts de la lista en pasarela.ts. */
   PAGES_ORIGIN?: string
   GEMINI_MODEL?: string
+  /** Catálogo de Supabase para afinar los macros (opcional; timeout 1,5 s). */
+  SUPABASE_URL?: string
+  SUPABASE_SERVICE_ROLE_KEY?: string
   TRUJILLO_MODEL?: string
   TRUJILLO_AI_URL?: string
   AUTH_SECRET?: string

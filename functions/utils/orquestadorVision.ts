@@ -13,6 +13,7 @@ import { resumirFallos } from './errorVision.ts'
 import { ErrorIA, pasoEscaneo, TIMEOUT_ESCANER_GEMINI_MS, TIMEOUT_ESCANER_MS, TIMEOUT_GATEWAY_FOTO_MS, type Imagen } from './ia.ts'
 import { FotoIlegible, type ResultadoAnalisis } from './iaParseo.ts'
 import { emojiComida, esEmojiValido } from '../../src/lib/miniaturaComida.ts'
+import { afinarConCatalogo, type EstadoCatalogo } from './afinarCatalogo.ts'
 import { CATEGORIAS_PLATO, categoriaDe, descripcionPlato, esCategoriaPlato, tituloGastronomico, type CategoriaPlato } from './tituloPlato.ts'
 
 export interface PlatoEscaneo {
@@ -27,6 +28,10 @@ export interface PlatoEscaneo {
   alternativas: string[]
   /** Desglose con cantidades ("2 rebanadas de pan tostado"); gramos y macros ya suman todas las unidades. */
   items?: ItemPlato[]
+  /** Catálogo de Supabase: 'no_disponible' → la app avisa de precisión reducida. */
+  catalogo?: EstadoCatalogo
+  /** Ingredientes con macros del catálogo (no estimados por la IA). */
+  afinados?: number
 }
 export interface ItemPlato { nombre: string; gramos: number; calorias: number; proteinas: number; carbohidratos: number; grasas: number }
 
@@ -53,6 +58,8 @@ const platoSchema = z.strictObject({
   }),
   alternativas: z.array(z.string().trim().min(1).max(80)).max(2),
   items: z.array(itemSchema).max(12).optional(),
+  catalogo: z.enum(['ok', 'no_disponible', 'sin_config']).optional(),
+  afinados: z.number().int().min(0).max(30).optional(),
 })
 
 const redondear = (n: number | undefined, max: number) => {
@@ -132,7 +139,11 @@ export function orquestarEscaneo(env: Env, img: Imagen): Promise<PlatoEscaneo> {
     () => pasoEscaneo(env, img, 'groq', TIMEOUT_GATEWAY_FOTO_MS),
     () => pasoEscaneo(env, img, 'trujillo', TIMEOUT_GATEWAY_FOTO_MS),
   ]
-  return cascadaEscaneo(pasos).then(aPlato)
+  return cascadaEscaneo(pasos).then(async (r) => {
+    const a = await afinarConCatalogo(env, r)
+    if (a.afinados) console.log('[catalogo] afinado:', JSON.stringify(a.detalle))
+    return { ...aPlato(a.resultado), catalogo: a.catalogo, afinados: a.afinados }
+  })
 }
 
 const TTL_PLATO_S = 30 * 24 * 3600

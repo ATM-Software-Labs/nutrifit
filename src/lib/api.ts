@@ -141,6 +141,8 @@ const q = (o: Record<string, string>) => new URLSearchParams(o).toString()
 
 export const api = {
   config: () => pedir<{ turnstileSiteKey: string | null }>('/api/config'),
+  salud: () =>
+    pedir<{ ok: boolean; db: boolean; precision_reducida: boolean; servicios: { d1: 'ok' | 'caido'; supabase: { estado: 'ok' | 'caido' | 'pausado' | 'sin_config' | 'desconocido'; comprobado_en?: string; caido_desde?: string | null } } }>('/api/salud', { silencio401: true }),
 
   yo: async (): Promise<{ ok: true; usuario: Usuario | null; perfilCompleto: boolean }> => {
     // En la app, sin token no hay sesión posible: ni siquiera preguntamos.
@@ -207,6 +209,23 @@ export const api = {
       turnstile,
     })
   },
+  /**
+   * Plato analizado en la pasarela (que no consulta el catálogo): se afina en Pages con
+   * nombres y gramos. Si tarda o falla, el plato sigue igual y se marca precisión reducida.
+   */
+  afinarPlato: async (plato: PlatoEscaneo): Promise<PlatoEscaneo> => {
+    if (plato.catalogo || !plato.items?.length) return plato
+    try {
+      const r = await pedir<{ ok: true; catalogo: 'ok' | 'no_disponible' | 'sin_config'; afinados: number; items: NonNullable<PlatoEscaneo['items']>; calorias: number; macros: PlatoEscaneo['macros'] }>(
+        '/api/alimentos/afinar',
+        { method: 'POST', body: { alimento: plato.alimento.slice(0, 80), items: plato.items }, signal: AbortSignal.timeout(3000) },
+      )
+      if (!r.afinados) return { ...plato, catalogo: r.catalogo }
+      return { ...plato, items: r.items, calorias: r.calorias, macros: r.macros, catalogo: r.catalogo, afinados: r.afinados }
+    } catch {
+      return { ...plato, catalogo: 'no_disponible' }
+    }
+  },
   /** Escáner unificado. En producción la foto sale hacia el API Gateway con un ticket de 60 s, con fallback automático a Cloudflare Functions. */
   escanear: async (imagen: Blob, turnstile: string) => {
     const subirFicha = () => {
@@ -224,7 +243,7 @@ export const api = {
         body: { sha256: await sha256Imagen(imagen) },
         turnstile,
       })
-      if (prep.modo === 'cache' && prep.plato?.items?.length) return prep.plato
+      if (prep.modo === 'cache' && prep.plato?.items?.length) return api.afinarPlato(prep.plato)
       if (prep.modo === 'cache') return subirFicha()
       if (prep.modo === 'local') return subirFicha()
       if (prep.modo !== 'gateway' || !prep.ticket || !urlVisionPermitida(prep.url)) {
@@ -243,7 +262,7 @@ export const api = {
       }
       // Una pasarela sin desglose por piezas (versión antigua) no cuenta unidades: se analiza aquí.
       if (!Array.isArray((data as { items?: unknown }).items) || !(data as { items: unknown[] }).items.length) return subirFicha()
-      return data as unknown as PlatoEscaneo
+      return api.afinarPlato(data as unknown as PlatoEscaneo)
     } catch (e) {
       if ((e as Error).name === 'AbortError') throw e
       return subirFicha()
@@ -251,7 +270,7 @@ export const api = {
   },
 
   analizarTexto: (descripcion: string, turnstile: string) =>
-    pedir<{ ok: true; proveedor: 'gemini' | 'workers-ai'; resultado: ResultadoAnalisis }>('/api/comidas/analizar-texto', {
+    pedir<{ ok: true; proveedor: 'gemini' | 'workers-ai'; resultado: ResultadoAnalisis; catalogo?: 'ok' | 'no_disponible' | 'sin_config'; afinados?: number }>('/api/comidas/analizar-texto', {
       method: 'POST',
       body: { descripcion },
       turnstile,

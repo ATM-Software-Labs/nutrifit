@@ -1,0 +1,19 @@
+name: Copia diaria a Supabase
+# 01:10 UTC = 03:10 en Madrid en verano (02:10 en invierno). Copia D1 → Supabase (bk_filas).
+# El latido anti-pausa y la vigilancia (alerta si cae > 30 min) van en la ronda de 15 min (recordatorios.yml).
+on:
+  schedule:
+    - cron: '10 1 * * *'
+  workflow_dispatch:
+permissions: {}
+jobs:
+  copia:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Copiar D1 a Supabase
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          curl -fsS -m 120 -X POST -H "x-cron-secret: $CRON_SECRET" -H 'content-type: application/json' \
+            https://nutri.trujillomingorance.com/api/interno/copia | python3 -c 'import json,sys; r=json.load(sys.stdin); print(json.dumps({k: r.get(k) for k in ("ok","subidas","borradas","d1","supabase","error")}, indent=1))'
