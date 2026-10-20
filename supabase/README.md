@@ -25,3 +25,12 @@ Todas con RLS activado, sin políticas, y permisos solo para `service_role`.
 Si Supabase no responde (timeout 1,5 s, circuito de 60 s), la app sigue con D1, Open Food Facts,
 USDA y la IA; `/api/salud` y Ajustes › Acerca de lo muestran y, tras 30 min caído (o al detectar
 la pausa), se envía un correo a `ALERTAS_EMAIL` con el enlace al panel.
+
+## Región y capacidad
+
+- Proyecto en **Central EU (Fráncfort), eu-central-1**; instancia t4g.nano.
+- Mantener el catálogo por debajo de ~150 MB (hoy ~100 MB de `catalogo_alimentos`; base ~112 MB).
+- Escrituras pensadas para generar poco WAL: el latido es un UPDATE de una sola fila sin índices
+  secundarios (HOT) cada 15 min; el catálogo desde la app solo inserta claves nuevas
+  (`ignore-duplicates`) y nunca reescribe filas existentes.
+- Tras cargas masivas, `supabase/mantenimiento.sql` (VACUUM ANALYZE) limpia filas muertas.

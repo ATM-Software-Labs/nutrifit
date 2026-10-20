@@ -44,7 +44,7 @@ Antes de enviarla, la foto se procesa **en tu propio dispositivo** (opción acti
 - **Groq Inc.:** proveedor de inferencia rápida de visión como respaldo secundario.
 - **Trujillo AI (`ai.trujillomingorance.com`):** gateway de contingencia para análisis de visión.
 - **Brevo:** servicio de infraestructura para el envío transaccional de correos de acceso.
-- **Supabase, Inc.:** base de datos secundaria (PostgreSQL) para la copia de seguridad diaria y el catálogo nutricional compartido. Ver «Copia de seguridad y catálogo» más abajo.
+- **Supabase, Inc.:** base de datos secundaria (PostgreSQL) para la copia de seguridad diaria y el catálogo nutricional compartido, alojada en la Unión Europea (Fráncfort, Alemania). Ver «Copia de seguridad y catálogo» más abajo.
 - **Open Food Facts:** catálogo alimentario abierto consultado mediante código de barras o término genérico de producto, sin transmitir tu email, tu IP ni identificadores de cuenta.
 
 No se comercializan datos personales, no se inserta publicidad ni se utilizan plataformas de rastreo o analítica publicitaria de terceros.
@@ -68,11 +68,11 @@ Cuando inicias sesión en un ordenador escaneando un código QR desde el móvil,
 
 ### Copia de seguridad y catálogo (Supabase)
 
-- **Copia diaria:** cada noche (hacia las 03:10, hora de Madrid) se copia la base de datos principal de NutriFit (Cloudflare D1) a un proyecto de Supabase, una base de datos PostgreSQL alojada en Amazon Web Services. Incluye tu cuenta, tu perfil, tu diario de comidas, peso, agua, entrenamientos, logros, preferencias y notificaciones, y sirve únicamente para recuperar el servicio ante un fallo. **No se copian** las sesiones, los códigos o enlaces de acceso, los límites anti-abuso, las cachés ni los tokens de las apps conectadas.
+- **Copia diaria:** cada noche (hacia las 03:10, hora de Madrid) se copia la base de datos principal de NutriFit (Cloudflare D1) a un proyecto de Supabase, una base de datos PostgreSQL alojada en Amazon Web Services en la región Central EU (Fráncfort, Alemania). Incluye tu cuenta, tu perfil, tu diario de comidas, peso, agua, entrenamientos, logros, preferencias y notificaciones, y sirve únicamente para recuperar el servicio ante un fallo. **No se copian** las sesiones, los códigos o enlaces de acceso, los límites anti-abuso, las cachés ni los tokens de las apps conectadas.
 - **Borrados:** cada copia sustituye a la anterior. Lo que borras en la app (o tu cuenta entera, si la eliminas) desaparece también de la copia en la siguiente ejecución, como máximo en 24 horas.
 - **Acceso:** solo el servidor de NutriFit accede a Supabase, con una clave que nunca llega al navegador. Las tablas tienen seguridad por filas activada y ningún permiso para accesos públicos o anónimos.
 - **Catálogo compartido:** cuando se encuentra o se crea un producto con código de barras, o se registra un plato reconocido por la IA, se guarda en un catálogo común **solo su composición** (nombre, marca, nutrientes, tamaño del envase y emoji). Nunca se guarda quién lo registró, cuándo, ni tus notas, y se descartan los nombres de plato que podrían identificar a alguien (por ejemplo, «cena con Marta»). El catálogo incluye además datos abiertos de Open Food Facts (ODbL), USDA FoodData Central (dominio público) y CIQUAL (Licence Ouverte), y recetas con valores calculados a partir de BEDCA y USDA.
-- **Transferencias:** si la región del proyecto de Supabase está fuera del Espacio Económico Europeo, la transferencia se ampara en las Cláusulas Contractuales Tipo del acuerdo de tratamiento de datos (DPA) de Supabase.
+- **Ubicación:** la copia y el catálogo se almacenan en la Unión Europea (Fráncfort, Alemania). Supabase actúa como encargado del tratamiento conforme a su acuerdo de tratamiento de datos (DPA).
 - **Si Supabase no está disponible,** la app sigue funcionando con su base de datos principal; solo el análisis de fotos pierde precisión mientras tanto.
 
 ### Conservación de la información

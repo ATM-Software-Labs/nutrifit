@@ -116,8 +116,10 @@ export function filaCatalogoAlimento(p: ProductoCatalogoEntrada, ahora = new Dat
 }
 
 /**
- * Upsert en catalogo_alimentos. Lo de fuentes públicas (OFF, USDA, BEDCA) actualiza;
- * lo que crea un usuario solo se añade si el código aún no está (no pisa datos públicos).
+ * Alta en catalogo_alimentos: solo se insertan claves nuevas (ignore-duplicates).
+ * Las filas existentes no se reescriben en cada búsqueda o escaneo, así no se genera
+ * WAL ni filas muertas en la instancia pequeña; los datos públicos se refrescan con la
+ * carga masiva (scripts/supabase). Lo que crea un usuario nunca pisa datos públicos.
  */
 export async function guardarEnCatalogo(env: SupaEnv, productos: ProductoCatalogoEntrada[]): Promise<number> {
   if (!supabaseConfigurado(env)) return 0
@@ -128,17 +130,11 @@ export async function guardarEnCatalogo(env: SupaEnv, productos: ProductoCatalog
   }
   const filas = [...porClave.values()]
   if (!filas.length) return 0
-  const publicas = filas.filter((f) => f.fuente === 'openfoodfacts' || f.fuente === 'usda' || f.fuente === 'bedca')
-  const propias = filas.filter((f) => !publicas.includes(f))
-  const enviar = (lote: FilaCatalogoAlimento[], resolucion: 'merge-duplicates' | 'ignore-duplicates') =>
-    lote.length
-      ? supaFetch(env, 'catalogo_alimentos?on_conflict=clave', {
-          method: 'POST',
-          headers: { prefer: `resolution=${resolucion},return=minimal` },
-          body: JSON.stringify(lote),
-        })
-      : Promise.resolve(null)
-  await Promise.all([enviar(publicas, 'merge-duplicates'), enviar(propias, 'ignore-duplicates')])
+  await supaFetch(env, 'catalogo_alimentos?on_conflict=clave', {
+    method: 'POST',
+    headers: { prefer: 'resolution=ignore-duplicates,return=minimal' },
+    body: JSON.stringify(filas),
+  })
   return filas.length
 }
 

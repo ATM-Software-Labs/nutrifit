@@ -45,14 +45,14 @@ test('catálogo de platos: descarta nombres que pueden identificar a alguien', (
   assert.equal(nombrePlatoCatalogo('llamar 612345678'), null)
 })
 
-test('upsert: lo público actualiza y lo del usuario no pisa', async () => {
+test('alta en catálogo: solo inserta claves nuevas, en una sola petición', async () => {
   simular(() => new Response(null, { status: 201 }))
   await guardarEnCatalogo(ENV, [
     { codigo: '12345678', nombre: 'A', calorias: 100, fuente: 'openfoodfacts' },
     { codigo: '87654321', nombre: 'B', calorias: 100, fuente: 'usuario' },
   ])
   const prefer = llamadas.map((l) => l.headers.get('prefer')).sort()
-  assert.deepEqual(prefer, ['resolution=ignore-duplicates,return=minimal', 'resolution=merge-duplicates,return=minimal'])
+  assert.deepEqual(prefer, ['resolution=ignore-duplicates,return=minimal'])
   assert.ok(llamadas.every((l) => l.headers.get('apikey') === 'clave-de-prueba' && l.url.includes('/rest/v1/catalogo_alimentos?on_conflict=clave')))
 })
 

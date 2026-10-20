@@ -25,6 +25,7 @@ NutriFit se fundamenta en minimizar la recogida de datos al mínimo técnico ind
 ## 3. Almacenamiento Local vs. Almacenamiento en Nube
 1. **Dispositivo del Usuario (IndexedDB):** Los datos se almacenan en el espacio local del navegador bajo la base de datos `nutrifit_local`. El usuario tiene control físico sobre la eliminación de la caché y de los datos en cualquier instante.
 2. **Servidores Cloudflare (Unión Europea / Red Global):** Las copias de seguridad de sincronización se alojan en Cloudflare D1 en nodos con certificación ISO/IEC 27001, SOC 2 Type II y cláusulas contractuales tipo (SCC) aprobadas por la Comisión Europea.
+3. **Copia de seguridad diaria (Supabase, Unión Europea):** Cada noche se replica la base de datos principal en un proyecto de Supabase (PostgreSQL) alojado en la Unión Europea (Fráncfort, Alemania), sin sesiones, códigos de acceso ni tokens de apps conectadas. Las supresiones se propagan a la copia en un máximo de 24 horas.
 
 ---
 

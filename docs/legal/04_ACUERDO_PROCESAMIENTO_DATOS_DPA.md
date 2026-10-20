@@ -23,6 +23,7 @@
 | :--- | :--- | :--- | :--- |
 | **Cloudflare, Inc.** | EE. UU. / Unión Europea | Red de entrega (CDN), Edge Workers, Cloudflare D1 | Cláusulas Contractuales Tipo (SCC), SOC 2 Type II, ISO 27001 |
 | **Brevo (Sendinblue)** | París, Francia (UE) | Envío de correos transaccionales (Magic Links) | Servidores ubicados en la Unión Europea, RGPD Compliant |
+| **Supabase, Inc.** | Fráncfort, Alemania (UE) | Base de datos secundaria: copia de seguridad diaria y catálogo nutricional | Datos almacenados en la UE (AWS eu-central-1), RLS y acceso solo desde el servidor, DPA de Supabase |
 | **Google Cloud Platform** | Global / UE | API de inferencia multimodal e inicio de sesión OAuth | Certificación ISO 27001, SOC 2, DPA corporativo |
 
 Cualquier cambio o incorporación en la lista de subencargados se notificará formalmente a través del canal corporativo `nutrifit@trujillomingorance.com`.
