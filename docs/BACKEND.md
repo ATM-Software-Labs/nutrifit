@@ -137,8 +137,8 @@ Nunca en git ni en `wrangler.toml`. En local van en `.dev.vars` (copia de `.dev.
 | `AUTH_SECRET` | Firmar sesiones y magic links (≥ 32 caracteres) | `node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"` |
 | `TURNSTILE_SECRET_KEY` | Verificar Turnstile | Panel de Turnstile (ver §3) |
 | `BREVO_API_KEY` | Enviar emails | Brevo → *SMTP & API* → *API Keys* → *Generate* |
-| `GEMINI_API_KEY` | Análisis de fotos (proveedor principal) | Google AI Studio (ver §6) |
-| `GROQ_API_KEY` | Foto del plato si Gemini falla (`llama-3.2-11b-vision-preview`, luego `llama-3.2-90b-vision-preview`) | [console.groq.com](https://console.groq.com/keys) |
+| `GEMINI_API_KEY` | Fotos y texto si Groq falla (segundo proveedor) | Google AI Studio (ver §6) |
+| `GROQ_API_KEY` | Proveedor principal: foto y etiqueta con `qwen/qwen3.8-27b`; texto con `openai/gpt-oss-120b` y luego `openai/gpt-oss-20b`; nombres con `openai/gpt-oss-20b` | [console.groq.com](https://console.groq.com/keys) |
 | `TRUJILLO_API_KEY` | Opcional. Bearer de `ai.trujillomingorance.com` si el gateway lo exige | Gateway propio |
 
 ```bash
@@ -166,18 +166,24 @@ porque su CNAME hacia Pages no puede convivir con registros MX/TXT. Sin
 
 `POST /api/comidas/analizar` llama a `analizarImagen` (`functions/utils/ia.ts`).
 Un fallo (sin clave, 429, 5xx, timeout o JSON inválido) prueba el siguiente.
-Cada gateway tiene 5 s y un circuit breaker propio (3 fallos de transporte
+Groq arranca al momento; si a los 2 s no ha respondido, Gemini sale en paralelo
+y gana el primero válido. Workers AI va siempre al final, para no gastar la cuota
+de Cloudflare AI. Cada gateway tiene su plazo y un circuit breaker propio (3 fallos de transporte
 seguidos lo abren 30 s; luego una sola sonda). Un JSON inválido o una clave
 ausente no lo abre. El estado es del isolate: solo contadores.
 
-1. **Gemini Flash** (`GEMINI_API_KEY`, modelo `GEMINI_MODEL` o `gemini-3.8-flash`, 5 s).
-2. **Groq Vision** (`GROQ_API_KEY`, 5 s para todo el gateway). Primero `llama-3.2-11b-vision-preview`. Si falla antes de que venza el plazo, `llama-3.2-90b-vision-preview`. Sin clave se salta.
-3. **Trujillo AI** `POST https://ai.trujillomingorance.com/v1/chat/completions` con el formato de OpenAI Vision (imagen en data URL). Modelo `TRUJILLO_MODEL` o `llama-3.2-11b-vision-instruct`. Bearer solo si hay `TRUJILLO_API_KEY` (5 s).
-4. **Workers AI** `@cf/meta/llama-3.2-11b-vision-instruct` (5 s). El binding no acepta `AbortSignal`: se abandona la espera.
+1. **Groq Vision** (`GROQ_API_KEY`, `qwen/qwen3.8-27b` sin razonamiento). Sin clave se salta.
+2. **Gemini Flash** (`GEMINI_API_KEY`, modelo `GEMINI_MODEL` o `gemini-flash-latest`).
+3. **Trujillo AI** `POST https://ai.trujillomingorance.com/v1/chat/completions` con el formato de OpenAI Vision (imagen en data URL). Modelo `TRUJILLO_MODEL` o `qwen/qwen3.8-27b`. Bearer solo si hay `TRUJILLO_API_KEY`.
+4. **Workers AI** `@cf/meta/llama-3.2-11b-vision-instruct`, último recurso. El binding no acepta `AbortSignal`: se abandona la espera.
 
 El cliente envía un JPEG 1024×1024 (calidad 0.85) sin EXIF. El prompt pide, en razonamiento interno, segmentar el plato, estimar gramajes y calcular macros con Atwater (4/4/9 kcal/g), y responder solo el JSON (`nombre_plato`, `ingredientes`, `calorias`, `proteinas`, `carbohidratos`, `grasas`). `iaParseo.ts` quita fences Markdown y bloques `<think>` y valida con Zod.
 
-Las **etiquetas** no usan Groq ni Trujillo: Gemini y después Gemma, Qwen, Mistral y Llama en Workers AI.
+Las **etiquetas** siguen el mismo orden (Groq, Gemini, Trujillo) y al final Gemma, Qwen, Mistral y Llama en Workers AI.
+
+El **texto** (`analizarTexto`) usa Groq `openai/gpt-oss-120b`, luego `openai/gpt-oss-20b`, después Gemini y, como último recurso, Gemma y Mistral en Workers AI.
+
+El **escáner** (`orquestarEscaneo`, también en el gateway `api.trujillomingorance.com`) va Groq → Gemini (8 s) → Trujillo → Workers AI (2 s).
 
 ### Workers AI (respaldo)
 
@@ -202,15 +208,15 @@ El binding `[ai]` siempre es **remoto**: `npm run pages:dev` necesita
 
 ---
 
-## 6. Gemini (proveedor principal)
+## 6. Gemini (segundo proveedor)
 
 1. Entra en <https://aistudio.google.com/apikey> → **Create API key** (elige o crea un proyecto de Google Cloud).
 2. `npx wrangler pages secret put GEMINI_API_KEY --project-name nutrifit`.
-3. Modelo por defecto: **`gemini-3.8-flash`** (Flash estable con free tier, oct-2026). Se cambia sin tocar código en `wrangler.toml` → `GEMINI_MODEL` (p. ej. `gemini-flash-latest`).
+3. Modelo por defecto: **`gemini-flash-latest`** (rescate a `gemini-2.5-flash` si da 404). Se cambia sin tocar código en `wrangler.toml` → `GEMINI_MODEL` (p. ej. `gemini-flash-latest`).
 
 Se usa REST `v1beta/models/{modelo}:generateContent` con `inline_data` (imagen
 base64), `responseMimeType: application/json` y `responseSchema`. En la foto del
-plato el timeout es 5 s y el fallo pasa a Groq (§5). El texto y la etiqueta
+plato Gemini es el segundo paso, tras Groq (§5). El texto y la etiqueta
 siguen con 25 s. La salida se limpia (fences, `<think>`, prosa, comas
 colgantes), se valida con Zod y se redondea a 1 decimal (`functions/utils/iaParseo.ts`).
 

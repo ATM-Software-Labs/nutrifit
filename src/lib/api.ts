@@ -270,7 +270,7 @@ export const api = {
   },
 
   analizarTexto: (descripcion: string, turnstile: string) =>
-    pedir<{ ok: true; proveedor: 'gemini' | 'workers-ai'; resultado: ResultadoAnalisis; catalogo?: 'ok' | 'no_disponible' | 'sin_config'; afinados?: number }>('/api/comidas/analizar-texto', {
+    pedir<{ ok: true; proveedor: 'groq' | 'gemini' | 'workers-ai'; resultado: ResultadoAnalisis; catalogo?: 'ok' | 'no_disponible' | 'sin_config'; afinados?: number }>('/api/comidas/analizar-texto', {
       method: 'POST',
       body: { descripcion },
       turnstile,

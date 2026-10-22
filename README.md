@@ -40,8 +40,8 @@
 - **Entrar sin contraseña:** enlace mágico **y código de 6 cifras** en el mismo email (15 min, un solo uso, 5 intentos), protegido con Cloudflare Turnstile invisible.
 - **Entrar en el PC con un QR:** el ordenador muestra un QR y un código corto; lo escaneas con el móvil donde ya tienes sesión, compruebas el código y pulsas «Aprobar» (2 min, un solo uso, ligado a ese navegador).
 - **Plan personalizado:** onboarding en 4 pasos con Mifflin-St Jeor, nivel de actividad y objetivo (perder grasa, mantener, ganar músculo).
-- **Foto → macros:** la foto se normaliza en el móvil (orientación EXIF aplicada, sin metadatos; HEIC de iPhone convertido a JPEG también en Chrome/Android) y la analiza **Gemini Flash** (`gemini-flash-latest`, con rescate a `gemini-2.5-flash` si el modelo deja de existir). Si falla: **Groq** (`qwen/qwen3.8-27b`), **Trujillo AI** y, al final, **Workers AI**. Revisas ingredientes y gramos y los macros se recalculan al momento.
-- **Sin cámara:** describe la comida con texto («dos huevos revueltos y una tostada») y la IA estima los macros (Gemini o, si no hay clave, Workers AI); **sube una foto** desde el PC (selector o arrastrar y soltar); o **busca alimentos** en una base local de ~360 alimentos habituales en España (valores por 100 g de [USDA FoodData Central](https://fdc.nal.usda.gov/), dominio público) y en **Open Food Facts** por nombre o código de barras.
+- **Foto → macros:** la foto se normaliza en el móvil (orientación EXIF aplicada, sin metadatos; HEIC de iPhone convertido a JPEG también en Chrome/Android) y la analiza **Groq** (`qwen/qwen3.8-27b`). Si falla: **Gemini Flash** (`gemini-flash-latest`, con rescate a `gemini-2.5-flash`), **Trujillo AI** y, solo como último recurso, **Workers AI**. Revisas ingredientes y gramos y los macros se recalculan al momento.
+- **Sin cámara:** describe la comida con texto («dos huevos revueltos y una tostada») y la IA estima los macros (Groq `openai/gpt-oss-120b` o `gpt-oss-20b`; si fallan, Gemini y, al final, Workers AI); **sube una foto** desde el PC (selector o arrastrar y soltar); o **busca alimentos** en una base local de ~360 alimentos habituales en España (valores por 100 g de [USDA FoodData Central](https://fdc.nal.usda.gov/), dominio público) y en **Open Food Facts** por nombre o código de barras.
 - **Escritorio:** a partir de 1024 px, barra lateral (Hoy, Historial, Añadir comida, Peso, Agua, Ajustes, Descargar app) y panel en 2–3 columnas con «Añadir comida» siempre a mano. En el móvil todo sigue igual.
 - **Historial:** vista semanal o mensual con calorías frente al objetivo, macros P/C/G, tendencia de peso y agua (SVG ligero) y la lista de días con sus totales.
 - **Exportar:** CSV de comidas, peso o agua (rango de fechas, formato español para Excel) e **informe PDF** imprimible.
@@ -61,7 +61,7 @@
 | Hosting | **Cloudflare Pages** (estáticos + cabeceras de seguridad) |
 | API | **Cloudflare Pages Functions** (`functions/`) con Zod |
 | Base de datos | **Cloudflare D1** (SQLite) |
-| IA | **Gemini Flash** · **Groq Vision** · **Trujillo AI** · **Workers AI** (en ese orden, solo la foto) |
+| IA | **Groq** · **Gemini Flash** · **Trujillo AI** · **Workers AI** (en ese orden; Workers AI solo como último recurso) |
 | Anti-bots | **Cloudflare Turnstile** (modo invisible) |
 | Email | **Brevo** (API transaccional) |
 | Móvil | **PWA** (iPhone/iPad) · **Capacitor 8** (APK Android) |
@@ -84,7 +84,7 @@ flowchart LR
     TS["Turnstile siteverify"]
   end
   GEM["Google Gemini API"]
-  GROQ["Groq Vision"]
+  GROQ["Groq<br/>Qwen 3.8 · GPT-OSS"]
   TRU["Trujillo AI"]
   BREVO["Brevo (email)"]
 
@@ -94,8 +94,8 @@ flowchart LR
   MW --> TS
   MW --> API
   API --> D1
-  API -->|foto| GEM
-  API -.->|2.º| GROQ
+  API -->|foto y texto| GROQ
+  API -.->|2.º| GEM
   API -.->|3.º| TRU
   API -.->|respaldo| WAI
   API -->|magic link| BREVO

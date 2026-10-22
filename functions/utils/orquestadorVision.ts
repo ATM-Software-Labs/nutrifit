@@ -2,9 +2,10 @@
  * Cascada silenciosa del escáner. El cliente solo ve el plato unificado:
  * ni cabecera de proveedor ni el 429 crudo de una pasarela.
  *
- *  1. Gemini (GEMINI_MODEL o gemini-flash-latest), abort a los 8 s.
- *  2. Workers AI si Gemini agota el plazo, responde 429/5xx o falla.
- *  3. Groq y, si también falla, Trujillo AI.
+ *  1. Groq (qwen/qwen3.8-27b).
+ *  2. Gemini (GEMINI_MODEL o gemini-flash-latest), abort a los 8 s.
+ *  3. Trujillo AI.
+ *  4. Workers AI, solo como último recurso (2 s), para no gastar su cuota.
  * Una foto ilegible no sigue.
  */
 import { z } from 'zod'
@@ -131,13 +132,13 @@ export async function cascadaEscaneo(pasos: (() => Promise<ResultadoAnalisis>)[]
   throw err
 }
 
-/** Gemini 8 s → Workers AI 2 s → Groq → Trujillo. El primero válido gana. */
+/** Groq → Gemini 8 s → Trujillo → Workers AI 2 s. El primero válido gana. */
 export function orquestarEscaneo(env: Env, img: Imagen): Promise<PlatoEscaneo> {
   const pasos = [
-    () => pasoEscaneo(env, img, 'gemini', TIMEOUT_ESCANER_GEMINI_MS),
-    () => pasoEscaneo(env, img, 'workers-ai', TIMEOUT_ESCANER_MS),
     () => pasoEscaneo(env, img, 'groq', TIMEOUT_GATEWAY_FOTO_MS),
+    () => pasoEscaneo(env, img, 'gemini', TIMEOUT_ESCANER_GEMINI_MS),
     () => pasoEscaneo(env, img, 'trujillo', TIMEOUT_GATEWAY_FOTO_MS),
+    () => pasoEscaneo(env, img, 'workers-ai', TIMEOUT_ESCANER_MS),
   ]
   return cascadaEscaneo(pasos).then(async (r) => {
     const a = await afinarConCatalogo(env, r)

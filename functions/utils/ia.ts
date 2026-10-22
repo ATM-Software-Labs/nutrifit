@@ -1,16 +1,18 @@
 /**
  * IA de NutriFit (foto del plato, foto de la etiqueta y texto).
- *   Foto del plato (analizarImagen). El modelo principal arranca al momento.
- *   Si a los 2 s no hay respuesta, el respaldo de Workers AI sale en paralelo
- *   y gana el primero que devuelva un plato válido. Cada gateway sigue cortado
- *   a 5 s. Un fallo pasa al siguiente:
- *          1) Gemini Flash          (GEMINI_API_KEY)
- *          2) Groq Vision           (llama-3.2-11b-vision-preview y, si cabe
- *                                    en el plazo, llama-3.2-90b-vision-preview)
+ *   Groq va primero en todo. Workers AI es solo el último recurso, para no
+ *   gastar la cuota de Cloudflare AI.
+ *   Foto del plato (analizarImagen). Groq arranca al momento. Si a los 2 s no
+ *   hay respuesta, Gemini sale en paralelo y gana el primero que devuelva un
+ *   plato válido. Cada gateway sigue cortado a TIMEOUT_GATEWAY_FOTO_MS. Un
+ *   fallo pasa al siguiente:
+ *          1) Groq Vision           (GROQ_API_KEY, qwen/qwen3.8-27b)
+ *          2) Gemini Flash          (GEMINI_API_KEY)
  *          3) Trujillo AI           (https://ai.trujillomingorance.com, OpenAI Vision)
  *          4) Workers AI            (@cf/meta/llama-3.2-11b-vision-instruct)
- *   Etiqueta: Gemini y luego los modelos de visión de Workers AI (sin este corte).
- *   Texto: 1) Gemini Flash  2) gemma-4-26b (sin razonamiento)  3) mistral-small-3.1
+ *   Etiqueta: el mismo orden, y en Workers AI sus modelos de visión (sin carrera).
+ *   Texto: 1) Groq openai/gpt-oss-120b  2) Groq openai/gpt-oss-20b  3) Gemini Flash
+ *          4) Workers AI gemma-4-26b (sin razonamiento)  5) mistral-small-3.1
  * Cualquier fallo (sin clave, 429, 5xx, timeout, JSON inválido o que no pasa la
  * validación) pasa al siguiente. Si todos fallan, el handler responde con el
  * fallo más útil (límite, peso, autenticación o timeout), nunca con el cuerpo
@@ -43,12 +45,25 @@ export const MODELOS_VISION_WORKERS_AI = [
 ] as const
 /** Respaldo final de la foto del plato. */
 export const MODELO_VISION_RESPALDO = '@cf/meta/llama-3.2-11b-vision-instruct'
-/** 11B primero. El 90B solo si el 11B falla dentro de los 5 s del gateway. */
-export const MODELOS_GROQ_VISION = ['qwen/qwen3.8-27b']  // los llama-3.2-vision de Groq están retirados as const
+/** Único modelo de visión que esta clave de Groq tiene (los llama-3.2-vision están retirados). */
+export const MODELOS_GROQ_VISION = ['qwen/qwen3.8-27b'] as const
 export const MODELO_GROQ_VISION = MODELOS_GROQ_VISION[0]
-const URL_GROQ_VISION = 'https://api.groq.com/openai/v1/chat/completions'
+/** Texto: GPT-OSS 120B y, si falla, el 20B (más rápido y con más cuota). */
+export const MODELOS_TEXTO_GROQ = ['openai/gpt-oss-120b', 'openai/gpt-oss-20b'] as const
+/** Tareas cortas (nombres del plato). */
+export const MODELO_GROQ_RAPIDO = 'openai/gpt-oss-20b'
+export const URL_GROQ = 'https://api.groq.com/openai/v1/chat/completions'
+const URL_GROQ_VISION = URL_GROQ
 export const URL_TRUJILLO_VISION = 'https://ai.trujillomingorance.com/v1/chat/completions'
-export const MODELO_TRUJILLO_VISION = 'llama-3.2-11b-vision-instruct'
+/** Trujillo AI reenvía a Groq: mismo modelo de visión. */
+export const MODELO_TRUJILLO_VISION = 'qwen/qwen3.8-27b'
+
+/** Parámetros de razonamiento de Groq: sin razonamiento visible y con margen de tokens para él. */
+export function extrasGroq(modelo: string, maxTokens: number): Record<string, unknown> {
+  if (modelo.startsWith('openai/gpt-oss')) return { max_tokens: maxTokens + 1024, reasoning_effort: 'low', reasoning_format: 'hidden' }
+  if (modelo.startsWith('qwen/')) return { max_tokens: maxTokens, reasoning_effort: 'none', reasoning_format: 'hidden' }
+  return { max_tokens: maxTokens }
+}
 export const MODELOS_TEXTO_WORKERS_AI = ['@cf/google/gemma-4-26b-a4b-it', '@cf/mistralai/mistral-small-3.1-24b-instruct'] as const
 
 export type Proveedor = 'gemini' | 'groq' | 'trujillo' | 'workers-ai'
@@ -433,15 +448,7 @@ async function visionWorkersAI<T>(env: Env, modelo: string, img: Imagen, t: Tare
 /** Ejecuta la cadena de proveedores de visión hasta que uno devuelva algo válido. */
 export async function cadenaVision<T>(env: Env, img: Imagen, t: TareaVision<T>): Promise<{ proveedor: Proveedor; modelo: string; resultado: T }> {
   const vistos: unknown[] = []
-  try {
-    return { proveedor: 'gemini', modelo: env.GEMINI_MODEL || GEMINI_MODELO_POR_DEFECTO, resultado: await visionGemini(env, img, t) }
-  } catch (e) {
-    if (esDefinitivo(e)) throw errorDefinitivo(e)
-    vistos.push(e)
-    const motivo = e instanceof ErrorParseo ? `parseo: ${e.message}` : e instanceof Error ? e.message : String(e)
-    console.warn(`[ia] Gemini falló (${motivo}) → Groq`)
-  }
-  // Misma cadena que la foto del plato: Groq y Trujillo AI antes de Workers AI.
+  // Misma cadena que la foto del plato: Groq, Gemini y Trujillo AI antes de Workers AI.
   try {
     const { modelo, resultado } = await visionGroq(env, img, t)
     return { proveedor: 'groq', modelo, resultado }
@@ -449,6 +456,14 @@ export async function cadenaVision<T>(env: Env, img: Imagen, t: TareaVision<T>):
     if (esDefinitivo(e)) throw errorDefinitivo(e)
     vistos.push(e)
     console.warn('[ia] Groq falló:', e instanceof Error ? e.message.slice(0, 200) : e)
+  }
+  try {
+    return { proveedor: 'gemini', modelo: env.GEMINI_MODEL || GEMINI_MODELO_POR_DEFECTO, resultado: await visionGemini(env, img, t) }
+  } catch (e) {
+    if (esDefinitivo(e)) throw errorDefinitivo(e)
+    vistos.push(e)
+    const motivo = e instanceof ErrorParseo ? `parseo: ${e.message}` : e instanceof Error ? e.message : String(e)
+    console.warn(`[ia] Gemini falló (${motivo}) → Trujillo`)
   }
   try {
     const modelo = modeloTrujillo(env)
@@ -474,7 +489,7 @@ export async function cadenaVision<T>(env: Env, img: Imagen, t: TareaVision<T>):
 async function visionOpenAI<T>(
   img: Imagen,
   t: TareaVision<T>,
-  llamada: { url: string; modelo: string; apiKey?: string; signal: AbortSignal; etiqueta: string },
+  llamada: { url: string; modelo: string; apiKey?: string; signal: AbortSignal; etiqueta: string; extras?: Record<string, unknown> },
 ): Promise<T> {
   const headers: Record<string, string> = { 'content-type': 'application/json' }
   if (llamada.apiKey) headers.authorization = `Bearer ${llamada.apiKey}`
@@ -493,6 +508,7 @@ async function visionOpenAI<T>(
       ],
       temperature: 0.1,
       max_tokens: t.maxTokens ?? 1200,
+      ...(llamada.extras ?? {}),
       ...(json ? { response_format: { type: 'json_object' } } : {}),
     })
   const inicio = Date.now()
@@ -510,10 +526,7 @@ async function visionOpenAI<T>(
   }
 }
 
-/**
- * Groq, un solo plazo de 5 s para los dos modelos. El 90B se prueba solo si el
- * 11B responde un error antes de que venza el plazo (un timeout no deja tiempo).
- */
+/** Groq Vision, un solo plazo para toda la lista de modelos. */
 async function visionGroq<T>(env: Env, img: Imagen, t: TareaVision<T>, timeoutMs = TIMEOUT_GATEWAY_FOTO_MS): Promise<{ modelo: string; resultado: T }> {
   if (!env.GROQ_API_KEY) throw falloSinClave('Groq')
   const signal = AbortSignal.timeout(timeoutMs)
@@ -523,7 +536,14 @@ async function visionGroq<T>(env: Env, img: Imagen, t: TareaVision<T>, timeoutMs
     try {
       return {
         modelo,
-        resultado: await visionOpenAI(img, t, { url: URL_GROQ_VISION, modelo, apiKey: env.GROQ_API_KEY, signal, etiqueta: 'Groq' }),
+        resultado: await visionOpenAI(img, t, {
+          url: URL_GROQ_VISION,
+          modelo,
+          apiKey: env.GROQ_API_KEY,
+          signal,
+          etiqueta: 'Groq',
+          extras: extrasGroq(modelo, t.maxTokens ?? 1200),
+        }),
       }
     } catch (e) {
       ultimo = e
@@ -681,12 +701,12 @@ export async function analizarImagen(env: Env, img: Imagen): Promise<{ proveedor
   const modeloGemini = env.GEMINI_MODEL || GEMINI_MODELO_POR_DEFECTO
   const modeloTru = modeloTrujillo(env)
   const pasos: { etiqueta: string; proveedor: Proveedor; run: () => Promise<{ modelo: string; resultado: ResultadoAnalisis }> }[] = [
+    { etiqueta: 'Groq', proveedor: 'groq', run: () => visionGroq(env, img, t) },
     {
       etiqueta: 'Gemini',
       proveedor: 'gemini',
       run: async () => ({ modelo: modeloGemini, resultado: await visionGemini(env, img, t, TIMEOUT_GATEWAY_FOTO_MS) }),
     },
-    { etiqueta: 'Groq', proveedor: 'groq', run: () => visionGroq(env, img, t) },
     {
       etiqueta: 'Trujillo',
       proveedor: 'trujillo',
@@ -731,8 +751,9 @@ export async function analizarImagen(env: Env, img: Imagen): Promise<{ proveedor
     }
   }
 
+  // Carrera Groq (principal) contra Gemini. Workers AI queda para el final.
   const principal = pasos[0]!
-  const respaldo = pasos.find((p) => p.proveedor === 'workers-ai')!
+  const respaldo = pasos.find((p) => p.proveedor === 'gemini')!
   try {
     return await carreraVision(() => intentar(principal), () => intentar(respaldo))
   } catch (e) {
@@ -851,6 +872,35 @@ async function textoWorkersAI(env: Env, modelo: string, descripcion: string): Pr
   }
 }
 
+async function textoGroq(env: Env, modelo: string, descripcion: string): Promise<ResultadoAnalisis> {
+  if (!env.GROQ_API_KEY) throw falloSinClave('Groq')
+  const inicio = Date.now()
+  try {
+    const res = await fetchConReintento(
+      URL_GROQ,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${env.GROQ_API_KEY}` },
+        body: JSON.stringify({
+          model: modelo,
+          messages: [
+            { role: 'system', content: PROMPT_SISTEMA_TEXTO },
+            { role: 'user', content: textoUsuario(descripcion) },
+          ],
+          temperature: 0.2,
+          response_format: { type: 'json_object' },
+          ...extrasGroq(modelo, 2048),
+        }),
+      },
+      AbortSignal.timeout(TIMEOUT_GATEWAY_FOTO_MS),
+    )
+    if (!res.ok) throw await falloHttp(res, 'Groq', inicio)
+    return parsearRespuestaModelo(contenidoWorkersAI(await res.json()))
+  } catch (e) {
+    envolverLlamada('Groq', inicio, e)
+  }
+}
+
 /** El modelo a veces reescribe la consulta. La ración de la tabla manda sobre un 100 g genérico. */
 function cerrarTexto(resultado: ResultadoAnalisis, descripcion: string): ResultadoAnalisis {
   return aplicarRaciones(descripcion, { ...resultado, input_query: descripcion })
@@ -859,6 +909,16 @@ function cerrarTexto(resultado: ResultadoAnalisis, descripcion: string): Resulta
 export async function analizarTexto(env: Env, descripcion: string): Promise<{ proveedor: Proveedor; modelo: string; resultado: ResultadoAnalisis }> {
   const limpia = sanitizarContextoModelo(descripcion, 300)
   const vistos: unknown[] = []
+  for (const modelo of MODELOS_TEXTO_GROQ) {
+    try {
+      return { proveedor: 'groq', modelo, resultado: cerrarTexto(await textoGroq(env, modelo, limpia), limpia) }
+    } catch (e) {
+      if (e instanceof FotoIlegible || esDefinitivo(e)) throw e
+      vistos.push(e)
+      console.warn(`[ia] Groq ${modelo} (texto) falló:`, e instanceof Error ? e.message.slice(0, 200) : e)
+      if (e instanceof ErrorIA && e.codigo === 'AUTH_FAILURE') break
+    }
+  }
   try {
     return { proveedor: 'gemini', modelo: env.GEMINI_MODEL || GEMINI_MODELO_POR_DEFECTO, resultado: cerrarTexto(await textoGemini(env, limpia), limpia) }
   } catch (e) {
