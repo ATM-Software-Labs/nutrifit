@@ -17,7 +17,7 @@ export interface Env {
   ALLOWED_ORIGINS?: string // lista separada por comas
   TURNSTILE_SITE_KEY?: string
   GEMINI_MODEL?: string
-  /** Modelo de visión en ai.trujillomingorance.com. Por defecto llama-3.2-11b-vision-instruct. */
+  /** Modelo de visión en ai.trujillomingorance.com. Por defecto qwen/qwen3.8-27b. */
   TRUJILLO_MODEL?: string
   /** URL completa del chat de Trujillo. Si falta, se usa el gateway público. */
   TRUJILLO_AI_URL?: string
@@ -36,7 +36,7 @@ export interface Env {
   VAPID_PRIVATE_JWK?: string
   VAPID_SUBJECT?: string
   GEMINI_API_KEY?: string
-  /** Groq Vision (llama-3.2-11b y, en el mismo plazo, llama-3.2-90b). Sin clave se salta ese paso. */
+  /** Groq, proveedor principal: qwen/qwen3.8-27b (foto y etiqueta), openai/gpt-oss-120b y gpt-oss-20b (texto). Sin clave se salta ese paso. */
   GROQ_API_KEY?: string
   /** Opcional: ai.trujillomingorance.com exige Bearer si el gateway no es abierto. */
   TRUJILLO_API_KEY?: string

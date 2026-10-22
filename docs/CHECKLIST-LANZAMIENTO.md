@@ -80,10 +80,10 @@ curl -s -X POST https://nutri.trujillomingorance.com/api/auth/solicitar \
 
 ## 6. IA: Gemini, Groq, Trujillo y Workers AI
 
-- `GEMINI_API_KEY` configurada. Analiza una foto real desde la app: la respuesta lleva `"proveedor":"gemini"`.
+- `GROQ_API_KEY` configurada. Analiza una foto real desde la app: la respuesta lleva `"proveedor":"groq"`.
 - Licencia de Llama 3.2 Vision aceptada (una vez, ver BACKEND.md §5). Para probar el respaldo:
-  1. Quita temporalmente la clave (`wrangler pages secret delete GEMINI_API_KEY`) o pon una inválida en un despliegue de *preview*.
-  2. Con `GROQ_API_KEY`, la misma foto responde `"proveedor":"groq"`. Sin Groq ni Trujillo, `"proveedor":"workers-ai"`.
+  1. Pon una `GROQ_API_KEY` inválida en un despliegue de *preview*.
+  2. Con `GEMINI_API_KEY`, la misma foto responde `"proveedor":"gemini"`. Sin Groq, Gemini ni Trujillo, `"proveedor":"workers-ai"`.
   3. Restaura la clave.
 - Sin ningún proveedor, la app ofrece «Añadir manualmente» (503).
 - Revisa los términos del nivel gratuito de Gemini y la [política de privacidad](../PRIVACIDAD.md) (borrador).
