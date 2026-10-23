@@ -1,0 +1,23 @@
+name: Error
+description: Algo no funciona como debería
+labels: [error]
+body:
+  - type: textarea
+    id: que
+    attributes: { label: ¿Qué ha pasado?, description: "Qué hiciste, qué esperabas y qué ocurrió." }
+    validations: { required: true }
+  - type: textarea
+    id: pasos
+    attributes: { label: Pasos para reproducirlo, placeholder: "1. Ve a…\n2. Pulsa…\n3. Aparece…" }
+  - type: dropdown
+    id: donde
+    attributes: { label: ¿Dónde?, options: [Web en el móvil, Web en el ordenador, PWA instalada (iPhone), App Android, Otro] }
+    validations: { required: true }
+  - type: input
+    id: version
+    attributes: { label: Navegador / versión de Android o iOS }
+  - type: textarea
+    id: capturas
+    attributes: { label: Capturas (sin datos personales) }
+  - type: markdown
+    attributes: { value: "**¿Es un fallo de seguridad?** No lo publiques aquí: sigue [SECURITY.md](../blob/main/SECURITY.md)." }

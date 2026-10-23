@@ -27,6 +27,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Auditoría de dependencias (producción, altas y críticas)
+        run: npm audit --omit=dev --audit-level=high
       - name: Tipos (app + Functions + tests)
         run: npm run typecheck
       - name: Tests

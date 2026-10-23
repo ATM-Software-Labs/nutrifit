@@ -1,0 +1,14 @@
+name: Idea o mejora
+description: Propón una función o un cambio
+labels: [mejora]
+body:
+  - type: textarea
+    id: problema
+    attributes: { label: ¿Qué problema resuelve?, description: "Cuéntalo desde el uso diario." }
+    validations: { required: true }
+  - type: textarea
+    id: propuesta
+    attributes: { label: ¿Cómo te lo imaginas? }
+  - type: textarea
+    id: alternativas
+    attributes: { label: Alternativas que has pensado }

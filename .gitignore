@@ -53,3 +53,7 @@ wrangler.local.toml
 auditoria-reporte.json
 test-report.json
 *.bak
+
+# Informes locales de Lighthouse
+*.lighthouse.json
+lh/

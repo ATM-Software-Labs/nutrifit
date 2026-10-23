@@ -15,6 +15,7 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/ATM-Software-Labs/nutrifit/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/ATM-Software-Labs/nutrifit/actions/workflows/ci.yml/badge.svg" /></a>
   <img alt="Licencia MIT" src="https://img.shields.io/badge/licencia-MIT-10B981" />
   <img alt="Cloudflare Pages" src="https://img.shields.io/badge/Cloudflare-Pages%20%2B%20D1-F38020?logo=cloudflare&logoColor=white" />
   <img alt="PWA" src="https://img.shields.io/badge/PWA-iPhone%20%C2%B7%20Android-111827" />
@@ -35,7 +36,15 @@
 | **Revisión del plato (IA)** | **Peso** | **Descarga Android** | **Instalar en iPhone** |
 | <img src="docs/screenshots/revision.png" width="200" alt="Revisión del plato" /> | <img src="docs/screenshots/grafica-peso.png" width="200" alt="Gráfica de peso" /> | <img src="docs/screenshots/descargar-android.png" width="200" alt="Descarga del APK" /> | <img src="docs/screenshots/banner-ios.png" width="200" alt="Instalar en iPhone" /> |
 
+| Día de entreno / descanso | Copiar comidas de otro día | Ajustes · Plan del día |
+|:-:|:-:|:-:|
+| <img src="docs/screenshots/plan-dia/tipo-dia-escritorio.png" width="300" alt="Tarjeta de tipo de día en el diario, con metas ajustadas" /> | <img src="docs/screenshots/plan-dia/copiar-dia-movil.png" width="160" alt="Hoja para copiar comidas de otro día" /> | <img src="docs/screenshots/plan-dia/ajustes-plan-dia.png" width="300" alt="Ajustes del plan del día: horario de entreno, metas, nombres y porción" /> |
+
 ## Funciones
+
+- **Días de entreno y descanso:** cada día puede ser de entreno o de descanso, con **metas propias** (sumar o restar kcal, proteína, carbohidratos y grasas). Un **horario semanal** (p. ej. L, X, V) lo aplica solo; desde el diario se puede cambiar cualquier día a mano.
+- **Copiar comidas de otro día:** «Repetir lo del día anterior» con un toque, o elegir qué comidas copiar y a qué día. Las bebidas copiadas suman al contador de agua.
+- **Ajustes a tu medida:** nombres propios para cada comida (p. ej. «Merienda» o «Post-entreno»), porción por defecto en gramos, idioma (español, catalán, inglés), unidades (métricas o imperiales) y recordatorios por franja.
 
 - **Entrar sin contraseña:** enlace mágico **y código de 6 cifras** en el mismo email (15 min, un solo uso, 5 intentos), protegido con Cloudflare Turnstile invisible.
 - **Entrar en el PC con un QR:** el ordenador muestra un QR y un código corto; lo escaneas con el móvil donde ya tienes sesión, compruebas el código y pulsas «Aprobar» (2 min, un solo uso, ligado a ese navegador).
@@ -137,6 +146,14 @@ npm run build && npm run pages:dev:offline   # http://localhost:8788 (sin cuenta
 
 Sin `BREVO_API_KEY`, el enlace mágico se imprime en la consola de Wrangler.
 
+## CI, despliegue y vuelta atrás
+
+- **CI** (`.github/workflows/ci.yml`): tipos, tests y build en cada push a `main` y en cada PR. **Dependabot** revisa npm y GitHub Actions cada semana (`.github/dependabot.yml`).
+- **Web:** cada push a `main` despliega en Cloudflare Pages (proyecto `nutrifit`). Para volver atrás: *Pages → Deployments → Rollback to this deployment* en el despliegue anterior, o `git revert` + push.
+- **API pública:** `gateway/` es un Worker (`api.trujillomingorance.com/nutrifit/*`) que reenvía a las Functions de Pages (`npm run gateway:deploy`; vuelta atrás con `wrangler rollback`).
+- **Base de datos (D1):** solo migraciones **aditivas** (tablas o columnas nuevas, nunca borrar). Antes de cada una se guarda un marcador de *time travel* (`wrangler d1 time-travel info nutrifit-db`) para poder restaurar.
+- **Secretos:** solo como secretos de Worker/Pages o de GitHub Actions, nunca en el repo. Ver [SECURITY.md](SECURITY.md).
+
 ## Desplegar en tu propio subdominio
 
 Necesitas una cuenta de Cloudflare con tu dominio, Node 22 y `npx wrangler login`.
@@ -188,11 +205,13 @@ docs/                guías, banner y capturas
 
 ## Contribuir
 
+Lee [CONTRIBUTING.md](CONTRIBUTING.md). En resumen:
+
 1. Abre un *issue* para hablar del cambio.
 2. Crea una rama desde `main`.
 3. Antes del PR, ejecuta `npm run typecheck && npm test && npm run build`.
 
-Textos de la interfaz y comentarios en español. No subas secretos: `.dev.vars`, `*.jks` y `.env*` están en `.gitignore`. Si encuentras una vulnerabilidad, escribe a soporte@trujillomingorance.com en lugar de abrir un issue público.
+Textos de la interfaz y comentarios en español. No subas secretos: `.dev.vars`, `*.jks` y `.env*` están en `.gitignore`. Si encuentras una vulnerabilidad, sigue [SECURITY.md](SECURITY.md) en lugar de abrir un issue público.
 
 ## Licencia
 

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Vulnerabilidad de seguridad
+    url: https://github.com/ATM-Software-Labs/nutrifit/security/advisories/new
+    about: Avísanos en privado, no en un issue público.
+  - name: Soporte de la app
+    url: https://nutri.trujillomingorance.com/privacidad
+    about: Contacto y privacidad.
