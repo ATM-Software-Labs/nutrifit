@@ -3,7 +3,7 @@
  * ni cabecera de proveedor ni el 429 crudo de una pasarela.
  *
  *  1. Groq (qwen/qwen3.8-27b).
- *  2. Gemini (GEMINI_MODEL o gemini-flash-latest), abort a los 8 s.
+ *  2. Gemini (GEMINI_MODEL = gemini-3.5-flash-lite, respaldo gratuito si Groq da 429), abort a los 8 s.
  *  3. Trujillo AI.
  *  4. Workers AI solo si VISION_WORKERS_AI="1" (apagado por defecto: su cuota gratuita es para otros proyectos).
  * Una foto ilegible no sigue.

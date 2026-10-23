@@ -29,7 +29,8 @@ import { sanitizarContextoModelo } from './sanitizar.ts'
 /** Alias estable de Google: gemini-2.0-flash se apagó el 1-jun-2026. */
 export const GEMINI_MODELO_POR_DEFECTO = 'gemini-flash-latest'
 /** Si el modelo configurado ya no existe (404) se reintenta con este. */
-const GEMINI_MODELO_RESCATE = 'gemini-2.5-flash'
+/** Free tier: Flash-Lite da ~500 peticiones/día frente a 20 de Flash. 2.5 ya no admite proyectos nuevos. */
+const GEMINI_MODELO_RESCATE = 'gemini-3.5-flash-lite'
 const TIMEOUT_GEMINI_MS = 25_000
 /** Cada gateway de la foto del plato. Texto y etiqueta siguen con TIMEOUT_GEMINI_MS. */
 export const TIMEOUT_GATEWAY_FOTO_MS = 15_000
@@ -665,7 +666,7 @@ function modeloTrujillo(env: Env): string {
   return limpio || MODELO_TRUJILLO_VISION
 }
 
-/** El escáner nuevo usa Gemini 2.5 Flash salvo que GEMINI_MODEL diga otra cosa. */
+/** Modelo Gemini del escáner si GEMINI_MODEL no dice otro (wrangler.toml fija gemini-3.5-flash-lite). */
 export const MODELO_ESCANER_GEMINI = GEMINI_MODELO_POR_DEFECTO
 /** Workers AI del escáner sigue en 2 s. Gemini tiene margen para el JSON del guiso. */
 export const TIMEOUT_ESCANER_MS = 2_000
