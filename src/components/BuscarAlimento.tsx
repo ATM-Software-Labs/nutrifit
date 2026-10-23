@@ -7,6 +7,7 @@
  *  · Productos envasados: Open Food Facts solo al pulsar Buscar o Enter.
  * Se eligen gramos, se van sumando a una «cesta» y se revisa como un plato.
  */
+import { porcionDefecto } from '../lib/porcionDefecto.ts'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { Barcode, Minus, Plus, Search, Sparkles, X } from 'lucide-react'
 import { Sheet } from './ui/Sheet.tsx'
@@ -88,7 +89,7 @@ function nombrePlato(c: EnCesta[]) {
 function Detalle({ a, onAnadir }: { a: Alimento; onAnadir: (cantidad: number) => void }) {
   const unidad = a.unidad ?? 'g'
   const idMem = a.codigo || a.id
-  const [cantidad, setCantidad] = useState(() => ultimaCantidad(idMem)?.cantidad ?? a.racion ?? (unidad === 'ml' && a.envase && a.envase <= 1000 ? a.envase : 100))
+  const [cantidad, setCantidad] = useState(() => ultimaCantidad(idMem)?.cantidad ?? a.racion ?? (unidad === 'ml' && a.envase && a.envase <= 1000 ? a.envase : porcionDefecto()))
   const [clave, setClave] = useState<string | undefined>()
   const g = Math.min(5000, Math.max(0, cantidad || 0))
   const m = escalar(a.por100, g)

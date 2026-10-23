@@ -60,6 +60,8 @@ const POR_USUARIO = [
   'DELETE FROM archivos_usuario WHERE usuario_id = ?1',
   'DELETE FROM preferencias_cantidades WHERE usuario_id = ?1',
   'DELETE FROM recordatorios_franjas WHERE usuario_id = ?1',
+  'DELETE FROM plan_dia WHERE usuario_id = ?1',
+  'DELETE FROM tipo_dia WHERE usuario_id = ?1',
   'DELETE FROM amistades WHERE solicitante_id = ?1 OR receptor_id = ?1',
   'DELETE FROM comidas_frecuentes WHERE usuario_id = ?1',
   'DELETE FROM entrenamientos WHERE usuario_id = ?1',

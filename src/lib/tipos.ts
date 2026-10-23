@@ -9,6 +9,27 @@ export const NOMBRE_TIPO: Record<TipoComida, string> = {
   cena: 'Cena',
   snack: 'Snacks',
 }
+export const NOMBRE_TIPO_DEFECTO: Readonly<Record<TipoComida, string>> = { ...NOMBRE_TIPO }
+/** Nombres personalizados (Ajustes → Plan del día). Vacío = nombre por defecto. */
+export function aplicarNombresComidas(n: Partial<Record<TipoComida, string>> | null | undefined) {
+  for (const t of TIPOS_COMIDA) NOMBRE_TIPO[t] = n?.[t]?.trim() || NOMBRE_TIPO_DEFECTO[t]
+  try { localStorage.setItem('nf:nombresComidas', JSON.stringify(n ?? {})) } catch { /* sin storage */ }
+}
+try {
+  const guardados = typeof localStorage !== 'undefined' ? localStorage.getItem('nf:nombresComidas') : null
+  if (guardados) for (const t of TIPOS_COMIDA) NOMBRE_TIPO[t] = (JSON.parse(guardados) as Record<string, string>)[t]?.trim() || NOMBRE_TIPO_DEFECTO[t]
+} catch { /* ignora */ }
+
+export type TipoDia = 'entreno' | 'descanso'
+export interface MetasDelta { calorias: number; proteinas: number; carbohidratos: number; grasas: number }
+export interface PlanDia {
+  horario_entreno: number
+  auto: boolean
+  entreno: MetasDelta
+  descanso: MetasDelta
+  nombres: Partial<Record<TipoComida, string>>
+  porcion_g: number | null
+}
 
 export interface Usuario {
   id: string
@@ -94,6 +115,9 @@ export interface Resumen {
   porcentaje: Totales | null
   agua_ml: number
   num_comidas: number
+  tipo_dia?: TipoDia | null
+  tipo_dia_origen?: 'manual' | 'horario' | null
+  metas_base?: Totales | null
 }
 
 export type CategoriaPlato =

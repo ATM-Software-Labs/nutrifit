@@ -16,7 +16,7 @@ import { hoy } from '../../functions/utils/fechas.ts'
 import type { PlatoEscaneo } from './platoEscaneo.ts'
 import { urlVisionPermitida } from '../../functions/utils/ticketVision.ts'
 import { enviarVision, sha256Imagen, usarPasarelaVision, type PreparadoVision } from './visionGateway.ts'
-import type { Comida, DatosPerfil, Historial, InfoVinculo, NuevaComida, ProductoOFF, Resumen, ResultadoAnalisis, TipoComida, Usuario } from './tipos.ts'
+import type { Comida, DatosPerfil, Historial, InfoVinculo, NuevaComida, ProductoOFF, Resumen, PlanDia, ResultadoAnalisis, TipoComida, TipoDia, Usuario } from './tipos.ts'
 
 export class ApiError extends Error {
   constructor(
@@ -205,6 +205,10 @@ export const api = {
   /** Copia comidas de otro día: todas, por tipo o por id. */
   copiarComidas: (b: { desde: string; hasta: string; ids?: string[]; tipos?: TipoComida[] }) =>
     pedir<{ ok: true; copiadas: number; comidas: Comida[] }>('/api/comidas/copiar', { method: 'POST', body: b, prioridad: 'alta' }),
+  marcarTipoDia: (fecha: string, tipo: TipoDia | null) =>
+    pedir<{ ok: true }>('/api/comidas/tipo-dia', { method: 'PUT', body: { fecha, tipo }, prioridad: 'alta' }),
+  planDia: () => pedir<{ ok: true; plan: PlanDia }>('/api/usuarios/plan-dia'),
+  guardarPlanDia: (plan: PlanDia) => pedir<{ ok: true; plan: PlanDia }>('/api/usuarios/plan-dia', { method: 'PUT', body: plan, prioridad: 'alta' }),
   borrarComida: (id: string) => pedir<{ ok: true }>(`/api/comidas/${encodeURIComponent(id)}`, { method: 'DELETE', prioridad: 'alta' }),
   analizar: (imagen: Blob, turnstile: string) => {
     const fd = new FormData()

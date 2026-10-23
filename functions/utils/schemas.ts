@@ -403,3 +403,21 @@ export const copiarComidasSchema = z.strictObject({
   ids: z.array(uuid).max(60).optional(),
   tipos: z.array(z.enum(TIPOS_COMIDA)).max(4).optional(),
 })
+
+/** PUT /api/comidas/tipo-dia: marca manual (null = quitar marca y volver al horario). */
+export const tipoDiaSchema = z.strictObject({
+  fecha,
+  tipo: z.enum(['entreno', 'descanso']).nullable(),
+})
+
+const delta = (max: number) => z.number().int().min(-max).max(max)
+const nombreFranja = z.string().trim().max(24)
+/** PUT /api/usuarios/plan-dia */
+export const planDiaSchema = z.strictObject({
+  horario_entreno: z.number().int().min(0).max(127),
+  auto: z.boolean(),
+  entreno: z.strictObject({ calorias: delta(1500), proteinas: delta(200), carbohidratos: delta(400), grasas: delta(150) }),
+  descanso: z.strictObject({ calorias: delta(1500), proteinas: delta(200), carbohidratos: delta(400), grasas: delta(150) }),
+  nombres: z.strictObject({ desayuno: nombreFranja, comida: nombreFranja, cena: nombreFranja, snack: nombreFranja }).partial().optional(),
+  porcion_g: z.number().int().min(1).max(2000).nullable().optional(),
+})

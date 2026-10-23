@@ -10,6 +10,7 @@ import { exigirSesion } from '../../utils/session.ts'
 import { obtenerUsuario } from '../../utils/usuarios.ts'
 import { aComidaApi, type FilaComida } from '../../utils/comidas.ts'
 import { hoy } from '../../utils/fechas.ts'
+import { ajustarMetas, leerPlanDia, tipoEfectivo } from '../../utils/planDia.ts'
 
 type Totales = { calorias: number; proteinas: number; carbohidratos: number; grasas: number }
 const r1 = (n: number) => Math.round(n * 10) / 10
@@ -24,7 +25,8 @@ export const onRequestGet: Handler = async ({ request, env, data }) => {
     env.DB.prepare('SELECT ml FROM registro_agua WHERE usuario_id = ?1 AND fecha = ?2').bind(sesion.usuarioId, fecha),
   ])
   const filas = (comidasRes?.results ?? []) as FilaComida[]
-  const usuario = await obtenerUsuario(env, sesion.usuarioId)
+  const [usuario, planDia] = await Promise.all([obtenerUsuario(env, sesion.usuarioId), leerPlanDia(env, sesion.usuarioId, fecha)])
+  const dia = tipoEfectivo(planDia.plan, planDia.manual, fecha)
 
   const comidas = Object.fromEntries(TIPOS_COMIDA.map((t) => [t, [] as ReturnType<typeof aComidaApi>[]]))
   const totales: Totales = { calorias: 0, proteinas: 0, carbohidratos: 0, grasas: 0 }
@@ -37,7 +39,7 @@ export const onRequestGet: Handler = async ({ request, env, data }) => {
   }
   for (const k of Object.keys(totales) as (keyof Totales)[]) totales[k] = r1(totales[k])
 
-  const metas: Totales | null =
+  const metasBase: Totales | null =
     usuario && usuario.meta_calorias !== null
       ? {
           calorias: usuario.meta_calorias,
@@ -46,6 +48,7 @@ export const onRequestGet: Handler = async ({ request, env, data }) => {
           grasas: usuario.meta_grasas ?? 0,
         }
       : null
+  const metas = metasBase && ajustarMetas(metasBase, planDia.plan, dia.tipo)
 
   const restante = metas && (Object.fromEntries((Object.keys(metas) as (keyof Totales)[]).map((k) => [k, r1(metas[k] - totales[k])])) as Totales)
   const porcentaje =
@@ -53,5 +56,5 @@ export const onRequestGet: Handler = async ({ request, env, data }) => {
     (Object.fromEntries((Object.keys(metas) as (keyof Totales)[]).map((k) => [k, metas[k] > 0 ? Math.round((totales[k] / metas[k]) * 100) : 0])) as Totales)
 
   const agua = (aguaRes?.results?.[0] as { ml?: number } | undefined)?.ml ?? 0
-  return json({ ok: true, fecha, comidas, totales, metas, restante, porcentaje, agua_ml: agua, num_comidas: filas.length })
+  return json({ ok: true, fecha, comidas, totales, metas, restante, porcentaje, agua_ml: agua, num_comidas: filas.length, tipo_dia: dia.tipo, tipo_dia_origen: dia.origen, metas_base: metasBase })
 }

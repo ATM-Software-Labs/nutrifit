@@ -25,6 +25,7 @@ import { SeccionDispositivos } from './SeccionDispositivos.tsx'
 import { EstadoServicios } from './EstadoServicios.tsx'
 import { SeccionIntegraciones } from './SeccionIntegraciones.tsx'
 import { SeccionPreferenciasAvanzadas } from './SeccionPreferenciasAvanzadas.tsx'
+import { SeccionPlanDia } from './SeccionPlanDia.tsx'
 import { useIdioma } from '../hooks/useIdioma.ts'
 import type { Idioma } from '../lib/i18n.ts'
 
@@ -367,6 +368,9 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
                 Afecta a medidas corporales, registro de hidratación y cálculos nutricionales.
               </p>
               <AjusteBebidasAgua />
+            </Seccion>
+            <Seccion id="plan-dia" titulo="Plan del día · entreno y descanso">
+              <SeccionPlanDia />
             </Seccion>
             <Seccion titulo={t('ajustes.apariencia')}>
               <Segmented

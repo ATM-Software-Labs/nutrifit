@@ -35,6 +35,8 @@ export const TABLAS_COPIA: TablaCopia[] = [
   { tabla: 'push_suscripciones', pk: ['endpoint_hash'] },
   { tabla: 'recordatorios_pref', pk: ['usuario_id'] },
   { tabla: 'recordatorios_franjas', pk: ['usuario_id', 'id'] },
+  { tabla: 'plan_dia', pk: ['usuario_id'] },
+  { tabla: 'tipo_dia', pk: ['usuario_id', 'fecha'] },
   { tabla: 'notificaciones_app', pk: ['id'] },
   { tabla: 'accesos_conocidos', pk: ['usuario_id', 'huella'] },
   { tabla: 'preferencias_cantidades', pk: ['usuario_id'] },

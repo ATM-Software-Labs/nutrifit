@@ -23,6 +23,8 @@ import { SeccionComida } from './SeccionComida.tsx'
 import { HojaAnadir } from './HojaAnadir.tsx'
 import { HojaCopiarDia } from './HojaCopiarDia.tsx'
 import { SugerenciaRepetir } from './SugerenciaRepetir.tsx'
+import { SelectorTipoDia } from './SelectorTipoDia.tsx'
+import { guardarPorcionDefecto } from '../lib/porcionDefecto.ts'
 
 import { WidgetAyuno } from './WidgetAyuno.tsx'
 import { WidgetAgua } from './WidgetAgua.tsx'
@@ -41,7 +43,7 @@ import { conComida, reemplazarComida, sinComida } from '../lib/resumen.ts'
 import { fechaLarga, hoyISO, tipoPorHora } from '../lib/fechas.ts'
 import { clicPrivacidad, navegar } from '../lib/rutas.ts'
 import { fijarUsuarioSync } from '../lib/ventanaCliente.ts'
-import { TIPOS_COMIDA, type Comida, type NuevaComida, type ResultadoAnalisis, type TipoComida, type Usuario } from '../lib/tipos.ts'
+import { aplicarNombresComidas, TIPOS_COMIDA, type Comida, type NuevaComida, type ResultadoAnalisis, type TipoComida, type Usuario } from '../lib/tipos.ts'
 
 const ScannerComida = lazy(() => import('./ScannerComida.tsx'))
 const ModalRevisionPlato = lazy(() => import('./ModalRevisionPlato.tsx'))
@@ -115,14 +117,16 @@ export default function Dashboard({
   const { resumen, error, actualizar, recargar } = useResumen(fecha)
   const toast = useToast()
   const cerrar = useCallback(() => setHoja(null), [])
-  const onCopiado = useCallback(
-    (hasta: string, comidas: Comida[]) => {
+  const onCopiado = (hasta: string, comidas: Comida[]) => {
       setHoja(null)
-      if (hasta === fecha) recargar()
-      toast({ tipo: 'exito', mensaje: `${comidas.length} ${comidas.length === 1 ? 'comida copiada' : 'comidas copiadas'}${hasta === fecha ? '' : ` al ${fechaLarga(hasta)}`}` })
-    },
-    [fecha, recargar, toast],
-  )
+      // Las bebidas copiadas suman al contador de agua igual que al apuntarlas a mano.
+      // Se insertan en el resumen sin recargar (así no se pisa el agua local aún sin sincronizar).
+      if (hasta === fecha) for (const c of comidas) actualizar((r) => conComida(r, c))
+      let ml = 0
+      for (const c of comidas) ml += sumarBebidaAlAgua({ ...c, fecha: hasta } as NuevaComida)
+      const agua = ml > 0 ? ` · +${Math.round(ml)} ml de agua` : ''
+      toast({ tipo: 'exito', mensaje: `${comidas.length} ${comidas.length === 1 ? 'comida copiada' : 'comidas copiadas'}${hasta === fecha ? '' : ` al ${fechaLarga(hasta)}`}${agua}` })
+  }
   const onActividad = useCallback((kcal: number, sumar: boolean) => {
     setQuemadas(kcal)
     setSumarQuemadas(sumar)
@@ -154,6 +158,10 @@ export default function Dashboard({
   }
 
   useEffect(() => { void sincronizarPreferenciasCantidades() }, [usuario.id])
+  // Nombres de comidas y porción por defecto del plan del día (servidor → caché local).
+  useEffect(() => {
+    void api.planDia().then(({ plan }) => { aplicarNombresComidas(plan.nombres); guardarPorcionDefecto(plan.porcion_g) }).catch(() => undefined)
+  }, [usuario.id])
   // Tras rotar la clave VAPID, renueva la suscripción push en silencio (sin volver a pedir permiso).
   useEffect(() => { void import('../lib/push.ts').then((m) => m.resincronizarPush()).catch(() => undefined) }, [usuario.id])
   // Enlace profundo de los avisos de franja: /?apuntar=comida abre el registro rápido de esa comida (hoy).
@@ -305,6 +313,7 @@ export default function Dashboard({
           </div>
 
           <div className="space-y-3 lg:col-span-7 xl:col-span-5">
+            {resumen && <SelectorTipoDia fecha={fecha} resumen={resumen} onCambio={recargar} />}
             {resumen && <SugerenciaRepetir fecha={fecha} resumen={resumen} onCopiado={onCopiado} onElegir={(desde) => setHoja({ tipo: 'copiar', desde })} />}
             {resumen === null && !error
               ? TIPOS_COMIDA.map((t) => <Esqueleto key={t} alto="h-[68px]" />)
