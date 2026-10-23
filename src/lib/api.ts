@@ -42,6 +42,8 @@ interface Opciones {
   method?: string
   body?: unknown
   turnstile?: string
+  /** Ticket de la pasarela ya cobrado: el respaldo no vuelve a gastar el cupo diario. */
+  ticketVision?: string
   signal?: AbortSignal
   /** No disparar onSesionPerdida (p. ej. en /auth/yo al arrancar). */
   silencio401?: boolean
@@ -117,6 +119,7 @@ async function enviar(ruta: string, o: Opciones, accept: string): Promise<Respon
   if (o.turnstile) headers['CF-Turnstile-Token'] = o.turnstile
   if (o.ifNoneMatch) headers['if-none-match'] = `"${o.ifNoneMatch}"`
   if (o.prioridad) headers['x-sync-prioridad'] = o.prioridad
+  if (o.ticketVision) headers['x-vision-ticket'] = o.ticketVision
   const token = esNativa ? await obtenerTokenApp() : null
   if (token) headers.authorization = `Bearer ${token}`
 
@@ -228,10 +231,11 @@ export const api = {
   },
   /** Escáner unificado. En producción la foto sale hacia el API Gateway con un ticket de 60 s, con fallback automático a Cloudflare Functions. */
   escanear: async (imagen: Blob, turnstile: string) => {
+    let ticketVision: string | undefined
     const subirFicha = () => {
       const fd = new FormData()
       fd.append('imagen', imagen, imagen.type === 'image/webp' ? 'plato.webp' : 'plato.jpg')
-      return pedir<PlatoEscaneo>('/api/alimentos/escanear', { method: 'POST', body: fd, turnstile })
+      return pedir<PlatoEscaneo>('/api/alimentos/escanear', { method: 'POST', body: fd, turnstile, ticketVision })
     }
 
     if (!usarPasarelaVision()) {
@@ -249,6 +253,7 @@ export const api = {
       if (prep.modo !== 'gateway' || !prep.ticket || !urlVisionPermitida(prep.url)) {
         return subirFicha()
       }
+      ticketVision = prep.ticket
       let res: Response
       try {
         res = await enviarVision(prep.url, prep.ticket, imagen)

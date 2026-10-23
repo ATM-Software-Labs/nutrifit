@@ -55,7 +55,7 @@ export function aplicarCors(headers: Headers, origin: string): void {
   headers.set('Access-Control-Allow-Origin', origin)
   headers.set('Access-Control-Allow-Credentials', 'true')
   headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS')
-  headers.set('Access-Control-Allow-Headers', 'Authorization, Content-Type, CF-Turnstile-Token, If-None-Match, If-Match, X-Sync-Prioridad, X-App-Client-Token')
+  headers.set('Access-Control-Allow-Headers', 'Authorization, Content-Type, CF-Turnstile-Token, If-None-Match, If-Match, X-Sync-Prioridad, X-Vision-Ticket, X-App-Client-Token')
   headers.set('Access-Control-Expose-Headers', 'Retry-After, ETag, Content-Disposition')
   headers.set('Access-Control-Max-Age', '86400')
   anadirVary(headers, 'Origin')

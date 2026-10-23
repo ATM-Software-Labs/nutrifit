@@ -116,7 +116,7 @@ export async function atender(request: Request, env: GatewayEnv, ctx: ContextoGa
       servicio: 'nutrifit-api-gateway',
       time: new Date().toISOString(),
       servicios: {
-        vision: Boolean(env.GEMINI_API_KEY || env.GROQ_API_KEY || env.TRUJILLO_API_KEY || env.AI),
+        vision: Boolean(env.GEMINI_API_KEY || env.GROQ_API_KEY || env.TRUJILLO_API_KEY),
         limite: Boolean(env.VISION_LIMITE),
         pasarela: Boolean(secretoPasarela(env)),
       },

@@ -40,6 +40,8 @@ export interface Env {
   GEMINI_API_KEY?: string
   /** Groq, proveedor principal: qwen/qwen3.8-27b (foto y etiqueta), openai/gpt-oss-120b y gpt-oss-20b (texto). Sin clave se salta ese paso. */
   GROQ_API_KEY?: string
+  /** "1" reactiva Workers AI como último recurso del escáner. Apagado por defecto. */
+  VISION_WORKERS_AI?: string
   /** Opcional: ai.trujillomingorance.com exige Bearer si el gateway no es abierto. */
   TRUJILLO_API_KEY?: string
   /** URL libsql o https de la base externa. Vacía = historial y cachés siguen en D1. */

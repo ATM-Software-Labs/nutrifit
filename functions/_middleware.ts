@@ -85,7 +85,7 @@ export function cabecerasCors(origin: string): Record<string, string> {
   return {
     'Access-Control-Allow-Origin': origin,
     'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Authorization, Content-Type, CF-Turnstile-Token, If-None-Match, If-Match, X-Sync-Prioridad',
+    'Access-Control-Allow-Headers': 'Authorization, Content-Type, CF-Turnstile-Token, If-None-Match, If-Match, X-Sync-Prioridad, X-Vision-Ticket',
     'Access-Control-Expose-Headers': 'Retry-After',
     'Access-Control-Max-Age': '86400',
     Vary: 'Origin',

@@ -2,7 +2,7 @@
  * Preprocesado de la foto del plato, en el dispositivo, antes de
  * POST /api/alimentos/escanear:
  *   · Worker con OffscreenCanvas si el navegador lo permite; si no, el hilo principal cede entre pasadas;
- *   · el lado mayor empieza en 1024 px y baja (800, luego menos) si el binario pasa de 130 KB;
+ *   · el lado mayor empieza en 768 px y baja (614, luego menos) si el binario pasa de 130 KB;
  *   · WebP entre 0.72 y 0.78, o JPEG a 0.75 si el navegador no codifica WebP;
  *   · una foto que ya cabe, aunque pese menos de 70 KB, no se amplía;
  *   · se vuelve a codificar: el EXIF (GPS incluido) no se copia.

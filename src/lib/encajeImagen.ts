@@ -3,7 +3,7 @@ export const LADO_JPEG = 1024
 /** Calidad del JPEG (0–1). El canvas no copia EXIF. */
 export const CALIDAD_JPEG = 0.85
 /** Primer lado mayor al comprimir. Si el binario pasa de 130 KB se baja el lado. */
-export const LADO_FOTO = 1024
+export const LADO_FOTO = 768
 /** Lado mayor de reserva, dentro del rango que acepta el análisis. */
 export const LADO_MAYOR = 800
 /** Por debajo de este lado, y solo entonces, la calidad puede bajar de 0.72. */

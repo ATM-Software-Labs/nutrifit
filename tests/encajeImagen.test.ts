@@ -15,12 +15,12 @@ test('encaja sin recortar ni ampliar', () => {
   assert.deepEqual(encajeCuadrado(800, 600), { lado: 1024, w: 800, h: 600, x: 112, y: 212 })
 })
 
-test('la foto de análisis empieza en 1024 px, baja a 800 y no pasa de 130 KB', () => {
-  assert.equal(LADO_FOTO, 1024)
+test('la foto de análisis empieza en 768 px y no pasa de 130 KB', () => {
+  assert.equal(LADO_FOTO, 768)
   assert.equal(LADO_MAYOR, 800)
   assert.equal(CALIDAD_FOTO, 0.75)
   assert.equal(MAX_FOTO_BYTES, 130 * 1024)
-  assert.deepEqual(encajeLadoMayor(4000, 3000, LADO_FOTO), { w: 1024, h: 768 })
+  assert.deepEqual(encajeLadoMayor(4000, 3000, LADO_FOTO), { w: 768, h: 576 })
   assert.deepEqual(encajeLadoMayor(4000, 3000), { w: 800, h: 600 })
   assert.deepEqual(encajeLadoMayor(3000, 4000), { w: 600, h: 800 })
   assert.deepEqual(encajeLadoMayor(800, 800), { w: 800, h: 800 })
@@ -37,10 +37,10 @@ test('si ya cabe, no se amplía; si no, baja el lado antes de salir de 0.72', as
   const grande = await elegirBinario(4000, 3000, async (w, _h, calidad) => {
     anchos.push(w)
     calidades.push(calidad)
-    return new Blob([new Uint8Array(w > 800 ? 200 * 1024 : 90 * 1024)])
+    return new Blob([new Uint8Array(w > 700 ? 200 * 1024 : 90 * 1024)])
   })
-  assert.equal(anchos[0], 1024)
-  assert.equal(anchos[1], 800)
+  assert.equal(anchos[0], 768)
+  assert.equal(anchos[1], 614)
   assert.ok(calidades[0]! >= CALIDAD_MIN)
   assert.ok(grande && grande.size <= MAX_FOTO_BYTES)
 })

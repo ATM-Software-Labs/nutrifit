@@ -67,6 +67,11 @@ export function extrasGroq(modelo: string, maxTokens: number): Record<string, un
 export const MODELOS_TEXTO_WORKERS_AI = ['@cf/google/gemma-4-26b-a4b-it', '@cf/mistralai/mistral-small-3.1-24b-instruct'] as const
 
 export type Proveedor = 'gemini' | 'groq' | 'trujillo' | 'workers-ai'
+
+/** Workers AI fuera del escáner de fotos salvo VISION_WORKERS_AI="1" (cuota gratuita reservada a otros proyectos). */
+export function workersAIVisionActivo(env: { VISION_WORKERS_AI?: string }): boolean {
+  return env.VISION_WORKERS_AI?.trim() === '1'
+}
 export class ErrorIA extends Error {
   /** El modelo respondió bien pero la imagen no sirve (p. ej. no es una tabla): no se prueba otro. */
   definitivo = false
@@ -132,6 +137,8 @@ async function falloHttp(res: Response, proveedor: string, inicio: number): Prom
 
 /** Dos reintentos solo ante 429 o 503. El plazo del AbortSignal sigue mandando. */
 export const REINTENTOS_CUOTA = 2
+/** Un retry-after mayor que esto no se espera. */
+export const ESPERA_MAX_REINTENTO_S = 2
 
 export function esperaReintentoMs(n: number, aleatorio = Math.random()): number {
   return 2 ** n * 500 + Math.floor(aleatorio * 250)
@@ -168,6 +175,8 @@ async function fetchConReintento(url: string, init: RequestInit, signal: AbortSi
   for (;;) {
     const res = await fetch(url, { ...init, signal })
     if (!esCuota(res.status) || n >= REINTENTOS_CUOTA) return res
+    // Cuota por minuto agotada (retry-after largo): se pasa ya al siguiente proveedor.
+    if (Number(res.headers.get('retry-after')) > ESPERA_MAX_REINTENTO_S) return res
     await res.body?.cancel().catch(() => undefined)
     await dormir(esperaReintentoMs(n), signal)
     n += 1
@@ -223,7 +232,7 @@ Si la foto está desenfocada, no es comida o no se distingue con claridad, no in
 
 const PROMPT_USUARIO = 'Output ONLY valid JSON. No Markdown.'
 /** Varios ingredientes con rango de gramos. Texto y etiqueta siguen con un tope más alto. */
-export const MAX_TOKENS_FOTO = 2048
+export const MAX_TOKENS_FOTO = 1536
 
 export const PROMPT_ETIQUETA = `Lees la TABLA DE INFORMACIÓN NUTRICIONAL de la foto de un envase de alimento.
 Responde ÚNICAMENTE con un objeto JSON válido, sin texto adicional.
@@ -473,7 +482,7 @@ export async function cadenaVision<T>(env: Env, img: Imagen, t: TareaVision<T>):
     vistos.push(e)
     console.warn('[ia] Trujillo falló:', e instanceof Error ? e.message.slice(0, 200) : e)
   }
-  for (const modelo of MODELOS_VISION_WORKERS_AI) {
+  for (const modelo of workersAIVisionActivo(env) ? MODELOS_VISION_WORKERS_AI : []) {
     try {
       return { proveedor: 'workers-ai', modelo, resultado: await visionWorkersAI(env, modelo, img, t) }
     } catch (e) {
@@ -712,14 +721,14 @@ export async function analizarImagen(env: Env, img: Imagen): Promise<{ proveedor
       proveedor: 'trujillo',
       run: async () => ({ modelo: modeloTru, resultado: await visionTrujillo(env, img, t, modeloTru) }),
     },
-    {
+    ...(workersAIVisionActivo(env) ? [{
       etiqueta: 'Workers AI',
-      proveedor: 'workers-ai',
+      proveedor: 'workers-ai' as const,
       run: async () => ({
         modelo: MODELO_VISION_RESPALDO,
         resultado: await conTimeout(visionWorkersAI(env, MODELO_VISION_RESPALDO, img, t), TIMEOUT_GATEWAY_FOTO_MS, 'Workers AI'),
       }),
-    },
+    }] : []),
   ]
   const ejecutados = new Set<Proveedor>()
   const vistos: unknown[] = []

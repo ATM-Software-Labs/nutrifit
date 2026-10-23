@@ -10,7 +10,7 @@ export const URL_VISION = 'https://api.trujillomingorance.com/nutrifit/vision'
 /** Mismos topes que POST /api/alimentos/escanear. El gateway añade 5/min encima. */
 export const CUPOS_ESCANEO = {
   porMinuto: 8,
-  porDia: 10,
+  porDia: 20,
   porHora: 20,
 } as const
 

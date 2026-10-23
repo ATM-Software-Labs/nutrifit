@@ -12,6 +12,7 @@ import { camposLimite, conContextoVision, MENSAJE_LIMITE, respuestaFalloVision }
 import type { Imagen } from '../../utils/ia.ts'
 import { guardarPlatoCache, huellaImagen, leerPlatoCache, orquestarEscaneo } from '../../utils/orquestadorVision.ts'
 import { CUPOS_ESCANEO } from '../../utils/ticketVision.ts'
+import { ticketYaCobrado } from '../../utils/ticketCobrado.ts'
 
 const OPCIONES_LIMITE = { extra: camposLimite(MENSAJE_LIMITE) }
 
@@ -32,11 +33,15 @@ export const onRequestPost: Handler = async ({ request, env, data, waitUntil }) 
 
     await exigirLimite(env, `escanear:min:u:${sesion.usuarioId}`, CUPOS_ESCANEO.porMinuto, 60, MENSAJE_LIMITE, OPCIONES_LIMITE)
     await exigirLimite(env, await claveLimite('escanear:min:ip', data.ip), CUPOS_ESCANEO.porMinuto, 60, MENSAJE_LIMITE, OPCIONES_LIMITE)
-    await exigirLimite(env, `analizar:u:${sesion.usuarioId}`, CUPOS_ESCANEO.porDia, 86400, MENSAJE_LIMITE, OPCIONES_LIMITE)
-    await exigirLimite(env, `comida:hora:u:${sesion.usuarioId}`, CUPOS_ESCANEO.porHora, 3600, MENSAJE_LIMITE, OPCIONES_LIMITE)
+    const yaCobrado = await ticketYaCobrado(env, request, sesion.usuarioId, clave)
+    if (!yaCobrado) {
+      await exigirLimite(env, `analizar:u:${sesion.usuarioId}`, CUPOS_ESCANEO.porDia, 86400, MENSAJE_LIMITE, OPCIONES_LIMITE)
+      await exigirLimite(env, `comida:hora:u:${sesion.usuarioId}`, CUPOS_ESCANEO.porHora, 3600, MENSAJE_LIMITE, OPCIONES_LIMITE)
+    }
 
     try {
-      const plato = await orquestarEscaneo(env, img)
+      // Tras fallar la pasarela (Groq y Trujillo ya probados allí) se empieza por Gemini.
+      const plato = await orquestarEscaneo(env, img, yaCobrado ? 'gemini' : 'groq')
       waitUntil(guardarPlatoCache(env, clave, plato).catch(() => undefined))
       return json(plato)
     } catch (e) {

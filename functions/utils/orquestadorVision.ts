@@ -5,13 +5,13 @@
  *  1. Groq (qwen/qwen3.8-27b).
  *  2. Gemini (GEMINI_MODEL o gemini-flash-latest), abort a los 8 s.
  *  3. Trujillo AI.
- *  4. Workers AI, solo como último recurso (2 s), para no gastar su cuota.
+ *  4. Workers AI solo si VISION_WORKERS_AI="1" (apagado por defecto: su cuota gratuita es para otros proyectos).
  * Una foto ilegible no sigue.
  */
 import { z } from 'zod'
 import type { Env } from './env.ts'
 import { resumirFallos } from './errorVision.ts'
-import { ErrorIA, pasoEscaneo, TIMEOUT_ESCANER_GEMINI_MS, TIMEOUT_ESCANER_MS, TIMEOUT_GATEWAY_FOTO_MS, type Imagen } from './ia.ts'
+import { ErrorIA, pasoEscaneo, workersAIVisionActivo, TIMEOUT_ESCANER_GEMINI_MS, TIMEOUT_ESCANER_MS, TIMEOUT_GATEWAY_FOTO_MS, type Imagen } from './ia.ts'
 import { FotoIlegible, type ResultadoAnalisis } from './iaParseo.ts'
 import { emojiComida, esEmojiValido } from '../../src/lib/miniaturaComida.ts'
 import { afinarConCatalogo, type EstadoCatalogo } from './afinarCatalogo.ts'
@@ -133,12 +133,13 @@ export async function cascadaEscaneo(pasos: (() => Promise<ResultadoAnalisis>)[]
 }
 
 /** Groq → Gemini 8 s → Trujillo → Workers AI 2 s. El primero válido gana. */
-export function orquestarEscaneo(env: Env, img: Imagen): Promise<PlatoEscaneo> {
+export function orquestarEscaneo(env: Env, img: Imagen, primero: 'groq' | 'gemini' = 'groq'): Promise<PlatoEscaneo> {
+  const groq = () => pasoEscaneo(env, img, 'groq', TIMEOUT_GATEWAY_FOTO_MS)
+  const gemini = () => pasoEscaneo(env, img, 'gemini', TIMEOUT_ESCANER_GEMINI_MS)
   const pasos = [
-    () => pasoEscaneo(env, img, 'groq', TIMEOUT_GATEWAY_FOTO_MS),
-    () => pasoEscaneo(env, img, 'gemini', TIMEOUT_ESCANER_GEMINI_MS),
+    ...(primero === 'gemini' ? [gemini, groq] : [groq, gemini]),
     () => pasoEscaneo(env, img, 'trujillo', TIMEOUT_GATEWAY_FOTO_MS),
-    () => pasoEscaneo(env, img, 'workers-ai', TIMEOUT_ESCANER_MS),
+    ...(workersAIVisionActivo(env) ? [() => pasoEscaneo(env, img, 'workers-ai', TIMEOUT_ESCANER_MS)] : []),
   ]
   return cascadaEscaneo(pasos).then(async (r) => {
     const a = await afinarConCatalogo(env, r)

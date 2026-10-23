@@ -22,6 +22,8 @@ export interface GatewayEnv {
   APP_CLIENT_TOKEN?: string
   GEMINI_API_KEY?: string
   GROQ_API_KEY?: string
+  /** "1" reactiva Workers AI como último recurso del escáner. Apagado por defecto. */
+  VISION_WORKERS_AI?: string
   TRUJILLO_API_KEY?: string
 }
 

@@ -1,6 +1,6 @@
 /**
  * POST /api/comidas/analizar — foto de comida → nombre, ingredientes y macros.
- * Middleware: sesión previa + Turnstile + 20/hora por usuario. Aquí: 10 análisis/día
+ * Middleware: sesión previa + Turnstile + 20/hora por usuario. Aquí: CUPOS_ESCANEO.porDia (20) análisis/día
  * por usuario, imagen ≤ 1,5 MB, tipo real jpeg/png/webp (bytes mágicos).
  * Acepta multipart (campo "imagen") o JSON { imagen: base64|dataURL, mime? }.
  *
@@ -27,6 +27,7 @@ import { claveLimite, exigirLimite } from '../../utils/rateLimit.ts'
 import { camposLimite, conContextoVision, MENSAJE_LIMITE, respuestaFalloVision } from '../../utils/errorVision.ts'
 import { analizarImagen, type Imagen } from '../../utils/ia.ts'
 import { leerImagen } from '../../utils/imagenSubida.ts'
+import { CUPOS_ESCANEO } from '../../utils/ticketVision.ts'
 
 export const onRequestPost: Handler = async ({ request, env, data }) => {
   const sesion = exigirSesion(data.sesion)
@@ -43,7 +44,7 @@ export const onRequestPost: Handler = async ({ request, env, data }) => {
     const opciones = { extra: camposLimite(MENSAJE_LIMITE) }
     await exigirLimite(env, `escanear:min:u:${sesion.usuarioId}`, 8, 60, MENSAJE_LIMITE, opciones)
     await exigirLimite(env, await claveLimite('escanear:min:ip', data.ip), 8, 60, MENSAJE_LIMITE, opciones)
-    await exigirLimite(env, `analizar:u:${sesion.usuarioId}`, 10, 86400, MENSAJE_LIMITE, opciones)
+    await exigirLimite(env, `analizar:u:${sesion.usuarioId}`, CUPOS_ESCANEO.porDia, 86400, MENSAJE_LIMITE, opciones)
 
     try {
       const { proveedor, modelo, resultado } = await analizarImagen(env, img)

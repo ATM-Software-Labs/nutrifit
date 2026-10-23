@@ -1,6 +1,6 @@
 /**
  * Elige el binario más pequeño que quepa en 130 KB.
- * Empieza en 1024 px y calidad 0.75. Baja el lado antes de salir de 0.72–0.78.
+ * Empieza en 768 px y calidad 0.75. Baja el lado antes de salir de 0.72–0.78.
  * Si el primer resultado ya pesa menos de 70 KB, se queda: no se amplía.
  */
 import { CALIDAD_FOTO, calidadDeRescate, encajeLadoMayor, LADO_FOTO, MAX_FOTO_BYTES, siguienteCompresion } from './encajeImagen.ts'
