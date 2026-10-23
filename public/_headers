@@ -55,3 +55,34 @@
   Content-Type: application/json
   Access-Control-Allow-Origin: *
   Cache-Control: public, max-age=3600
+
+# SEO: pantallas con sesión fuera de los buscadores (las públicas: /, /descargar,
+# /privacidad, /legal, /recursos y /calculadora-creatina-agua/ sí se indexan).
+/historial
+  X-Robots-Tag: noindex, nofollow
+/profile
+  X-Robots-Tag: noindex, nofollow
+/ajustes
+  X-Robots-Tag: noindex, nofollow
+/peso
+  X-Robots-Tag: noindex, nofollow
+/agua
+  X-Robots-Tag: noindex, nofollow
+/logros
+  X-Robots-Tag: noindex, nofollow
+/vincular
+  X-Robots-Tag: noindex, nofollow
+/app-login
+  X-Robots-Tag: noindex, nofollow
+/app-login.html
+  X-Robots-Tag: noindex, nofollow
+
+# Imagen para redes (Open Graph) y SEO estático: 1 día + revalidación.
+/og-image.jpg
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+/sitemap.xml
+  Cache-Control: public, max-age=3600
+/robots.txt
+  Cache-Control: public, max-age=3600
+/calculadora-creatina-agua/*
+  Cache-Control: public, max-age=0, must-revalidate

@@ -3,62 +3,79 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>NutriFit | Tu App de Nutrición y Macros</title>
-    <meta name="description" content="NutriFit, la app de seguimiento de nutrición y macros minimalista, rápida y open source." />
-    <meta name="keywords" content="NutriFit, App de Nutrición, Contador de Calorías, Macros, Proteínas, Carbohidratos, Grasas, Ayuno Intermitente, Seguimiento de Dieta, Open Source, Alberto Trujillo, Trujillo Mingorance, Alberto Trujillo Mingorance, NutriFit Trujillo" />
+    <title>NutriFit | App gratis de calorías y macros con IA</title>
+    <meta name="description" content="NutriFit: cuenta calorías y macros con una foto, el código de barras o una frase. Agua, peso, ayuno y días de entreno. Gratis, sin anuncios y open source." />
     <meta name="author" content="Alberto Trujillo Mingorance" />
     <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
     <link rel="canonical" href="https://nutri.trujillomingorance.com/" />
-    
-    <!-- Open Graph -->
-    <meta property="og:title" content="NutriFit | App de Nutrición y Macros" />
-    <meta property="og:description" content="La app de seguimiento de nutrición y macros minimalista, rápida y open source." />
+
+    <!-- Open Graph / Twitter -->
+    <meta property="og:site_name" content="NutriFit" />
+    <meta property="og:title" content="NutriFit | App gratis de calorías y macros con IA" />
+    <meta property="og:description" content="Cuenta calorías y macros con una foto, el código de barras o una frase. Gratis, sin anuncios y open source." />
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://nutri.trujillomingorance.com" />
-    <meta property="og:image" content="https://nutri.trujillomingorance.com/icons/icon-512x512.png" />
+    <meta property="og:url" content="https://nutri.trujillomingorance.com/" />
+    <meta property="og:image" content="https://nutri.trujillomingorance.com/og-image.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="NutriFit, tu nutrición en equilibrio" />
     <meta property="og:locale" content="es_ES" />
-    
-    <!-- Twitter Cards -->
+    <meta property="og:locale:alternate" content="en_GB" />
+    <meta property="og:locale:alternate" content="ca_ES" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="NutriFit | App de Nutrición y Macros" />
-    <meta name="twitter:description" content="La app de seguimiento de nutrición y macros minimalista, rápida y open source." />
-    <meta name="twitter:image" content="https://nutri.trujillomingorance.com/icons/icon-512x512.png" />
-    
-    <!-- JSON-LD Structured Data -->
+    <meta name="twitter:title" content="NutriFit | App gratis de calorías y macros con IA" />
+    <meta name="twitter:description" content="Cuenta calorías y macros con una foto, el código de barras o una frase. Gratis, sin anuncios y open source." />
+    <meta name="twitter:image" content="https://nutri.trujillomingorance.com/og-image.jpg" />
+    <meta name="twitter:image:alt" content="NutriFit, tu nutrición en equilibrio" />
+
+    <!-- Datos estructurados (sin valoraciones: no hay reseñas reales que mostrar) -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "SoftwareApplication",
-      "name": "NutriFit",
-      "applicationCategory": "HealthApplication",
-      "applicationSubCategory": "Dietary and Nutritional Tracking",
-      "operatingSystem": "Web, Android, iOS",
-      "offers": {
-        "@type": "Offer",
-        "price": "0",
-        "priceCurrency": "EUR"
-      },
-      "featureList": [
-        "Seguimiento de macronutrientes",
-        "Contador de calorías diarias",
-        "Escaneo de alimentos y códigos de barras",
-        "Temporizador de ayuno intermitente",
-        "Registro de hidratación y peso",
-        "Sin anuncios ni venta de datos",
-        "Código abierto (Open Source)"
-      ],
-      "aggregateRating": {
-        "@type": "AggregateRating",
-        "ratingValue": "4.9",
-        "reviewCount": "128"
-      },
-      "author": {
-        "@type": "Person",
-        "name": "Alberto Trujillo Mingorance",
-        "url": "https://trujillomingorance.com"
-      },
-      "description": "App de seguimiento de nutrición, macros y dieta.",
-      "url": "https://nutri.trujillomingorance.com"
+      "@graph": [
+        {
+          "@type": "WebSite",
+          "@id": "https://nutri.trujillomingorance.com/#web",
+          "name": "NutriFit",
+          "url": "https://nutri.trujillomingorance.com/",
+          "inLanguage": ["es", "en", "ca"],
+          "publisher": { "@id": "https://nutri.trujillomingorance.com/#org" }
+        },
+        {
+          "@type": "Organization",
+          "@id": "https://nutri.trujillomingorance.com/#org",
+          "name": "NutriFit",
+          "url": "https://nutri.trujillomingorance.com/",
+          "logo": "https://nutri.trujillomingorance.com/icons/icon-512x512.png",
+          "founder": { "@type": "Person", "name": "Alberto Trujillo Mingorance", "url": "https://trujillomingorance.com" },
+          "sameAs": ["https://github.com/ATM-Software-Labs/nutrifit"]
+        },
+        {
+          "@type": ["WebApplication", "SoftwareApplication"],
+          "@id": "https://nutri.trujillomingorance.com/#app",
+          "name": "NutriFit",
+          "url": "https://nutri.trujillomingorance.com/",
+          "applicationCategory": "HealthApplication",
+          "applicationSubCategory": "Seguimiento de nutrición",
+          "operatingSystem": "Web, Android",
+          "browserRequirements": "Requiere JavaScript",
+          "isAccessibleForFree": true,
+          "inLanguage": ["es", "en", "ca"],
+          "image": "https://nutri.trujillomingorance.com/og-image.jpg",
+          "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
+          "featureList": [
+            "Calorías y macros por foto, código de barras o texto",
+            "Días de entreno y descanso con metas propias",
+            "Copiar comidas de otro día",
+            "Registro de agua, peso y ayuno intermitente",
+            "Sin anuncios ni venta de datos",
+            "Código abierto"
+          ],
+          "author": { "@type": "Person", "name": "Alberto Trujillo Mingorance", "url": "https://trujillomingorance.com" },
+          "publisher": { "@id": "https://nutri.trujillomingorance.com/#org" },
+          "description": "App de seguimiento de calorías y macros con análisis de fotos por IA. Gratis, sin anuncios y open source."
+        }
+      ]
     }
     </script>
 
@@ -69,7 +86,6 @@
     <link rel="icon" href="/favicon.ico" sizes="48x48" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.json" />
-    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />

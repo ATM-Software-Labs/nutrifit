@@ -267,9 +267,9 @@ function renderizar(md: string): ReactNode[] {
       const texto = h[2]!
       if (n === 1) {
         bloques.push(
-          <h1 key={bloques.length} className="mt-2 mb-4 text-2xl font-bold tracking-tight text-graphite dark:text-white">
+          <h2 key={bloques.length} className="mt-2 mb-4 text-2xl font-bold tracking-tight text-graphite dark:text-white">
             {enLinea(texto)}
-          </h1>
+          </h2>
         )
       } else if (n === 2) {
         bloques.push(

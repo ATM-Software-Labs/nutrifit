@@ -28,19 +28,24 @@ export function SelectorTipoDia({ fecha, resumen, onCambio }: { fecha: string; r
     { valor: 'entreno', etiqueta: 'Entreno', icono: <Dumbbell size={14} />, activo: manual && tipo === 'entreno' },
   ]
 
+  const Icono = tipo === 'entreno' ? Dumbbell : tipo === 'descanso' ? BedDouble : Sparkles
+
   return (
-    <div data-testid="tipo-dia" className="tarjeta flex flex-wrap items-center gap-3 p-3 pl-4">
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium">
-          {tipo === 'entreno' ? 'Día de entreno' : tipo === 'descanso' ? 'Día de descanso' : 'Día normal'}
-          {!manual && tipo && <span className="ml-1.5 text-xs font-normal text-neutral-500 dark:text-neutral-400">· según tu horario</span>}
-        </p>
-        <p className="cifra text-xs text-neutral-500 dark:text-neutral-400">
-          {resumen.metas ? `${entero(resumen.metas.calorias)} kcal objetivo` : 'Sin objetivo'}
-          {delta !== 0 && <span className={delta > 0 ? 'text-mint-600 dark:text-mint-400' : 'text-carbs'}> ({delta > 0 ? '+' : ''}{entero(delta)})</span>}
-        </p>
+    <div data-testid="tipo-dia" className="tarjeta space-y-3 p-3 sm:p-4">
+      <div className="flex items-center gap-3">
+        <span className={cx('flex h-9 w-9 shrink-0 items-center justify-center rounded-xl', tipo === 'entreno' ? 'bg-mint-500/10 text-mint-600 dark:text-mint-400' : 'bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400')} aria-hidden="true">
+          <Icono size={18} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold">{tipo === 'entreno' ? 'Día de entreno' : tipo === 'descanso' ? 'Día de descanso' : 'Día normal'}</p>
+          <p className="cifra truncate text-xs text-neutral-500 dark:text-neutral-400">
+            {resumen.metas ? `${entero(resumen.metas.calorias)} kcal objetivo` : 'Sin objetivo'}
+            {delta !== 0 && <span className={delta > 0 ? 'text-mint-600 dark:text-mint-400' : 'text-carbs'}> ({delta > 0 ? '+' : ''}{entero(delta)})</span>}
+            {!manual && tipo && ' · según tu horario'}
+          </p>
+        </div>
       </div>
-      <div role="radiogroup" aria-label="Tipo de día" className="flex rounded-xl bg-neutral-100 p-0.5 dark:bg-neutral-800">
+      <div role="radiogroup" aria-label="Tipo de día" className="grid grid-cols-3 rounded-xl bg-neutral-100 p-0.5 dark:bg-neutral-800">
         {opciones.map((o) => (
           <button
             key={o.etiqueta}
@@ -50,8 +55,8 @@ export function SelectorTipoDia({ fecha, resumen, onCambio }: { fecha: string; r
             disabled={guardando}
             onClick={() => !o.activo && void marcar(o.valor)}
             className={cx(
-              'flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs transition',
-              o.activo ? 'bg-white font-semibold shadow-sm dark:bg-neutral-700' : 'text-neutral-500 hover:text-graphite dark:text-neutral-400 dark:hover:text-white',
+              'flex min-h-9 items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs transition',
+              o.activo ? 'bg-white font-semibold text-graphite shadow-sm dark:bg-neutral-700 dark:text-white' : 'text-neutral-600 hover:text-graphite dark:text-neutral-400 dark:hover:text-white',
             )}
           >
             {o.icono} {o.etiqueta}

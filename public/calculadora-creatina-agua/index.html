@@ -4,6 +4,22 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Calculadora de Creatina y Agua Diaria | NutriFit</title>
+  <meta name="description" content="Calcula gratis cuánta creatina (0,1 g por kg) y cuánta agua (35 ml por kg) necesitas al día según tu peso. Herramienta de NutriFit.">
+  <link rel="canonical" href="https://nutri.trujillomingorance.com/calculadora-creatina-agua/">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <meta name="theme-color" content="#0F172A">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="NutriFit">
+  <meta property="og:locale" content="es_ES">
+  <meta property="og:title" content="Calculadora de Creatina y Agua Diaria | NutriFit">
+  <meta property="og:description" content="Cuánta creatina y agua necesitas al día según tu peso.">
+  <meta property="og:url" content="https://nutri.trujillomingorance.com/calculadora-creatina-agua/">
+  <meta property="og:image" content="https://nutri.trujillomingorance.com/og-image.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"Calculadora de Creatina y Agua","url":"https://nutri.trujillomingorance.com/calculadora-creatina-agua/","applicationCategory":"HealthApplication","operatingSystem":"Web","inLanguage":"es","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"},"isPartOf":{"@type":"WebSite","name":"NutriFit","url":"https://nutri.trujillomingorance.com/"}}</script>
   <style>
     body { margin:0; padding:40px 20px; background:#0F172A; color:#F8FAFC; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display:flex; justify-content:center; }
     .card { background:#1E293B; border:1px solid #334155; border-radius:24px; max-width:480px; width:100%; padding:32px; box-sizing:border-box; }
@@ -14,26 +30,25 @@
     .res { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px; }
     .box { background:#0F172A; border:1px solid #334155; padding:16px; border-radius:14px; text-align:center; }
     .val { font-size:24px; font-weight:700; color:#10B981; }
+    .nota { font-size:12px; margin:20px 0 12px 0; }
+    .cta { display:block; text-align:center; color:#10B981; font-size:14px; font-weight:600; text-decoration:none; padding:12px; border:1px solid #334155; border-radius:12px; }
+    .cta:hover { background:#0F172A; }
     .lbl { font-size:12px; color:#94A3B8; margin-top:4px; }
   </style>
 </head>
 <body>
-  <div class="card">
+  <main class="card">
     <h1>Calculadora de Creatina y Agua</h1>
     <p>Dosis recomendada: 0.1 g de creatina por kg de peso corporal.</p>
-    <label>Tu peso corporal (kg):</label>
-    <input type="number" id="peso" value="85" min="40" max="180" oninput="calcular()">
+    <label for="peso">Tu peso corporal (kg):</label>
+    <input type="number" id="peso" value="85" min="40" max="180" inputmode="decimal">
     <div class="res">
       <div class="box"><div class="val" id="creatina">8.5 g</div><div class="lbl">Creatina diaria</div></div>
       <div class="box"><div class="val" id="agua">3.0 L</div><div class="lbl">Agua recomendada</div></div>
     </div>
-  </div>
-  <script>
-    function calcular() {
-      const p = parseFloat(document.getElementById('peso').value) || 0;
-      document.getElementById('creatina').innerText = (p * 0.1).toFixed(1) + ' g';
-      document.getElementById('agua').innerText = ((p * 35) / 1000).toFixed(1) + ' L';
-    }
-  </script>
+    <p class="nota">Orientativo: si tienes alguna condición médica, consulta a un profesional.</p>
+    <a class="cta" href="/">Lleva el control de tus calorías y macros con NutriFit →</a>
+  </main>
+  <script src="calc.js" defer></script>
 </body>
 </html>

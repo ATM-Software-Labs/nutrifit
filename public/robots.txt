@@ -1,3 +1,7 @@
 User-agent: *
 Allow: /
+# La API no es contenido. Las pantallas con sesión NO se bloquean aquí a propósito:
+# llevan "X-Robots-Tag: noindex" (public/_headers) y el buscador tiene que poder leerlo.
+Disallow: /api/
+
 Sitemap: https://nutri.trujillomingorance.com/sitemap.xml

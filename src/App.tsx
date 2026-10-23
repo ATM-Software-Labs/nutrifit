@@ -8,6 +8,7 @@ import { CookieBanner } from './components/CookieBanner.tsx'
 import { activarActualizacion } from './lib/sw.ts'
 import { esNativa } from './lib/plataforma.ts'
 import { borrarTokenApp, guardarTokenApp } from './lib/tokenApp.ts'
+import { aplicarSeo } from './lib/seo.ts'
 import { EVENTO, esRutaPrivacidad, esRutaRecursos, guardarVinculoPendiente, navegar, rutaActual, tomarVinculoPendiente, useRuta } from './lib/rutas.ts'
 
 // Pantallas en chunks separados. Se precargan en paralelo a /api/auth/yo según
@@ -88,6 +89,10 @@ export default function App() {
       window.removeEventListener(EVENTO, sync)
     }
   }, [])
+
+  useEffect(() => {
+    aplicarSeo(window.location.pathname, estado.fase === 'app' || estado.fase === 'onboarding')
+  }, [rutaApp, enPrivacidad, enRecursos, estado.fase])
 
   /** Con sesión: si había una aprobación de QR pendiente, ir a ella. */
   const retomarVinculo = useCallback(() => {

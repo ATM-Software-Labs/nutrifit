@@ -60,20 +60,22 @@ export function SugerenciaRepetir({
   }
 
   return (
-    <div data-testid="sugerencia-repetir" className="flex animate-fade-in items-center gap-3 rounded-2xl border border-mint/30 bg-mint/10 p-4 dark:border-mint/20 dark:bg-mint/5">
+    <div data-testid="sugerencia-repetir" className="relative flex animate-fade-in flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border border-mint/30 bg-mint/10 p-4 pr-10 dark:border-mint/20 dark:bg-mint/5">
       <History size={20} strokeWidth={1.75} className="shrink-0 text-mint-600 dark:text-mint-400" />
-      <div className="min-w-0 flex-1">
+      <div className="min-w-[10rem] flex-1">
         <p className="text-sm font-medium">¿Repetir lo del día anterior?</p>
         <p className="cifra text-xs text-neutral-500 dark:text-neutral-400">
           {previo.n} {previo.n === 1 ? 'comida' : 'comidas'} · {entero(previo.kcal)} kcal
         </p>
       </div>
+      <div className="ml-auto flex items-center gap-1">
       <button type="button" onClick={() => onElegir(ayer)} className="rounded-lg px-2.5 py-1.5 text-sm text-neutral-600 hover:bg-white/60 dark:text-neutral-300 dark:hover:bg-neutral-800">
         Elegir
       </button>
       <button type="button" disabled={copiando} onClick={() => void copiarTodo()} className="rounded-lg bg-graphite px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60 dark:bg-white dark:text-graphite">
         {copiando ? 'Copiando…' : 'Repetir todo'}
       </button>
+      </div>
       <button
         type="button"
         aria-label="Descartar sugerencia"
@@ -81,7 +83,7 @@ export function SugerenciaRepetir({
           setDescartado(true)
           try { localStorage.setItem(CLAVE, fecha) } catch { /* sin storage */ }
         }}
-        className="-mr-1 rounded-full p-1 text-neutral-400 hover:text-graphite dark:hover:text-white"
+        className="absolute right-2 top-2 rounded-full p-1.5 text-neutral-500 dark:text-neutral-400 hover:text-graphite dark:hover:text-white"
       >
         <X size={16} />
       </button>
