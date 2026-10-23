@@ -3,6 +3,7 @@ main = "worker.ts"
 compatibility_date = "2026-09-01"
 # workers.dev solo expone /armar, protegido con x-cron-secret.
 workers_dev = true
+preview_urls = false
 
 # Sin Cron Trigger: la cuenta ya usa sus 5 gratuitos. Lo sustituye la alarma del Durable Object Reloj.
 [triggers]

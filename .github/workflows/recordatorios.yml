@@ -19,3 +19,9 @@ jobs:
         run: |
           curl -fsS -m 60 -X POST -H "x-cron-secret: $CRON_SECRET" -H 'content-type: application/json' \
             https://nutri.trujillomingorance.com/api/interno/cron
+      - name: Asegurar la alarma del Reloj (Durable Object)
+        if: always()
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          curl -fsS -m 30 -X POST -H "x-cron-secret: $CRON_SECRET" https://nutrifit-cron.atrumin16.workers.dev/armar
