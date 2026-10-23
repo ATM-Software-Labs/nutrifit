@@ -145,6 +145,19 @@ export default function Dashboard({
   useEffect(() => { void sincronizarPreferenciasCantidades() }, [usuario.id])
   // Tras rotar la clave VAPID, renueva la suscripción push en silencio (sin volver a pedir permiso).
   useEffect(() => { void import('../lib/push.ts').then((m) => m.resincronizarPush()).catch(() => undefined) }, [usuario.id])
+  // Enlace profundo de los avisos de franja: /?apuntar=comida abre el registro rápido de esa comida (hoy).
+  useEffect(() => {
+    if (vista !== 'hoy') return
+    const u = new URL(window.location.href)
+    const t = u.searchParams.get('apuntar')
+    if (!t) return
+    u.searchParams.delete('apuntar')
+    u.searchParams.delete('franja')
+    window.history.replaceState(window.history.state, '', u.pathname + u.search + u.hash)
+    if (!(TIPOS_COMIDA as readonly string[]).includes(t)) return
+    setFecha(hoyISO())
+    setHoja({ tipo: 'anadir', comida: t as TipoComida })
+  }, [vista])
 
   async function guardar(nueva: NuevaComida) {
     setHoja(null)

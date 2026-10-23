@@ -1,7 +1,8 @@
 name: Recordatorios (cron)
-# Sustituto del Cron Trigger de nutrifit-cron mientras la cuenta de Cloudflare
-# (además hace el latido de Supabase para que no se pause y avisa si lleva > 30 min caído)
-# tenga ocupados sus 5 crons gratuitos. Llama a /api/interno/cron cada 15 min.
+# RESPALDO. La ronda la dispara cada 5 min la alarma del Durable Object Reloj (Worker
+# nutrifit-cron). GitHub retrasa mucho los cron programados (a veces horas), así que esto solo
+# cubre huecos: la ronda es idempotente (recordatorios_envios) y tolera retrasos (franja fin + 90 min).
+# Además hace el latido de Supabase (se omite si ya se hizo hace < 14 min).
 on:
   schedule:
     - cron: '*/15 * * * *'

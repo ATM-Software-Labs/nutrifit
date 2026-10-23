@@ -1,16 +1,22 @@
 name = "nutrifit-cron"
-main = "index.ts"
+main = "worker.ts"
 compatibility_date = "2026-09-01"
-workers_dev = false
+# workers.dev solo expone /armar, protegido con x-cron-secret.
+workers_dev = true
 
+# Sin Cron Trigger: la cuenta ya usa sus 5 gratuitos. Lo sustituye la alarma del Durable Object Reloj.
 [triggers]
-crons = ["*/15 * * * *"]
+crons = []
 
-[[d1_databases]]
-binding = "DB"
-database_name = "nutrifit-db"
-database_id = "c7f77ed4-a5d0-4c3a-a686-ecc1fb77d1f1"
+[[durable_objects.bindings]]
+name = "RELOJ"
+class_name = "Reloj"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Reloj"]
 
 [vars]
 APP_URL = "https://nutri.trujillomingorance.com"
-# Secretos (wrangler secret put): BREVO_API_KEY, VAPID_PUBLIC_KEY, VAPID_PRIVATE_JWK, VAPID_SUBJECT
+# Secretos (wrangler secret put): CRON_SECRET (el mismo que en Pages).
+# index.ts (ejecutar) lo importa Pages en /api/interno/cron; ya no es la entrada del Worker.

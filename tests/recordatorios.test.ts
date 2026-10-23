@@ -13,12 +13,9 @@ test('zona horaria y cambio de hora (Madrid)', () => {
   assert.equal(ahoraEnZona('America/New_York', new Date('2026-10-12T03:00:00Z')).fecha, '2026-10-11')
 })
 
-test('solo avisa si la comida no está registrada', () => {
-  assert.deepEqual(recordatoriosPendientes(p, a(14, 35), dia(), new Set()).map((x) => x.clave), ['comida'])
-  assert.deepEqual(recordatoriosPendientes(p, a(14, 35), dia(['comida']), new Set()), [])
-  assert.deepEqual(recordatoriosPendientes(p, a(14, 35), dia(), new Set(['comida'])), [])
-  assert.deepEqual(recordatoriosPendientes(p, a(15, 30), dia(), new Set()), []) // fuera de ventana
-  assert.deepEqual(recordatoriosPendientes({ ...p, activo: 0 }, a(14, 35), dia(), new Set()), [])
+test('los avisos de cada comida ya no salen de aquí (van por franjas)', () => {
+  assert.deepEqual(recordatoriosPendientes(p, a(14, 35), dia(), new Set()), [])
+  assert.deepEqual(recordatoriosPendientes({ ...p, activo: 0 }, a(22, 30), dia(), new Set()), [])
 })
 
 test('cierre del día, silencio y máximo diario', () => {
@@ -28,8 +25,10 @@ test('cierre del día, silencio y máximo diario', () => {
   assert.deepEqual(recordatoriosPendientes(p, a(22, 30), dia(['desayuno', 'comida', 'cena']), new Set()), [])
   assert.ok(enSilencio(23 * 60 + 30, '23:00', '08:00'))
   assert.ok(!enSilencio(12 * 60, '23:00', '08:00'))
-  assert.deepEqual(recordatoriosPendientes({ ...p, desayuno: '23:15' }, a(23, 20), dia(), new Set()), [])
-  assert.deepEqual(recordatoriosPendientes({ ...p, max_dia: 1 }, a(14, 35), dia(), new Set(['desayuno'])), [])
+  assert.deepEqual(recordatoriosPendientes({ ...p, cierre: '23:15' }, a(23, 20), dia(), new Set()), [])
+  assert.deepEqual(recordatoriosPendientes({ ...p, max_dia: 1 }, a(22, 30), dia(), new Set(['f:comida'])), [])
+  // "Ya comí"/"Saltar hoy" y el resumen no gastan cupo.
+  assert.equal(recordatoriosPendientes({ ...p, max_dia: 1 }, a(22, 30), dia(), new Set(['h:comida', 's:cena', 'resumen'])).length, 1)
 })
 
 test('resumen semanal solo los lunes a las 9', () => {
@@ -56,5 +55,6 @@ test('canales por tipo con valores por defecto y personalizados', () => {
   assert.deepEqual(canalesDe(null, 'comidas'), { push: true, email: false, app: false })
   assert.deepEqual(canalesDe({ email: 1, canales_json: '{"comidas":{"email":true}}' }, 'comidas'), { push: true, email: true, app: false })
   assert.equal(tipoDeClave('cena'), 'comidas')
+  assert.equal(tipoDeClave('f:merienda'), 'comidas')
   assert.equal(tipoDeClave('bienvenida3'), 'bienvenida')
 })

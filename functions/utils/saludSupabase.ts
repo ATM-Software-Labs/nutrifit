@@ -1,6 +1,7 @@
 /**
  * Salud de Supabase (base secundaria) y latido anti-pausa.
- * La ronda del cron (GitHub Actions, cada 15 min) llama a vigilarSupabase():
+ * Cada ronda del cron (reloj del Worker cada 5 min; GitHub Actions de respaldo) llama a vigilarSupabase()
+ * (como mucho un latido real cada LATIDO_MIN_S si todo va bien):
  *   · nf_latido(): una lectura y una escritura reales en Postgres → el proyecto
  *     cuenta con actividad y el plan gratuito no lo pausa por inactividad;
  *   · guarda el estado en D1 (estado_servicios) para /api/health y Ajustes;
@@ -116,10 +117,16 @@ export interface EnvVigilancia extends SupaEnv {
 }
 
 /** Latido + estado + alerta. enviar() se inyecta para no acoplar este módulo a Brevo. */
+/** Con el reloj de 5 min del Worker, el latido no hace falta en cada ronda: si todo iba bien, uno cada ~14 min (menos escrituras en Postgres). */
+export const LATIDO_MIN_S = 14 * 60
+
 export async function vigilarSupabase(env: EnvVigilancia, enviar: (para: string, m: MensajeCorreo) => Promise<boolean>, crearMensaje: (titulo: string, cuerpo: string, url: string, boton: string) => MensajeCorreo) {
+  const previo = await leerEstadoSupabase(env.DB)
+  if (previo?.estado === 'ok' && Math.floor(Date.now() / 1000) - previo.comprobado_en < LATIDO_MIN_S) {
+    return { estado: 'ok' as EstadoSupabase, latido: null, alerta: null, avisado: false, omitido: true }
+  }
   const c = await comprobarSupabase(env)
   const ahora = Math.floor(Date.now() / 1000)
-  const previo = await leerEstadoSupabase(env.DB)
   const { fila, alerta } = transicion(previo, c, ahora, env.SUPABASE_URL)
   let avisado = false
   if (alerta) {
@@ -133,5 +140,5 @@ export async function vigilarSupabase(env: EnvVigilancia, enviar: (para: string,
     console.warn(`[supabase] ${c.estado}: ${c.error}`)
   }
   await guardarEstadoSupabase(env.DB, fila).catch((e: unknown) => console.warn('[supabase] estado no guardado:', e instanceof Error ? e.message : e))
-  return { estado: c.estado, latido: c.latido ?? null, alerta: alerta?.tipo ?? null, avisado }
+  return { estado: c.estado, latido: c.latido ?? null, alerta: alerta?.tipo ?? null, avisado, omitido: false }
 }

@@ -15,9 +15,28 @@ export interface PrefRecordatorios {
   silencio_hasta: string
   max_dia: number
   canales?: Record<string, { push: boolean; email: boolean; app: boolean }>
+  franjas?: Franja[]
 }
+export interface Franja {
+  id: string
+  nombre: string
+  tipo: 'desayuno' | 'comida' | 'cena' | 'snack'
+  inicio: string
+  fin: string
+  /** Avisar X min tras el inicio; null = al final de la franja. */
+  aviso_min: number | null
+  /** bit 0 = lunes … bit 6 = domingo. */
+  dias: number
+  activo: boolean
+  orden: number
+}
+export interface Sugerencia { inicio: string; fin: string; dias: number; texto: string }
 export interface EstadoRecordatorios {
   preferencias: PrefRecordatorios
+  franjas: Franja[]
+  franjasPersonalizadas: boolean
+  franjasPorDefecto: Franja[]
+  sugerencias: Record<string, Sugerencia>
   dispositivosPush: number
   vapidPublica: string | null
   pushDisponible: boolean

@@ -7,7 +7,9 @@
  *   · lunes 9:00, resumen semanal por correo.
  * Idempotente: recordatorios_envios (usuario, fecha, clave) evita duplicados.
  */
-import { ahoraEnZona, avisosExtra, canalesDe, PREF_POR_DEFECTO, recordatoriosPendientes, tipoDeClave, tocaResumen, type Pendiente, type PrefRecordatorios } from '../../functions/utils/recordatorios.ts'
+import { ahoraEnZona, avisosExtra, canalesDe, cuentanParaCupo, PREF_POR_DEFECTO, recordatoriosPendientes, tipoDeClave, tocaResumen, type Pendiente, type PrefRecordatorios } from '../../functions/utils/recordatorios.ts'
+import { franjaDeFila, franjasEfectivas, franjasPendientes, minutoDeRegistro, type FilaFranja } from '../../functions/utils/franjas.ts'
+import { avisoFranja, tokenAccion } from '../../functions/utils/accionAviso.ts'
 import { enviarPush, vapidDeEnv } from '../../functions/utils/webpush.ts'
 import { enviarAviso as enviarAvisoBrevo, mensajeRecordatorio, mensajeResumenSemanal } from '../../functions/utils/email.ts'
 import { calcularRacha, evaluarLogros, resumenSemanal, sumarDiasISO, type DiaStats } from '../../functions/utils/logros.ts'
@@ -20,7 +22,10 @@ export interface Env {
   VAPID_SUBJECT?: string
   APP_URL?: string
   CRON_SECRET?: string
+  /** Firma los botones de los avisos de franja ("Ya comí", "Saltar hoy"). */
+  AUTH_SECRET?: string
 }
+
 
 type Fila = PrefRecordatorios & { usuario_id: string; email_usuario: string; nombre: string | null; baja_token: string | null; meta_agua_base_ml: number | null; meta_calorias: number | null; meta_proteinas: number | null; creado_usuario: string }
 
@@ -40,13 +45,16 @@ async function enviarAviso(env: Env, para: string, m: { asunto: string; html: st
 
 type Sub = { endpoint_hash: string; endpoint: string; p256dh: string; auth: string }
 
-/** Envía un aviso por los canales elegidos para su tipo: push → email (si no hubo push o lo pidió) → centro de la app. */
+/**
+ * Envía un aviso por los canales elegidos para su tipo: push → email (si no hubo push o lo pidió) → centro de la app.
+ * Para las comidas, el centro de la app es la red de seguridad: si el push no llegó a ningún dispositivo, queda ahí.
+ */
 export async function despachar(env: Env, f: Fila, r: Pendiente, subs: Sub[], v: ReturnType<typeof vapidDeEnv>, bajaUrl: string): Promise<string> {
   const c = canalesDe(f, tipoDeClave(r.clave))
   const usados: string[] = []
   if (c.push && v && subs.length) {
     for (const s of subs) {
-      const st = await enviarPush(s, { titulo: r.titulo, cuerpo: r.cuerpo, url: r.url, etiqueta: r.clave }, v, 2 * 3600).catch(() => 0)
+      const st = await enviarPush(s, { titulo: r.titulo, cuerpo: r.cuerpo, url: r.url, etiqueta: r.clave, ...r.push }, v, 2 * 3600).catch(() => 0)
       if (st >= 200 && st < 300) { if (!usados.includes('push')) usados.push('push') }
       else if (st === 404 || st === 410) await env.DB.prepare('DELETE FROM push_suscripciones WHERE endpoint_hash = ?1').bind(s.endpoint_hash).run()
       else await env.DB.prepare('UPDATE push_suscripciones SET fallos = fallos + 1 WHERE endpoint_hash = ?1').bind(s.endpoint_hash).run()
@@ -56,7 +64,7 @@ export async function despachar(env: Env, f: Fila, r: Pendiente, subs: Sub[], v:
   if (quiereEmail && f.baja_token && r.clave !== 'agua') {
     if (await enviarAviso(env, f.email_usuario, mensajeRecordatorio(r.titulo, r.cuerpo, r.url, bajaUrl), bajaUrl)) usados.push('email')
   }
-  if (c.app) {
+  if (c.app || (tipoDeClave(r.clave) === 'comidas' && !usados.includes('push'))) {
     await env.DB.prepare('INSERT INTO notificaciones_app (id, usuario_id, tipo, titulo, cuerpo, url) VALUES (?1, ?2, ?3, ?4, ?5, ?6)').bind(crypto.randomUUID(), f.usuario_id, tipoDeClave(r.clave), r.titulo, r.cuerpo, r.url).run()
     usados.push('app')
   }
@@ -66,14 +74,16 @@ export async function despachar(env: Env, f: Fila, r: Pendiente, subs: Sub[], v:
 async function procesar(env: Env, f: Fila, ahoraUtc: Date): Promise<string[]> {
   const ahora = ahoraEnZona(f.zona || 'Europe/Madrid', ahoraUtc)
   const desde = sumarDiasISO(ahora.fecha, -120)
-  const [hoyRes, envRes, diasRes, aguaRes, subsRes] = await env.DB.batch([
-    env.DB.prepare('SELECT tipo_comida FROM diario_comidas WHERE usuario_id = ?1 AND fecha = ?2').bind(f.usuario_id, ahora.fecha),
+  const [hoyRes, envRes, diasRes, aguaRes, subsRes, franjasRes] = await env.DB.batch([
+    env.DB.prepare('SELECT tipo_comida, fecha, hora, creado_en FROM diario_comidas WHERE usuario_id = ?1 AND fecha = ?2').bind(f.usuario_id, ahora.fecha),
     env.DB.prepare('SELECT clave FROM recordatorios_envios WHERE usuario_id = ?1 AND fecha = ?2').bind(f.usuario_id, ahora.fecha),
     env.DB.prepare('SELECT fecha, COUNT(*) AS comidas, SUM(calorias) AS calorias, SUM(proteinas) AS proteinas FROM diario_comidas WHERE usuario_id = ?1 AND fecha >= ?2 GROUP BY fecha').bind(f.usuario_id, desde),
     env.DB.prepare('SELECT ml FROM registro_agua WHERE usuario_id = ?1 AND fecha = ?2').bind(f.usuario_id, ahora.fecha),
     env.DB.prepare('SELECT endpoint_hash, endpoint, p256dh, auth FROM push_suscripciones WHERE usuario_id = ?1').bind(f.usuario_id),
+    env.DB.prepare('SELECT id, nombre, tipo_comida, inicio, fin, aviso_min, dias, activo, orden FROM recordatorios_franjas WHERE usuario_id = ?1').bind(f.usuario_id),
   ])
-  const tipos = new Set(((hoyRes?.results ?? []) as { tipo_comida: string }[]).map((r) => r.tipo_comida))
+  const hoyFilas = (hoyRes?.results ?? []) as { tipo_comida: string; fecha: string; hora: string | null; creado_en: string }[]
+  const tipos = new Set(hoyFilas.map((r) => r.tipo_comida))
   const enviados = new Set(((envRes?.results ?? []) as { clave: string }[]).map((r) => r.clave))
   const dias = (diasRes?.results ?? []) as { fecha: string; comidas: number; calorias: number; proteinas: number }[]
   const racha = calcularRacha(dias.map((d) => d.fecha), ahora.fecha)
@@ -88,7 +98,17 @@ async function procesar(env: Env, f: Fila, ahoraUtc: Date): Promise<string[]> {
     env.DB.prepare('INSERT OR IGNORE INTO recordatorios_envios (usuario_id, fecha, clave, canal) VALUES (?1, ?2, ?3, ?4)').bind(f.usuario_id, ahora.fecha, clave, canal).run()
 
   const hoyFila = dias.find((d) => d.fecha === ahora.fecha)
-  const estadoDia = { tipos, comidas: hoyFila?.comidas ?? 0, aguaMl, metaAguaMl: metaAgua }
+  // "Ya comí" desde la notificación cuenta como comida hecha para el aviso de cierre del día.
+  const hechasSinApuntar = [...enviados].filter((c) => c.startsWith('h:')).length
+  const estadoDia = { tipos, comidas: (hoyFila?.comidas ?? 0) + hechasSinApuntar, aguaMl, metaAguaMl: metaAgua }
+  const zona = f.zona || 'Europe/Madrid'
+  const franjas = franjasEfectivas(((franjasRes?.results ?? []) as FilaFranja[]).map(franjaDeFila), f)
+  const registros = hoyFilas.map((r) => ({ tipo: r.tipo_comida, min: minutoDeRegistro(r, zona) }))
+  const deFranjas: Pendiente[] = []
+  for (const x of franjasPendientes(f, franjas, ahora, registros, enviados)) {
+    const token = env.AUTH_SECRET ? await tokenAccion(env.AUTH_SECRET, f.usuario_id, x.franja.id, ahora.fecha) : null
+    deFranjas.push({ clave: x.clave, titulo: x.titulo, cuerpo: x.cuerpo, url: x.url, push: avisoFranja({ ...x, franja: x.franja.id, fecha: ahora.fecha, token }) })
+  }
   const ultimo = dias.map((d) => d.fecha).sort().at(-1) ?? null
   const diasEntre = (a: string, b: string) => Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 86_400_000)
   const semanaRes = await env.DB.prepare('SELECT DISTINCT clave FROM recordatorios_envios WHERE usuario_id = ?1 AND fecha >= ?2').bind(f.usuario_id, sumarDiasISO(ahora.fecha, -7)).all<{ clave: string }>()
@@ -102,8 +122,8 @@ async function procesar(env: Env, f: Fila, ahoraUtc: Date): Promise<string[]> {
     diasDesdeAlta: diasEntre(f.creado_usuario.slice(0, 10), ahora.fecha),
     enviadosSemana: new Set((semanaRes.results ?? []).map((r) => r.clave)),
   })
-  let cupo = Math.max(0, f.max_dia - [...enviados].filter((c) => c !== 'resumen').length)
-  for (const r of [...recordatoriosPendientes(f, ahora, estadoDia, enviados, racha.actual), ...extra]) {
+  let cupo = Math.max(0, f.max_dia - cuentanParaCupo(enviados))
+  for (const r of [...deFranjas, ...recordatoriosPendientes(f, ahora, estadoDia, enviados, racha.actual), ...extra]) {
     if (cupo <= 0) break
     const res = await marcar(r.clave, 'pendiente')
     if (!res.meta?.changes) continue

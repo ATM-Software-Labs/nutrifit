@@ -3,7 +3,12 @@
  * Un recordatorio de comida solo sale si esa comida no está registrada todavía,
  * fuera de las horas de silencio, como mucho `max_dia` al día y una vez por clave y día.
  */
-export type ClaveRecordatorio = 'desayuno' | 'comida' | 'cena' | 'snack' | 'cierre' | 'agua' | 'resumen' | 'racha' | 'objetivo' | 'inactividad' | 'bienvenida1' | 'bienvenida3'
+import type { Aviso } from './webpush.ts'
+
+export type ClaveRecordatorio = 'desayuno' | 'comida' | 'cena' | 'snack' | 'cierre' | 'agua' | 'resumen' | 'racha' | 'objetivo' | 'inactividad' | 'bienvenida1' | 'bienvenida3' | `f:${string}`
+
+/** Avisos enviados hoy que cuentan para el máximo diario (no el resumen ni las marcas "Ya comí"/"Saltar hoy"). */
+export const cuentanParaCupo = (enviadosHoy: Iterable<string>) => [...enviadosHoy].filter((c) => c !== 'resumen' && !c.startsWith('h:') && !c.startsWith('s:')).length
 
 export interface PrefRecordatorios {
   activo: number
@@ -58,28 +63,27 @@ export interface EstadoDia {
   metaAguaMl: number
 }
 
-export interface Pendiente { clave: ClaveRecordatorio; titulo: string; cuerpo: string; url: string }
+export interface Pendiente {
+  clave: ClaveRecordatorio
+  titulo: string
+  cuerpo: string
+  url: string
+  /** Campos extra del push (botones, etiqueta por comida, vibración…). */
+  push?: Partial<Aviso>
+}
 
 /** Ventana tras la hora elegida en la que aún se envía (cubre cron cada 15 min con margen). */
 export const VENTANA_MIN = 45
 
-const TEXTOS: Record<'desayuno' | 'comida' | 'cena' | 'snack', [string, string]> = {
-  desayuno: ['¿Qué has desayunado?', 'Apúntalo en 10 segundos y empieza el día con tu racha.'],
-  comida: ['¿Ya has comido?', 'Haz una foto al plato o búscalo y sigue con tus macros al día.'],
-  cena: ['Falta la cena', 'Regístrala ahora para cerrar bien el día.'],
-  snack: ['¿Algo entre horas?', 'Si has picoteado, apúntalo para que cuadren tus calorías.'],
-}
-
+/**
+ * Avisos de la noche que dependen del día (cierre y agua). Los de cada comida salen por
+ * franjas (franjas.ts): ventana habitual + "si a esta hora no hay nada apuntado".
+ */
 export function recordatoriosPendientes(p: PrefRecordatorios, ahora: AhoraLocal, dia: EstadoDia, enviadosHoy: Set<string>, racha = 0): Pendiente[] {
   if (!p.activo || enSilencio(ahora.min, p.silencio_desde, p.silencio_hasta)) return []
-  let cupo = Math.max(0, p.max_dia - [...enviadosHoy].filter((c) => c !== 'resumen').length)
+  let cupo = Math.max(0, p.max_dia - cuentanParaCupo(enviadosHoy))
   const out: Pendiente[] = []
   const toca = (hhmm: string | null) => !!hhmm && ahora.min >= aMin(hhmm) && ahora.min < aMin(hhmm) + VENTANA_MIN
-  for (const t of ['desayuno', 'comida', 'cena', 'snack'] as const) {
-    if (cupo <= 0) break
-    if (enviadosHoy.has(t) || dia.tipos.has(t) || !toca(p[t])) continue
-    out.push({ clave: t, titulo: TEXTOS[t][0], cuerpo: TEXTOS[t][1], url: "/" }); cupo--
-  }
   if (cupo > 0 && !enviadosHoy.has('cierre') && toca(p.cierre) && dia.comidas < 3) {
     out.push({
       clave: 'cierre',
@@ -120,7 +124,7 @@ export const CANALES_POR_DEFECTO: Record<TipoAviso, Canales> = {
 }
 
 export function tipoDeClave(c: ClaveRecordatorio | 'logro'): TipoAviso {
-  if (c === 'desayuno' || c === 'comida' || c === 'cena' || c === 'snack') return 'comidas'
+  if (c === 'desayuno' || c === 'comida' || c === 'cena' || c === 'snack' || c.startsWith('f:')) return 'comidas'
   if (c === 'bienvenida1' || c === 'bienvenida3') return 'bienvenida'
   if (c === 'logro') return 'logros'
   return c as TipoAviso

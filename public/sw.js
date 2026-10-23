@@ -142,30 +142,56 @@ async function redPrimero(req, nombreCache) {
 }
 
 /* ── Web Push: recordatorios de NutriFit (payload cifrado RFC 8291) ── */
+/* Avisos push. Los de las franjas de comida traen botones ("Ya comí", "Saltar hoy", "Apuntar"),
+ * etiqueta por comida (uno sustituye al anterior de la misma comida), renotify y vibración: así
+ * se ven y se contestan desde el reloj (Wear OS / Apple Watch reflejan la notificación del móvil). */
 self.addEventListener('push', (event) => {
   let d = {}
   try { d = event.data ? event.data.json() : {} } catch { d = { cuerpo: event.data ? event.data.text() : '' } }
   const titulo = d.titulo || 'NutriFit'
-  event.waitUntil(
-    self.registration.showNotification(titulo, {
-      body: d.cuerpo || '',
-      icon: '/icons/icon-192.png',
-      badge: '/icons/icon-192.png',
-      tag: d.etiqueta || 'nutrifit',
-      renotify: false,
-      lang: 'es',
-      data: { url: d.url || '/' },
-    }),
-  )
+  const max = (self.Notification && Notification.maxActions) || 2
+  const opciones = {
+    body: d.cuerpo || '',
+    icon: '/icons/icon-192.png',
+    badge: '/icons/icon-192.png',
+    tag: d.etiqueta || 'nutrifit',
+    renotify: !!(d.renotificar && d.etiqueta),
+    lang: 'es',
+    data: { url: d.url || '/', ...(d.datos || {}) },
+  }
+  if (Array.isArray(d.vibrar)) opciones.vibrate = d.vibrar
+  if (Array.isArray(d.acciones) && d.acciones.length) opciones.actions = d.acciones.slice(0, max).map((a) => ({ action: a.accion, title: a.titulo }))
+  event.waitUntil(self.registration.showNotification(titulo, opciones))
 })
+
+function abrir(url) {
+  const destino = new URL(url || '/', self.location.origin).href
+  return self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((ventanas) => {
+    for (const v of ventanas) if (v.url.startsWith(self.location.origin) && 'focus' in v) { v.navigate(destino).catch(() => {}); return v.focus() }
+    return self.clients.openWindow(destino)
+  })
+}
+
+/** "Ya comí" / "Saltar hoy": se marca en el servidor sin abrir la app. Si falla (sin red, aviso caducado), se abre la app. */
+function responder(datos, accion) {
+  const cuerpo = datos.t ? { t: datos.t, accion } : { franja: datos.franja, fecha: datos.fecha, accion }
+  return fetch('/api/recordatorios/accion', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(cuerpo),
+  })
+    .then((r) => { if (!r.ok) throw new Error(String(r.status)) })
+    .catch(() => abrir(datos.url))
+}
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
-  const destino = new URL((event.notification.data && event.notification.data.url) || '/', self.location.origin).href
-  event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((ventanas) => {
-      for (const v of ventanas) if (v.url.startsWith(self.location.origin) && 'focus' in v) { v.navigate(destino).catch(() => {}); return v.focus() }
-      return self.clients.openWindow(destino)
-    }),
-  )
+  const datos = event.notification.data || {}
+  if ((event.action === 'hecho' || event.action === 'saltar') && (datos.t || datos.franja)) {
+    event.waitUntil(responder(datos, event.action))
+    return
+  }
+  // "Apuntar" o toque en la notificación → registro rápido de esa comida.
+  event.waitUntil(abrir(datos.url))
 })

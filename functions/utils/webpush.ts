@@ -75,6 +75,13 @@ export interface Aviso {
   cuerpo: string
   url?: string
   etiqueta?: string
+  /** Botones de la notificación (Chrome/Android y relojes muestran 2; iOS ninguno). */
+  acciones?: { accion: string; titulo: string }[]
+  /** Volver a sonar/vibrar aunque ya haya una con la misma etiqueta. */
+  renotificar?: boolean
+  vibrar?: number[]
+  /** Datos para el service worker (franja, fecha, token de acción). */
+  datos?: Record<string, string>
 }
 
 /** Envía un aviso. Devuelve el status HTTP (404/410 → suscripción caducada). */
