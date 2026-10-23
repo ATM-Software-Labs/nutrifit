@@ -23,7 +23,7 @@
     ? 'intent://login?token=' + t + '#Intent;scheme=' + PAQUETE + ';package=' + PAQUETE + ';S.browser_fallback_url=' + respaldo + ';end'
     : PAQUETE + '://login?token=' + t
   var local = location.hostname === 'localhost' || location.hostname === '127.0.0.1'
-  web.href = (local ? location.origin + '/api/auth/verificar?token=' : 'https://api.trujillomingorance.com/v1/auth/verificar?token=') + t
+  web.href = (local ? location.origin + '/api/auth/verificar?token=' : 'https://api.trujillomingorance.com/nutrifit/auth/verificar?token=') + t
 
   if (android) {
     app.hidden = false

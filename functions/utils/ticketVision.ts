@@ -1,5 +1,5 @@
 /**
- * Ticket corto para POST https://api.trujillomingorance.com/v1/nutrifit/vision.
+ * Ticket corto para POST https://api.trujillomingorance.com/nutrifit/vision.
  * El propósito HMAC no es el de la sesión: una cookie __Host-nf_session no vale aquí.
  * La caducidad la mira quien verifica. firmar() solo garantiza la firma.
  */

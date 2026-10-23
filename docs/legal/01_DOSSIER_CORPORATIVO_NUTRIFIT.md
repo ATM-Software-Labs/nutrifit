@@ -52,5 +52,5 @@ NutriFit es una plataforma multiplataforma de registro nutricional, hidratación
 ## 5. Contacto Corporativo y Soporte
 - **Consultas Generales y Corporativas:** `nutrifit@trujillomingorance.com`
 - **Seguridad e Informes de Vulnerabilidades:** `security@trujillomingorance.com` / `nutrifit@trujillomingorance.com`
-- **Soporte de Privacidad (DPO):** `dpo@trujillomingorance.com`
+- **Privacidad y protección de datos:** `soporte@trujillomingorance.com`
 - **Portal Web Oficial:** [https://nutri.trujillomingorance.com](https://nutri.trujillomingorance.com)

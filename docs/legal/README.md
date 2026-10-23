@@ -29,4 +29,4 @@ Este repositorio contiene la documentación corporativa, técnica y legal oficia
 ## Canales de Comunicación Institucional
 - **Consultas Generales:** `nutrifit@trujillomingorance.com`
 - **Equipo de Seguridad Informática:** `security@trujillomingorance.com`
-- **Delegado de Protección de Datos (DPO):** `dpo@trujillomingorance.com`
+- **Privacidad y protección de datos:** `soporte@trujillomingorance.com`

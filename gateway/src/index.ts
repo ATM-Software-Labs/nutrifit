@@ -1,6 +1,6 @@
 /**
  * API Gateway de api.trujillomingorance.com.
- * POST /v1/nutrifit/vision se analiza aquí (ticket HMAC o X-App-Client-Token).
+ * POST /nutrifit/vision se analiza aquí (ticket HMAC o X-App-Client-Token).
  * El resto de /v1 se reenvía a Pages. La cookie __Host- queda en este host.
  */
 import { verificarFirma } from '../../functions/utils/crypto.ts'
