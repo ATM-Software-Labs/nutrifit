@@ -241,7 +241,7 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
   const GRUPOS: { titulo: string; items: { id: SeccionId; label: string }[] }[] = [
     { titulo: 'Tú', items: [{ id: 'perfil', label: 'Perfil y objetivos' }, { id: 'estrategia', label: 'Ayuno y estrategia' }] },
     { titulo: 'Hábitos', items: [{ id: 'notificaciones', label: 'Recordatorios y notificaciones' }] },
-    { titulo: 'App', items: [{ id: 'preferencias', label: 'Apariencia, idioma y unidades' }, { id: 'conexiones', label: 'Conexiones y apps' }] },
+    { titulo: 'App', items: [{ id: 'preferencias', label: 'Apariencia, idioma, unidades y plan del día' }, { id: 'conexiones', label: 'Conexiones y apps' }] },
     { titulo: 'Privacidad y datos', items: [{ id: 'dispositivos', label: 'Sesiones y dispositivos' }, { id: 'legal', label: 'Privacidad y legal' }, { id: 'peligro', label: 'Exportar o eliminar datos' }] },
     { titulo: 'Cuenta', items: [{ id: 'cuenta', label: 'Cuenta y sesión' }, { id: 'mas', label: 'Acerca de' }] },
   ]
