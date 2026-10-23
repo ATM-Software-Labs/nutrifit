@@ -6,7 +6,7 @@
  */
 import { HojaEditarComida } from './HojaEditarComida.tsx'
 import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
-import { ChartColumn, Droplet, House, Plus, Scale, User } from 'lucide-react'
+import { ChartColumn, CopyPlus, Droplet, House, Plus, Scale, User } from 'lucide-react'
 import { Logo } from './Logo.tsx'
 import { DialogoSalir } from './DialogoSalir.tsx'
 import { TarjetaRacha } from './TarjetaRacha.tsx'
@@ -21,6 +21,8 @@ import { BarraMacro } from './BarrasMacros.tsx'
 import { SelectorSemana } from './SelectorSemana.tsx'
 import { SeccionComida } from './SeccionComida.tsx'
 import { HojaAnadir } from './HojaAnadir.tsx'
+import { HojaCopiarDia } from './HojaCopiarDia.tsx'
+import { SugerenciaRepetir } from './SugerenciaRepetir.tsx'
 
 import { WidgetAyuno } from './WidgetAyuno.tsx'
 import { WidgetAgua } from './WidgetAgua.tsx'
@@ -71,6 +73,7 @@ type Hoja =
   | { tipo: 'revision'; comida: TipoComida; resultado: ResultadoAnalisis | null; imagenUrl: string | null }
   | { tipo: 'ajustes' }
   | { tipo: 'editar'; c: Comida }
+  | { tipo: 'copiar'; desde?: string }
 
 function saludo() {
   const h = new Date().getHours()
@@ -112,6 +115,14 @@ export default function Dashboard({
   const { resumen, error, actualizar, recargar } = useResumen(fecha)
   const toast = useToast()
   const cerrar = useCallback(() => setHoja(null), [])
+  const onCopiado = useCallback(
+    (hasta: string, comidas: Comida[]) => {
+      setHoja(null)
+      if (hasta === fecha) recargar()
+      toast({ tipo: 'exito', mensaje: `${comidas.length} ${comidas.length === 1 ? 'comida copiada' : 'comidas copiadas'}${hasta === fecha ? '' : ` al ${fechaLarga(hasta)}`}` })
+    },
+    [fecha, recargar, toast],
+  )
   const onActividad = useCallback((kcal: number, sumar: boolean) => {
     setQuemadas(kcal)
     setSumarQuemadas(sumar)
@@ -294,11 +305,24 @@ export default function Dashboard({
           </div>
 
           <div className="space-y-3 lg:col-span-7 xl:col-span-5">
+            {resumen && <SugerenciaRepetir fecha={fecha} resumen={resumen} onCopiado={onCopiado} onElegir={(desde) => setHoja({ tipo: 'copiar', desde })} />}
             {resumen === null && !error
               ? TIPOS_COMIDA.map((t) => <Esqueleto key={t} alto="h-[68px]" />)
               : TIPOS_COMIDA.map((t) => (
                   <SeccionComida key={t} tipo={t} comidas={resumen?.comidas[t] ?? []} onAnadir={(comida) => setHoja({ tipo: 'anadir', comida })} onBorrar={(c) => void borrar(c)} onRepetir={repetir} onFrecuente={(c) => void frecuente(c)} onEditar={(c) => setHoja({ tipo: 'editar', c })} />
                 ))}
+            {resumen && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setHoja({ tipo: 'copiar' })}
+                  data-testid="abrir-copiar"
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-neutral-300 py-3 text-sm font-medium text-neutral-500 transition-colors hover:border-neutral-400 hover:text-graphite dark:border-neutral-700 dark:text-neutral-400 dark:hover:text-white"
+                >
+                  <CopyPlus size={16} strokeWidth={1.75} /> Copiar comidas de otro día
+                </button>
+              </>
+            )}
           </div>
 
           <div className="hidden xl:flex xl:col-span-3 flex-col gap-6 lg:sticky lg:top-4">
@@ -443,6 +467,8 @@ export default function Dashboard({
           <span className="text-[10px] font-medium">Perfil</span>
         </button>
       </nav>
+
+      <HojaCopiarDia abierto={hoja?.tipo === 'copiar'} destinoInicial={fecha} origenInicial={hoja?.tipo === 'copiar' ? hoja.desde : undefined} onClose={cerrar} onCopiado={onCopiado} />
 
       <HojaAnadir
         abierto={hoja?.tipo === 'anadir'}

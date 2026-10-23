@@ -395,3 +395,11 @@ export type Issue = { campo: string; mensaje: string }
 export function formatearErrores(err: z.ZodError): Issue[] {
   return err.issues.slice(0, 10).map((i) => ({ campo: i.path.join('.') || '(raíz)', mensaje: i.message }))
 }
+
+/** POST /api/comidas/copiar: comidas de un día a otro (todas, por tipo o por id). */
+export const copiarComidasSchema = z.strictObject({
+  desde: fecha,
+  hasta: fecha,
+  ids: z.array(uuid).max(60).optional(),
+  tipos: z.array(z.enum(TIPOS_COMIDA)).max(4).optional(),
+})
