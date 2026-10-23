@@ -2,7 +2,7 @@
  * Reenvía `/v1/*` a Pages. La visión no pasa por aquí.
  * El navegador recibe el Set-Cookie del host api.trujillomingorance.com.
  */
-import { CABECERA_FIRMA_IP, CABECERA_VIA, firmarIpCliente } from '../../functions/utils/ipPasarela.ts'
+import { CABECERA_FIRMA_IP, CABECERA_VIA, firmarIpCliente, secretoPasarela } from '../../functions/utils/ipPasarela.ts'
 import { reescribirLocation } from '../../functions/utils/pasarela.ts'
 import type { GatewayEnv } from './env.ts'
 import { ipDeGateway } from './politica.ts'
@@ -33,14 +33,21 @@ const NO_COPIAR = new Set([
   'x-app-client-token',
 ])
 
-export async function reenviar(request: Request, env: GatewayEnv, destino: string, fetcher: Fetcher = fetch): Promise<Response> {
+/** Sin credenciales: la respuesta es pública y se puede cachear en el borde. */
+const SIN_CREDENCIALES = new Set(['cookie', 'authorization'])
+
+export async function reenviar(request: Request, env: GatewayEnv, destino: string, fetcher: Fetcher = fetch, anonimo = false): Promise<Response> {
   const headers = new Headers()
   request.headers.forEach((valor, clave) => {
-    if (!NO_COPIAR.has(clave.toLowerCase())) headers.set(clave, valor)
+    const k = clave.toLowerCase()
+    if (NO_COPIAR.has(k)) return
+    if (anonimo && SIN_CREDENCIALES.has(k)) return
+    headers.set(clave, valor)
   })
-  if (env.AUTH_SECRET) {
+  const secreto = secretoPasarela(env)
+  if (secreto) {
     headers.set(CABECERA_VIA, 'gateway')
-    headers.set(CABECERA_FIRMA_IP, await firmarIpCliente(env.AUTH_SECRET, ipDeGateway(request)))
+    headers.set(CABECERA_FIRMA_IP, await firmarIpCliente(secreto, ipDeGateway(request)))
   }
   const metodo = request.method.toUpperCase()
   const tieneCuerpo = metodo !== 'GET' && metodo !== 'HEAD'

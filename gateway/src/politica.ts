@@ -47,6 +47,7 @@ export function aplicarCabecerasGateway(headers: Headers): void {
   headers.set('X-Frame-Options', 'DENY')
   headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
   headers.set('Strict-Transport-Security', HSTS_GATEWAY)
+  headers.set('X-Robots-Tag', 'noindex, nofollow')
   if (!headers.has('cache-control')) headers.set('Cache-Control', 'no-store')
 }
 
@@ -57,7 +58,21 @@ export function aplicarCors(headers: Headers, origin: string): void {
   headers.set('Access-Control-Allow-Headers', 'Authorization, Content-Type, CF-Turnstile-Token, If-None-Match, If-Match, X-Sync-Prioridad, X-App-Client-Token')
   headers.set('Access-Control-Expose-Headers', 'Retry-After, ETag, Content-Disposition')
   headers.set('Access-Control-Max-Age', '86400')
-  headers.set('Vary', 'Origin')
+  anadirVary(headers, 'Origin')
+}
+
+/** Vary sin duplicados (Pages ya manda Origin y accept-encoding). */
+export function anadirVary(headers: Headers, valor: string): void {
+  const actuales = (headers.get('vary') ?? '').split(',').map((v) => v.trim()).filter(Boolean)
+  const vistos = new Set<string>()
+  const limpio: string[] = []
+  for (const v of [...actuales, valor]) {
+    const k = v.toLowerCase()
+    if (vistos.has(k)) continue
+    vistos.add(k)
+    limpio.push(v)
+  }
+  headers.set('Vary', limpio.join(', '))
 }
 
 /** Comparación de longitud fija. Un secreto ausente nunca autoriza. */

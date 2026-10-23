@@ -384,3 +384,77 @@ function unir(partes: Uint8Array[]): Uint8Array {
   }
   return out
 }
+
+test('GATEWAY_SECRET firma los tickets sin necesitar AUTH_SECRET; AUTH_SECRET sigue valiendo si falta', async () => {
+  const otro = 'g'.repeat(40)
+  const bytes = new Uint8Array([0xff, 0xd8, 0xff, 0xd9])
+  const img = await hex(bytes)
+  const exp = Math.floor(Date.now() / 1000) + 60
+  const bueno = await firmar(otro, PROPOSITO_VISION, { sub: 'usuario-1', exp, img })
+  const viejo = await firmar(SECRETO, PROPOSITO_VISION, { sub: 'usuario-1', exp, img })
+  const pedir = (t: string, e: Record<string, unknown>) => atender(new Request(VISION, {
+    method: 'POST',
+    headers: { authorization: `Bearer ${t}`, 'user-agent': UA, 'sec-fetch-site': 'cross-site', origin: 'https://nutri.trujillomingorance.com', 'content-type': 'image/jpeg' },
+    body: bytes,
+  }), e as never, ctx)
+  const soloGateway = { VISION_LIMITE: limite(), GATEWAY_SECRET: otro }
+  const r1 = await pedir(viejo, soloGateway)
+  assert.equal(((await r1.json()) as { codigo: string }).codigo, 'ticket')
+  const r2 = await pedir(bueno, { VISION_LIMITE: limite(), GATEWAY_SECRET: otro })
+  assert.notEqual(((await r2.json()) as { codigo?: string }).codigo, 'ticket')
+  const r3 = await pedir(viejo, env())
+  assert.notEqual(((await r3.json()) as { codigo?: string }).codigo, 'ticket')
+})
+
+test('el proxy firma la IP con GATEWAY_SECRET y Pages la acepta con el mismo secreto', async () => {
+  const otro = 'g'.repeat(40)
+  let visto: Headers | null = null
+  const fetcher = async (_u: RequestInfo | URL, init?: RequestInit) => {
+    visto = new Headers(init?.headers)
+    return new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } })
+  }
+  await atender(new Request('https://api.trujillomingorance.com/nutrifit/comidas/resumen', {
+    headers: { 'cf-connecting-ip': '203.0.113.7', 'user-agent': UA },
+  }), { PAGES_ORIGIN: 'https://nutri.trujillomingorance.com', GATEWAY_SECRET: otro } as never, ctx, fetcher)
+  const h = visto as unknown as Headers
+  const req = new Request('https://nutri.trujillomingorance.com/api/x', { headers: h })
+  assert.equal(await leerIpFirmada(otro, req), '203.0.113.7')
+  assert.equal(await leerIpFirmada(SECRETO, req), null)
+})
+
+test('HEAD de / y /health responde 200 sin cuerpo; favicon 204; 404 lleva codigo', async () => {
+  const e = env()
+  const head = await atender(new Request('https://api.trujillomingorance.com/', { method: 'HEAD' }), e as never, ctx)
+  assert.equal(head.status, 200)
+  assert.equal(head.body, null)
+  const h2 = await atender(new Request('https://api.trujillomingorance.com/health', { method: 'HEAD' }), e as never, ctx)
+  assert.equal(h2.status, 200)
+  assert.equal(h2.body, null)
+  const fav = await atender(new Request('https://api.trujillomingorance.com/favicon.svg', { method: 'HEAD' }), e as never, ctx)
+  assert.equal(fav.status, 204)
+  const no = await atender(new Request('https://api.trujillomingorance.com/nada'), e as never, ctx)
+  assert.equal(no.status, 404)
+  assert.equal(((await no.json()) as { codigo: string }).codigo, 'no_encontrado')
+  assert.equal(no.headers.get('x-robots-tag'), 'noindex, nofollow')
+})
+
+test('config y app/version se piden sin cookie ni Bearer y sin Vary duplicado', async () => {
+  let visto: Headers | null = null
+  let destino = ''
+  const fetcher = async (u: RequestInfo | URL, init?: RequestInit) => {
+    destino = String(u)
+    visto = new Headers(init?.headers)
+    return new Response('{"turnstileSiteKey":"x"}', { status: 200, headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=300', vary: 'Origin' } })
+  }
+  const r = await atender(new Request('https://api.trujillomingorance.com/nutrifit/config', {
+    headers: { cookie: '__Host-nf_session=abc', authorization: 'Bearer zzz', origin: 'https://localhost', 'user-agent': UA },
+  }), { PAGES_ORIGIN: 'https://nutri.trujillomingorance.com' } as never, ctx, fetcher)
+  assert.equal(r.status, 200)
+  assert.equal(destino, 'https://nutri.trujillomingorance.com/api/config')
+  const h = visto as unknown as Headers
+  assert.equal(h.get('cookie'), null)
+  assert.equal(h.get('authorization'), null)
+  assert.equal(r.headers.get('vary'), 'Origin')
+  assert.equal(r.headers.get('access-control-allow-origin'), 'https://localhost')
+  assert.deepEqual(await r.json(), { turnstileSiteKey: 'x' })
+})

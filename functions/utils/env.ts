@@ -29,6 +29,8 @@ export interface Env {
 
   // Secretos
   AUTH_SECRET?: string
+  /** Solo tickets de visión y firma de IP con el gateway (ver ipPasarela.ts). */
+  GATEWAY_SECRET?: string
   TURNSTILE_SECRET_KEY?: string
   BREVO_API_KEY?: string
   /** Web Push (VAPID). Pública en base64url, privada como JWK JSON. */

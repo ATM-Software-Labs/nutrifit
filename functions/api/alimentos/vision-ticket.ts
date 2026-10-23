@@ -5,6 +5,7 @@
  * La foto no viaja en esta petición. Solo su SHA-256, para la caché.
  */
 import { firmar } from '../../utils/crypto.ts'
+import { secretoPasarela } from '../../utils/ipPasarela.ts'
 import type { Handler } from '../../utils/env.ts'
 import { camposLimite, MENSAJE_LIMITE } from '../../utils/errorVision.ts'
 import { leerJson } from '../../utils/http.ts'
@@ -29,7 +30,8 @@ export const onRequestPost: Handler = async ({ request, env, data }) => {
   if (!pasarelaVisionActiva(env.VISION_GATEWAY_URL, host)) {
     return json({ ok: true, modo: 'local' })
   }
-  if (!env.AUTH_SECRET || !/^[A-Za-z0-9_-]{1,80}$/.test(sesion.usuarioId)) {
+  const secreto = secretoPasarela(env)
+  if (!secreto || !/^[A-Za-z0-9_-]{1,80}$/.test(sesion.usuarioId)) {
     console.error('[vision-ticket] sin firma')
     throw new HttpError(500, 'Error interno. Inténtalo de nuevo más tarde.')
   }
@@ -40,6 +42,6 @@ export const onRequestPost: Handler = async ({ request, env, data }) => {
   await exigirLimite(env, `comida:hora:u:${sesion.usuarioId}`, CUPOS_ESCANEO.porHora, 3600, MENSAJE_LIMITE, OPCIONES_LIMITE)
 
   const exp = Math.floor(Date.now() / 1000) + TTL_TICKET_VISION_S
-  const ticket = await firmar(env.AUTH_SECRET, PROPOSITO_VISION, { sub: sesion.usuarioId, exp, img: sha } satisfies PayloadTicketVision)
+  const ticket = await firmar(secreto, PROPOSITO_VISION, { sub: sesion.usuarioId, exp, img: sha } satisfies PayloadTicketVision)
   return json({ ok: true, modo: 'gateway', ticket, exp, url: URL_VISION })
 }

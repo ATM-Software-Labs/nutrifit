@@ -2,6 +2,7 @@
 # Secretos, fuera de este archivo:
 #   npx wrangler secret put AUTH_SECRET --config gateway/wrangler.toml
 #   el mismo valor que el AUTH_SECRET de Pages, si no los tickets no validan
+#   GATEWAY_SECRET (mismo valor en Pages y aquí; firma tickets de visión e IP, no sesiones)
 #   GEMINI_API_KEY, GROQ_API_KEY, TRUJILLO_API_KEY, APP_CLIENT_TOKEN
 # namespace_id es un entero que eliges. No es un id de KV y no hay que crearlo.
 # Si otro Worker del mismo account usa "748210", comparten contador.
@@ -10,6 +11,13 @@ main = "src/index.ts"
 compatibility_date = "2026-10-01"
 compatibility_flags = ["nodejs_compat"]
 workers_dev = false
+preview_urls = false
+minify = true
+
+# Logs del Worker en el panel (gratis hasta 200k eventos/día; el gateway va muy por debajo).
+[observability]
+enabled = true
+head_sampling_rate = 1
 
 [[routes]]
 pattern = "api.trujillomingorance.com/*"

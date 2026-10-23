@@ -29,7 +29,7 @@
 import type { Datos, Env, Handler } from './utils/env.ts'
 import { error, HttpError } from './utils/response.ts'
 import { ipCliente, leerJson } from './utils/http.ts'
-import { leerIpFirmada } from './utils/ipPasarela.ts'
+import { leerIpFirmada, secretoPasarela } from './utils/ipPasarela.ts'
 import { COOKIE_SESION, resolverSesion } from './utils/session.ts'
 import { verificarTurnstile } from './utils/turnstile.ts'
 import { puntuacionBot, scoreAnomalo } from './utils/bot.ts'
@@ -251,7 +251,7 @@ export const onRequest: Handler = async (ctx) => {
   datos.cookiesRotacion = []
   const inicio = Date.now()
   try {
-    datos.ip = (await leerIpFirmada(env.AUTH_SECRET, request)) ?? ipCliente(request)
+    datos.ip = (await leerIpFirmada(secretoPasarela(env), request)) ?? ipCliente(request)
     const resuelta = await resolverSesion(env, request)
     datos.sesion = resuelta.sesion
     datos.cookiesRotacion = resuelta.cookies

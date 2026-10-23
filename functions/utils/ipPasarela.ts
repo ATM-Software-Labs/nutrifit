@@ -8,6 +8,16 @@ export const PROPOSITO_IP_PASARELA = 'client-ip'
 export const CABECERA_VIA = 'x-nf-via'
 export const CABECERA_FIRMA_IP = 'x-nf-client-sig'
 
+/**
+ * Secreto compartido Pages ↔ gateway (tickets de visión y firma de IP).
+ * GATEWAY_SECRET si existe; si no, AUTH_SECRET (compatibilidad). Así el gateway
+ * no necesita AUTH_SECRET y no puede firmar sesiones.
+ */
+export function secretoPasarela(env: { GATEWAY_SECRET?: string; AUTH_SECRET?: string }): string | undefined {
+  const g = env.GATEWAY_SECRET?.trim()
+  return g && g.length >= 32 ? g : env.AUTH_SECRET
+}
+
 export function ipPresentable(ip: string): boolean {
   return ip.length > 0 && ip.length <= 64 && !/[\s,]/.test(ip)
 }

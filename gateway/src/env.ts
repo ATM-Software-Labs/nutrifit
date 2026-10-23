@@ -14,7 +14,10 @@ export interface GatewayEnv {
   SUPABASE_SERVICE_ROLE_KEY?: string
   TRUJILLO_MODEL?: string
   TRUJILLO_AI_URL?: string
+  /** Compatibilidad: solo si falta GATEWAY_SECRET. */
   AUTH_SECRET?: string
+  /** Tickets de visión y firma de IP con Pages. No sirve para sesiones. */
+  GATEWAY_SECRET?: string
   /** Secreto de servidor. No existe ninguna variable VITE_ con este valor. */
   APP_CLIENT_TOKEN?: string
   GEMINI_API_KEY?: string
