@@ -46,6 +46,8 @@ export const TABLAS_COPIA: TablaCopia[] = [
 export const TABLAS_SIN_COPIA = [
   'magic_tokens', 'rate_limits', 'tokens_app', 'codigos_login', 'emparejamientos_qr', 'cache_off',
   'sesiones_web', 'catalogo_alimentos_cache', 'sesiones_dispositivos', 'recordatorios_envios',
+  // Enlaces públicos de «Compartir mi día»: efímeros (caducan) y con PNG; no se replican.
+  'dias_compartidos',
 ]
 
 export interface FilaCopia {

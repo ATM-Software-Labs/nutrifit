@@ -133,3 +133,15 @@
 
   window.__nf = { recuperar: recuperar, recargar: function () { recargarYa(fallidos) }, mostrarFallo: mostrarFallo }
 })()
+
+/* Portada (visitante sin sesión en /): adelanta la captura del hero, que es el LCP. */
+;(function () {
+  try {
+    if (location.pathname !== '/' || localStorage.getItem('nf:sesion')) return
+    if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) return
+    var l = document.createElement('link')
+    l.rel = 'preload'; l.as = 'image'; l.href = '/landing/hoy.webp'; l.type = 'image/webp'
+    l.setAttribute('fetchpriority', 'high')
+    document.head.appendChild(l)
+  } catch (e) { /* sin localStorage */ }
+})()

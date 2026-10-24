@@ -1,11 +1,8 @@
 # Recarga directa de la SPA. Un archivo que ya existe (calculadoras, iconos,
 # index.html) se sirve tal cual. /api/*, /assets/* y /descargar/* los atienden
 # las Functions por public/_routes.json y no pasan por aquí.
-/historial    /index.html   200
-/profile      /index.html   200
-/privacidad   /index.html   200
-/recursos     /index.html   200
-/legal        /index.html   200
-/vincular     /index.html   200
-/descargar    /index.html   200
+# /privacidad, /descargar, /legal, /recursos y /entrar tienen su propio HTML con
+# metadatos (scripts/paginas-seo.mjs): Pages los sirve desde <ruta>.html.
+# Ojo: una regla explícita `/ruta /index.html 200` acaba en 308 → / (Pages
+# normaliza /index.html), así que solo queda el comodín.
 /*            /index.html   200

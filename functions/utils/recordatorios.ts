@@ -84,20 +84,50 @@ export function recordatoriosPendientes(p: PrefRecordatorios, ahora: AhoraLocal,
   let cupo = Math.max(0, p.max_dia - cuentanParaCupo(enviadosHoy))
   const out: Pendiente[] = []
   const toca = (hhmm: string | null) => !!hhmm && ahora.min >= aMin(hhmm) && ahora.min < aMin(hhmm) + VENTANA_MIN
-  if (cupo > 0 && !enviadosHoy.has('cierre') && toca(p.cierre) && dia.comidas < 3) {
-    out.push({
-      clave: 'cierre',
-      titulo: 'Cierra tu día',
-      cuerpo: dia.comidas === 0
-        ? (racha > 0 ? `Tu racha de ${racha} ${racha === 1 ? 'día' : 'días'} está en juego: registra lo que has comido hoy.` : 'Aún no has registrado nada hoy. Un minuto basta.')
-        : `Llevas ${dia.comidas} ${dia.comidas === 1 ? 'comida' : 'comidas'} hoy. ¿Falta algo?`,
-      url: '/',
-    }); cupo--
+  if (cupo > 0 && !enviadosHoy.has('cierre') && toca(p.cierre)) {
+    out.push(avisoCierre(dia.comidas, racha, ahora.fecha)); cupo--
   }
   if (cupo > 0 && p.agua && !enviadosHoy.has('agua') && ahora.min >= aMin('17:00') && ahora.min < aMin('17:00') + VENTANA_MIN && dia.aguaMl < dia.metaAguaMl / 2) {
     out.push({ clave: 'agua', titulo: 'Un vaso de agua', cuerpo: `Llevas ${dia.aguaMl} ml de ${dia.metaAguaMl}. Hidrátate un poco.`, url: '/agua' })
   }
   return out
+}
+
+/** URL que abre la hoja «Compartir mi día» de una fecha. */
+export const urlCompartirDia = (fecha: string) => `/?compartir=${fecha}`
+
+/**
+ * Aviso de cierre del día. Sin comidas: recordar la racha. Con 1–2: "¿falta algo?".
+ * Con 3 o más: día completo. Si hay algo apuntado lleva el botón «Compartir mi día»
+ * (en el reloj y en Android sale como acción; en iOS se abre desde la app).
+ */
+export function avisoCierre(comidas: number, racha: number, fecha: string): Pendiente {
+  if (comidas === 0) {
+    return {
+      clave: 'cierre',
+      titulo: 'Cierra tu día',
+      cuerpo: racha > 0 ? `Tu racha de ${racha} ${racha === 1 ? 'día' : 'días'} está en juego: registra lo que has comido hoy.` : 'Aún no has registrado nada hoy. Un minuto basta.',
+      url: '/',
+    }
+  }
+  const compartir = { accion: 'compartir', titulo: 'Compartir mi día' }
+  const datos = { compartir: urlCompartirDia(fecha), fecha }
+  if (comidas < 3) {
+    return {
+      clave: 'cierre',
+      titulo: 'Cierra tu día',
+      cuerpo: `Llevas ${comidas} ${comidas === 1 ? 'comida' : 'comidas'} hoy. ¿Falta algo?`,
+      url: '/',
+      push: { acciones: [{ accion: 'apuntar', titulo: 'Apuntar' }, compartir], datos },
+    }
+  }
+  return {
+    clave: 'cierre',
+    titulo: 'Día completo 🌱',
+    cuerpo: `${comidas} comidas registradas hoy. ¿Lo compartes?`,
+    url: urlCompartirDia(fecha),
+    push: { acciones: [compartir], datos },
+  }
 }
 
 /** Resumen semanal: lunes entre 9:00 y 9:45 locales. */

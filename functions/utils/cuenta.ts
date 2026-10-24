@@ -57,6 +57,7 @@ async function borrarIntegraciones(env: Env, usuarioId: string): Promise<void> {
 }
 
 const POR_USUARIO = [
+  'DELETE FROM dias_compartidos WHERE usuario_id = ?1',
   'DELETE FROM archivos_usuario WHERE usuario_id = ?1',
   'DELETE FROM preferencias_cantidades WHERE usuario_id = ?1',
   'DELETE FROM recordatorios_franjas WHERE usuario_id = ?1',

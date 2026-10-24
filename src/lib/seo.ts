@@ -19,7 +19,7 @@ const PUBLICAS: Record<string, MetaRuta> = {
 
 const PRIVADAS: Record<string, string> = {
   '/historial': 'Historial', '/profile': 'Perfil', '/ajustes': 'Ajustes', '/peso': 'Peso',
-  '/agua': 'Agua', '/logros': 'Logros', '/vincular': 'Vincular dispositivo',
+  '/agua': 'Agua', '/logros': 'Logros', '/vincular': 'Vincular dispositivo', '/entrar': 'Entrar',
 }
 
 function meta(sel: string, crear: () => HTMLElement): HTMLElement {

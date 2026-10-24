@@ -6,7 +6,7 @@
  */
 import { HojaEditarComida } from './HojaEditarComida.tsx'
 import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
-import { ChartColumn, CopyPlus, Droplet, House, Plus, Scale, User } from 'lucide-react'
+import { ChartColumn, CopyPlus, Droplet, House, Plus, Scale, Share2, User } from 'lucide-react'
 import { Logo } from './Logo.tsx'
 import { DialogoSalir } from './DialogoSalir.tsx'
 import { TarjetaRacha } from './TarjetaRacha.tsx'
@@ -22,6 +22,7 @@ import { SelectorSemana } from './SelectorSemana.tsx'
 import { SeccionComida } from './SeccionComida.tsx'
 import { HojaAnadir } from './HojaAnadir.tsx'
 import { HojaCopiarDia } from './HojaCopiarDia.tsx'
+import { AvisoCompartirDia } from './AvisoCompartirDia.tsx'
 import { SugerenciaRepetir } from './SugerenciaRepetir.tsx'
 import { SelectorTipoDia } from './SelectorTipoDia.tsx'
 import { guardarPorcionDefecto } from '../lib/porcionDefecto.ts'
@@ -53,6 +54,7 @@ const PaginaPerfil = lazy(async () => {
   const m = await import('./PaginaPerfil.tsx')
   return { default: m.PaginaPerfil }
 })
+const HojaCompartirDia = lazy(async () => ({ default: (await import('./HojaCompartirDia.tsx')).HojaCompartirDia }))
 const DescribirComida = lazy(() => import('./DescribirComida.tsx'))
 const BuscarAlimento = lazy(() => import('./BuscarAlimento.tsx'))
 const LectorEtiqueta = lazy(() => import('./LectorEtiqueta.tsx'))
@@ -76,6 +78,7 @@ type Hoja =
   | { tipo: 'ajustes' }
   | { tipo: 'editar'; c: Comida }
   | { tipo: 'copiar'; desde?: string }
+  | { tipo: 'compartir'; fecha: string }
 
 function saludo() {
   const h = new Date().getHours()
@@ -176,6 +179,19 @@ export default function Dashboard({
     if (!(TIPOS_COMIDA as readonly string[]).includes(t)) return
     setFecha(hoyISO())
     setHoja({ tipo: 'anadir', comida: t as TipoComida })
+  }, [vista])
+  // Enlace profundo del aviso de cierre: /?compartir=AAAA-MM-DD|hoy abre «Compartir mi día».
+  useEffect(() => {
+    const u = new URL(window.location.href)
+    const v = u.searchParams.get('compartir')
+    if (!v) return
+    u.searchParams.delete('compartir')
+    window.history.replaceState(window.history.state, '', u.pathname + u.search + u.hash)
+    const f = v === 'hoy' ? hoyISO() : v
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(f) || f > hoyISO()) return
+    if (vista !== 'hoy') navegar('/')
+    setFecha(f)
+    setHoja({ tipo: 'compartir', fecha: f })
   }, [vista])
 
   async function guardar(nueva: NuevaComida) {
@@ -291,7 +307,21 @@ export default function Dashboard({
                 <BarraMacro macro="carbohidratos" valor={totales.carbohidratos} meta={metas.carbohidratos} />
                 <BarraMacro macro="grasas" valor={totales.grasas} meta={metas.grasas} />
               </div>
+              {resumen && (
+                <button
+                  type="button"
+                  onClick={() => setHoja({ tipo: 'compartir', fecha })}
+                  data-testid="abrir-compartir"
+                  className="mt-5 flex w-full items-center justify-center gap-2 rounded-full border border-neutral-200 py-2.5 text-sm font-medium text-graphite transition-colors hover:border-mint hover:text-mint dark:border-neutral-700 dark:text-white"
+                >
+                  <Share2 size={16} strokeWidth={1.75} /> Compartir mi día
+                </button>
+              )}
             </section>
+
+            {resumen && fecha === hoyISO() && (
+              <AvisoCompartirDia fecha={fecha} numComidas={resumen.num_comidas} onCompartir={() => setHoja({ tipo: 'compartir', fecha })} />
+            )}
 
             <TarjetaRacha />
 
@@ -431,6 +461,7 @@ export default function Dashboard({
               setFecha(f)
               navegar('/')
             }}
+            onCompartirDia={(f) => setHoja({ tipo: 'compartir', fecha: f })}
           />
         </Suspense>
       )}
@@ -476,6 +507,12 @@ export default function Dashboard({
           <span className="text-[10px] font-medium">Perfil</span>
         </button>
       </nav>
+
+      {hoja?.tipo === 'compartir' && (
+        <Suspense fallback={null}>
+          <HojaCompartirDia abierto fecha={hoja.fecha} onClose={cerrar} />
+        </Suspense>
+      )}
 
       <HojaCopiarDia abierto={hoja?.tipo === 'copiar'} destinoInicial={fecha} origenInicial={hoja?.tipo === 'copiar' ? hoja.desde : undefined} onClose={cerrar} onCopiado={onCopiado} />
 

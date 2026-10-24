@@ -142,6 +142,8 @@ async function enviar(ruta: string, o: Opciones, accept: string): Promise<Respon
 type Entrada = { ok: true; usuario: Usuario; perfilCompleto: boolean }
 const q = (o: Record<string, string>) => new URLSearchParams(o).toString()
 
+export interface EnlaceDia { token: string; url: string; fecha: string; creado_en: string; expira_en: string | null; estado: 'activo' | 'caducado' | 'revocado'; visitas: number; emojis: string }
+
 export const api = {
   config: () => pedir<{ turnstileSiteKey: string | null }>('/api/config'),
   salud: () =>
@@ -199,6 +201,11 @@ export const api = {
     return res
   },
 
+  diaCompartible: (fecha: string) => pedir<{ ok: true; dia: import('../../functions/utils/compartir.ts').DiaCompartido }>(`/api/compartir/dia?fecha=${encodeURIComponent(fecha)}`),
+  crearEnlaceDia: (b: { fecha: string; opciones: import('../../functions/utils/compartir.ts').OpcionesPrivacidad; expira: import('../../functions/utils/compartir.ts').Caducidad; og?: string }) =>
+    pedir<{ ok: true; token: string; url: string; expira_en: string | null }>('/api/compartir', { method: 'POST', body: b }),
+  enlacesDia: () => pedir<{ ok: true; enlaces: EnlaceDia[] }>('/api/compartir'),
+  revocarEnlaceDia: (token: string) => pedir<{ ok: true }>(`/api/compartir/${encodeURIComponent(token)}`, { method: 'DELETE' }),
   resumen: (fecha: string, signal?: AbortSignal) =>
     pedir<Resumen & { ok: true }>(`/api/comidas/resumen?fecha=${encodeURIComponent(fecha)}`, { signal }),
   guardarComida: (c: NuevaComida) => pedir<{ ok: true; comida: Comida }>('/api/comidas/guardar', { method: 'POST', body: c, prioridad: 'alta' }),

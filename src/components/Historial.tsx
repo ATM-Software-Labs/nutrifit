@@ -3,7 +3,7 @@
  * peso y agua en SVG, y la lista de días con sus totales (clic → ver ese día).
  */
 import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react'
-import { ChevronLeft, ChevronRight, Download } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Download, Share2 } from 'lucide-react'
 import { Button } from './ui/Button.tsx'
 import { Segmented } from './ui/Segmented.tsx'
 import { GraficaBarras, GraficaLinea } from './Graficas.tsx'
@@ -57,7 +57,7 @@ export function Leyenda({ items }: { items: [string, string][] }) {
   )
 }
 
-export default function Historial({ usuario, onVerDia }: { usuario: Usuario; onVerDia: (fecha: string) => void }) {
+export default function Historial({ usuario, onVerDia, onCompartirDia }: { usuario: Usuario; onVerDia: (fecha: string) => void; onCompartirDia?: (fecha: string) => void }) {
   const [tipo, setTipo] = useState<TipoPeriodo>('semana')
   const [ref, setRef] = useState(hoyISO)
   const [datos, setDatos] = useState<DatosHistorial | null>(null)
@@ -211,6 +211,7 @@ export default function Historial({ usuario, onVerDia }: { usuario: Usuario; onV
                     <th scope="col" className="px-3 py-1.5 text-right font-medium">G</th>
                     <th scope="col" className="px-3 py-1.5 text-right font-medium">Agua</th>
                     <th scope="col" className="px-4 py-1.5 text-right font-medium">Peso</th>
+                    {onCompartirDia && <th scope="col" className="w-10 px-2 py-1.5"><span className="sr-only">Compartir</span></th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
@@ -237,6 +238,15 @@ export default function Historial({ usuario, onVerDia }: { usuario: Usuario; onV
                       <td className="px-3 py-2.5 text-right">{d.num_comidas ? entero(d.grasas) : ''}</td>
                       <td className="px-3 py-2.5 text-right">{d.agua_ml ? litros(d.agua_ml) : ''}</td>
                       <td className="px-5 py-2.5 text-right">{d.peso !== null ? `${decimal(d.peso)} kg` : ''}</td>
+                      {onCompartirDia && (
+                        <td className="px-2 py-1 text-right">
+                          {d.num_comidas > 0 && (
+                            <button type="button" onClick={() => onCompartirDia(d.fecha)} aria-label={`Compartir ${fechaLarga(d.fecha)}`} title="Compartir este día" className="rounded-full p-2 text-neutral-400 transition-colors hover:bg-mint/10 hover:text-mint" data-testid={`compartir-${d.fecha}`}>
+                              <Share2 size={16} strokeWidth={1.75} />
+                            </button>
+                          )}
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>

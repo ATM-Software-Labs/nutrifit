@@ -3,7 +3,8 @@
   "include": [
     "/api/*",
     "/assets/*",
-    "/descargar/*"
+    "/descargar/*",
+    "/d/*"
   ],
   "exclude": []
 }

@@ -22,6 +22,7 @@ import { calcularMacros, type NivelActividad, type Objetivo, type Sexo } from '.
 import { entero } from '../lib/formato.ts'
 import type { Usuario } from '../lib/tipos.ts'
 import { SeccionDispositivos } from './SeccionDispositivos.tsx'
+import { SeccionEnlacesCompartidos } from './SeccionEnlacesCompartidos.tsx'
 import { EstadoServicios } from './EstadoServicios.tsx'
 import { SeccionIntegraciones } from './SeccionIntegraciones.tsx'
 import { SeccionPreferenciasAvanzadas } from './SeccionPreferenciasAvanzadas.tsx'
@@ -70,7 +71,7 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
     toast({ tipo: 'exito', mensaje: val === 'metrico' ? 'Sistema métrico activado (kg, cm, ml)' : 'Sistema imperial activado (lb, ft, oz)' })
   }
 
-  type SeccionId = 'perfil' | 'preferencias' | 'notificaciones' | 'estrategia' | 'conexiones' | 'dispositivos' | 'legal' | 'cuenta' | 'mas' | 'peligro'
+  type SeccionId = 'perfil' | 'preferencias' | 'notificaciones' | 'estrategia' | 'conexiones' | 'dispositivos' | 'enlaces' | 'legal' | 'cuenta' | 'mas' | 'peligro'
 
   const obtenerSeccionInicial = (): SeccionId => {
     if (typeof window !== 'undefined') {
@@ -80,6 +81,7 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
         return 'notificaciones'
       }
       if (hash.includes('dispositivo')) return 'dispositivos'
+      if (hash.includes('enlace') || hash.includes('compartid')) return 'enlaces'
       if (hash.includes('legal') || hash.includes('privacid') || search.includes('legal')) return 'legal'
       if (hash.includes('cuenta')) return 'cuenta'
       if (hash.includes('preferencia')) return 'preferencias'
@@ -242,7 +244,7 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
     { titulo: 'Tú', items: [{ id: 'perfil', label: 'Perfil y objetivos' }, { id: 'estrategia', label: 'Ayuno y estrategia' }] },
     { titulo: 'Hábitos', items: [{ id: 'notificaciones', label: 'Recordatorios y notificaciones' }] },
     { titulo: 'App', items: [{ id: 'preferencias', label: 'Apariencia, idioma, unidades y plan del día' }, { id: 'conexiones', label: 'Conexiones y apps' }] },
-    { titulo: 'Privacidad y datos', items: [{ id: 'dispositivos', label: 'Sesiones y dispositivos' }, { id: 'legal', label: 'Privacidad y legal' }, { id: 'peligro', label: 'Exportar o eliminar datos' }] },
+    { titulo: 'Privacidad y datos', items: [{ id: 'dispositivos', label: 'Sesiones y dispositivos' }, { id: 'enlaces', label: 'Enlaces compartidos' }, { id: 'legal', label: 'Privacidad y legal' }, { id: 'peligro', label: 'Exportar o eliminar datos' }] },
     { titulo: 'Cuenta', items: [{ id: 'cuenta', label: 'Cuenta y sesión' }, { id: 'mas', label: 'Acerca de' }] },
   ]
 
@@ -473,6 +475,12 @@ export default function Ajustes({ usuario, onClose, onUsuario, onSalir }: { usua
         {seccionActiva === 'dispositivos' && (
         <Seccion id="dispositivos" titulo={t('ajustes.dispositivos')} noCard>
           <SeccionDispositivos />
+        </Seccion>
+        )}
+
+        {seccionActiva === 'enlaces' && (
+        <Seccion id="enlaces" titulo="Enlaces compartidos">
+          <SeccionEnlacesCompartidos />
         </Seccion>
         )}
 

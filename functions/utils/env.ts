@@ -11,6 +11,8 @@ export interface Env {
   /** Búsquedas públicas de alimentos. Opcional: sin el binding se usa la caché D1/Turso. */
   KV?: KVNamespace
   AI: Ai
+  /** Estáticos de Pages (lo inyecta el runtime). */
+  ASSETS: Fetcher
 
   ENVIRONMENT?: string // 'production' | 'development' | 'preview'
   APP_URL?: string // URL pública base para enlaces de email

@@ -192,6 +192,12 @@ self.addEventListener('notificationclick', (event) => {
     event.waitUntil(responder(datos, event.action))
     return
   }
+  // «Compartir mi día» (aviso de cierre): abre la hoja de compartir de esa fecha.
+  if (event.action === 'compartir') {
+    const fecha = /^\d{4}-\d{2}-\d{2}$/.test(datos.fecha || '') ? datos.fecha : 'hoy'
+    event.waitUntil(abrir(datos.compartir || '/?compartir=' + fecha))
+    return
+  }
   // "Apuntar" o toque en la notificación → registro rápido de esa comida.
   event.waitUntil(abrir(datos.url))
 })

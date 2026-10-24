@@ -22,7 +22,17 @@ test('cierre del día, silencio y máximo diario', () => {
   const r = recordatoriosPendientes(p, a(22, 30), dia(), new Set(), 5)
   assert.equal(r[0]!.clave, 'cierre')
   assert.match(r[0]!.cuerpo, /racha de 5 días/)
-  assert.deepEqual(recordatoriosPendientes(p, a(22, 30), dia(['desayuno', 'comida', 'cena']), new Set()), [])
+  // Día completo: ya no se calla, invita a compartir (botón y URL con la fecha).
+  const completo = recordatoriosPendientes(p, a(22, 30), dia(['desayuno', 'comida', 'cena']), new Set())
+  assert.equal(completo.length, 1)
+  assert.equal(completo[0]!.url, '/?compartir=2026-10-13')
+  assert.deepEqual(completo[0]!.push?.acciones?.map((x) => x.accion), ['compartir'])
+  const medio = recordatoriosPendientes(p, a(22, 30), dia(['desayuno']), new Set())[0]!
+  assert.equal(medio.url, '/')
+  assert.deepEqual(medio.push?.acciones?.map((x) => x.accion), ['apuntar', 'compartir'])
+  assert.equal(medio.push?.datos?.compartir, '/?compartir=2026-10-13')
+  // Sin comidas no hay nada que compartir.
+  assert.equal(recordatoriosPendientes(p, a(22, 30), dia(), new Set())[0]!.push, undefined)
   assert.ok(enSilencio(23 * 60 + 30, '23:00', '08:00'))
   assert.ok(!enSilencio(12 * 60, '23:00', '08:00'))
   assert.deepEqual(recordatoriosPendientes({ ...p, cierre: '23:15' }, a(23, 20), dia(), new Set()), [])

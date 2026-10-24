@@ -7,6 +7,7 @@ import type { Usuario } from './lib/tipos.ts'
 import { CookieBanner } from './components/CookieBanner.tsx'
 import { activarActualizacion } from './lib/sw.ts'
 import { esNativa } from './lib/plataforma.ts'
+import { instalada } from './lib/instalacion.ts'
 import { borrarTokenApp, guardarTokenApp } from './lib/tokenApp.ts'
 import { aplicarSeo } from './lib/seo.ts'
 import { EVENTO, esRutaPrivacidad, esRutaRecursos, guardarVinculoPendiente, navegar, rutaActual, tomarVinculoPendiente, useRuta } from './lib/rutas.ts'
@@ -17,6 +18,8 @@ const cargarLogin = () => import('./components/Login.tsx')
 const cargarDashboard = () => import('./components/Dashboard.tsx')
 const cargarOnboarding = () => import('./components/Onboarding.tsx')
 const Login = lazy(cargarLogin)
+const cargarLanding = () => import('./components/Landing.tsx')
+const Landing = lazy(cargarLanding)
 const Dashboard = lazy(async () => {
   const m = await cargarDashboard()
   const mod = m as { Dashboard?: ComponentType<any>; default?: ComponentType<any> }
@@ -44,13 +47,17 @@ if (ruta === '/vincular') {
     guardarVinculoPendiente(id) // por si hay que entrar antes (enlace mágico en otra pestaña)
   }
   history.replaceState(null, '', '/vincular')
-} else if (!entraEnPrivacidad && !entraEnRecursos && ruta !== '/descargar' && ruta !== '/' && ruta !== '/historial' && ruta !== '/profile' && ruta !== '/ajustes' && ruta !== '/peso' && ruta !== '/agua' && ruta !== '/logros') {
+} else if (!entraEnPrivacidad && !entraEnRecursos && ruta !== '/descargar' && ruta !== '/' && ruta !== '/entrar' && ruta !== '/historial' && ruta !== '/profile' && ruta !== '/ajustes' && ruta !== '/peso' && ruta !== '/agua' && ruta !== '/logros') {
   history.replaceState(null, '', '/') // ruta desconocida → Hoy
 }
 
 const PISTA = 'nf:sesion'
+/** Portada pública: solo en «/» sin sesión, en la web (no en el APK ni en la PWA instalada). */
+const conPortada = (r: string) => r === '/' && !esNativa && !instalada()
+const portadaInicial = conPortada(ruta) && !localStorage.getItem(PISTA)
 if (!entraEnPrivacidad && !entraEnRecursos && ruta !== '/descargar') {
   if (localStorage.getItem(PISTA)) void (ruta === '/vincular' ? import('./components/Vincular.tsx') : cargarDashboard())
+  else if (portadaInicial) void cargarLanding()
   else void cargarLogin()
 }
 
@@ -107,6 +114,7 @@ export default function App() {
   const entrar = useCallback(
     (usuario: Usuario, perfilCompleto: boolean) => {
       localStorage.setItem(PISTA, '1')
+      if (rutaActual() === '/entrar') navegar('/', { reemplazar: true })
       if (!perfilCompleto) void cargarOnboarding()
       setEstado(perfilCompleto ? { fase: 'app', usuario } : { fase: 'onboarding', usuario })
       retomarVinculo()
@@ -234,7 +242,8 @@ export default function App() {
   let pantalla
   switch (estado.fase) {
     case 'cargando':
-      pantalla = <Cargando />
+      // Sin pista de sesión, la portada se pinta ya (LCP) mientras se confirma con /api/auth/yo.
+      pantalla = portadaInicial && rutaApp === '/' ? <Landing onEntrar={() => { void cargarLogin(); navegar('/entrar') }} /> : <Cargando />
       break
     case 'error':
       pantalla = (
@@ -255,7 +264,9 @@ export default function App() {
       )
       break
     case 'anonimo':
-      pantalla = <Login onEntrar={entrar} vinculando={rutaApp === '/vincular'} />
+      pantalla = conPortada(rutaApp)
+        ? <Landing onEntrar={() => { void cargarLogin(); navegar('/entrar') }} />
+        : <Login onEntrar={entrar} vinculando={rutaApp === '/vincular'} />
       break
     case 'onboarding':
     case 'app':
