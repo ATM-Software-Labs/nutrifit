@@ -21,7 +21,7 @@ jobs:
     env:
       VITE_GITHUB_REPO: ${{ vars.VITE_GITHUB_REPO || github.repository }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v5
         with:
           node-version: 22
